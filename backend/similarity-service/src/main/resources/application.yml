@@ -1,0 +1,10 @@
+server:
+  port: 8087
+spring:
+  application:
+    name: similarity-service
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
