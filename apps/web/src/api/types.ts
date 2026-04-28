@@ -7,6 +7,37 @@ export type UserProfile = {
   roles: RoleCode[];
 };
 
+export type OrganizationType = 'COLLEGE' | 'MAJOR' | 'CLASS';
+
+export type UserStatus = 'ACTIVE' | 'DISABLED' | 'PENDING';
+
+export type OrganizationSummary = {
+  id: number;
+  parentId: number | null;
+  name: string;
+  type: OrganizationType;
+};
+
+export type UserSummary = {
+  id: number;
+  organizationId: number;
+  username: string;
+  name: string;
+  studentNo?: string;
+  teacherNo?: string;
+  email?: string;
+  phone?: string;
+  status: UserStatus;
+  roles: RoleCode[];
+};
+
+export type StudentImportPreview = {
+  total: number;
+  valid: number;
+  duplicated: number;
+  invalid: number;
+};
+
 export type CourseStatus = 'DRAFT' | 'ACTIVE' | 'ARCHIVED';
 
 export type AssignmentStatus = 'DRAFT' | 'PUBLISHED' | 'CLOSED' | 'ARCHIVED';

@@ -380,7 +380,8 @@ button:focus-visible {
 .course-tabs,
 .class-list,
 .assignment-list,
-.student-task-list {
+.student-task-list,
+.student-list {
   display: grid;
   gap: 12px;
   margin-top: 18px;
@@ -455,17 +456,27 @@ button:focus-visible {
 
 .class-row,
 .assignment-card,
-.student-task-card {
+.student-task-card,
+.student-row,
+.import-dropzone {
   border: 1px solid #e2e8f0;
   border-radius: 18px;
   background: linear-gradient(180deg, #ffffff, #f8fafc);
 }
 
-.class-row {
+.class-row,
+.student-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
   padding: 14px;
+}
+
+.student-row span:not(.status-pill) {
+  display: block;
+  margin-top: 4px;
+  color: #64748b;
+  font-size: 13px;
 }
 
 .assignment-card,
@@ -498,6 +509,62 @@ button:focus-visible {
 .student-task-card {
   grid-template-columns: minmax(0, 1fr) auto auto;
   align-items: center;
+}
+
+.import-dropzone {
+  display: grid;
+  gap: 8px;
+  place-items: center;
+  min-height: 156px;
+  margin-top: 18px;
+  padding: 24px;
+  color: #475569;
+  text-align: center;
+  border-style: dashed;
+  background: linear-gradient(135deg, #eff6ff, #f8fafc);
+}
+
+.import-dropzone svg {
+  color: #2563eb;
+}
+
+.import-dropzone strong {
+  color: #0f172a;
+}
+
+.import-metrics {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.import-metrics span {
+  padding: 12px;
+  color: #64748b;
+  text-align: center;
+  border-radius: 14px;
+  background: #f8fafc;
+}
+
+.import-metrics strong {
+  display: block;
+  color: #0f172a;
+  font-size: 22px;
+}
+
+.org-chain {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 18px;
+}
+
+.org-chain span {
+  padding: 7px 10px;
+  color: #2563eb;
+  border-radius: 999px;
+  background: #eff6ff;
 }
 
 @media (max-width: 1040px) {
@@ -548,6 +615,10 @@ button:focus-visible {
 
   .course-tabs {
     grid-template-columns: 1fr;
+  }
+
+  .import-metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .nav-list {

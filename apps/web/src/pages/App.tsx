@@ -10,7 +10,6 @@ import {
   FileText,
   GraduationCap,
   LayoutDashboard,
-  LogOut,
   Plus,
   ShieldCheck,
   Sparkles,
@@ -59,6 +58,9 @@ export function App() {
   const classes = mockApi.listClasses(selectedCourse.id);
   const assignments = mockApi.listAssignments(selectedCourse.id);
   const studentTasks = mockApi.listStudentTasks();
+  const organizations = mockApi.listOrganizations();
+  const students = mockApi.listUsers('STUDENT');
+  const importPreview = mockApi.getStudentImportPreview();
 
   const teacherStats = [
     { label: '进行中任务', value: String(metrics.activeAssignments), trend: '+2 本周', tone: 'blue' },
@@ -150,6 +152,9 @@ export function App() {
             selectedCourseId={selectedCourseId}
             setSelectedCourseId={setSelectedCourseId}
             stats={teacherStats}
+            importPreview={importPreview}
+            organizations={organizations}
+            students={students}
           />
         )}
       </section>
@@ -165,6 +170,9 @@ function TeacherDashboard({
   selectedCourseId,
   setSelectedCourseId,
   stats,
+  importPreview,
+  organizations,
+  students,
 }: {
   assignments: ReturnType<typeof mockApi.listAssignments>;
   classes: ReturnType<typeof mockApi.listClasses>;
@@ -173,6 +181,9 @@ function TeacherDashboard({
   selectedCourseId: number;
   setSelectedCourseId: (courseId: number) => void;
   stats: Array<{ label: string; value: string; trend: string; tone: string }>;
+  importPreview: ReturnType<typeof mockApi.getStudentImportPreview>;
+  organizations: ReturnType<typeof mockApi.listOrganizations>;
+  students: ReturnType<typeof mockApi.listUsers>;
 }) {
   return (
     <>
@@ -256,6 +267,55 @@ function TeacherDashboard({
                   <span>{item.aiGradingEnabled ? 'AI 批改开启' : '人工批改'}</span>
                   <span>{item.similarityCheckEnabled ? '查重开启' : '查重关闭'}</span>
                 </div>
+              </div>
+            ))}
+          </div>
+        </article>
+      </section>
+
+      <section className="management-grid">
+        <article className="panel roster-panel">
+          <div className="panel-heading">
+            <div>
+              <p className="eyebrow">Roster Import</p>
+              <h3>学生名单导入</h3>
+            </div>
+            <button className="ghost-button" type="button"><UploadCloud size={15} /> 导入 Excel</button>
+          </div>
+          <div className="import-dropzone">
+            <UploadCloud size={28} />
+            <strong>拖拽学生名单到这里</strong>
+            <span>支持 Excel 模板，字段包含学号、姓名、邮箱、手机号、班级</span>
+          </div>
+          <div className="import-metrics">
+            <span><strong>{importPreview.total}</strong>总记录</span>
+            <span><strong>{importPreview.valid}</strong>可导入</span>
+            <span><strong>{importPreview.duplicated}</strong>重复</span>
+            <span><strong>{importPreview.invalid}</strong>异常</span>
+          </div>
+        </article>
+
+        <article className="panel roster-panel">
+          <div className="panel-heading">
+            <div>
+              <p className="eyebrow">Directory</p>
+              <h3>组织与学生</h3>
+            </div>
+            <span className="status-pill">{students.length} 名学生</span>
+          </div>
+          <div className="org-chain">
+            {organizations.slice(0, 3).map((item) => (
+              <span key={item.id}>{item.name}</span>
+            ))}
+          </div>
+          <div className="student-list">
+            {students.slice(0, 4).map((student) => (
+              <div className="student-row" key={student.id}>
+                <div>
+                  <strong>{student.name}</strong>
+                  <span>{student.studentNo} · {student.email}</span>
+                </div>
+                <span className="status-pill">{student.status === 'ACTIVE' ? '已激活' : '待激活'}</span>
               </div>
             ))}
           </div>
