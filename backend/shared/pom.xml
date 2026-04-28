@@ -10,4 +10,10 @@
   </parent>
   <artifactId>shared</artifactId>
   <name>TrainMark AI Shared</name>
+  <dependencies>
+    <dependency>
+      <groupId>jakarta.validation</groupId>
+      <artifactId>jakarta.validation-api</artifactId>
+    </dependency>
+  </dependencies>
 </project>

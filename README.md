@@ -36,13 +36,13 @@ TrainMark/
 ### 1. 安装前端依赖
 
 ```bash
-npm install
+pnpm install
 ```
 
 ### 2. 启动前端
 
 ```bash
-npm run dev:web
+pnpm dev:web
 ```
 
 访问：`http://localhost:5173`
@@ -50,7 +50,7 @@ npm run dev:web
 ### 3. 启动本地基础设施
 
 ```bash
-npm run dev:infra
+pnpm dev:infra
 ```
 
 常用地址：
@@ -66,7 +66,7 @@ npm run dev:infra
 ### 4. 构建后端
 
 ```bash
-npm run build:backend
+pnpm build:backend
 ```
 
 ### 5. 启动后端示例服务
@@ -83,6 +83,12 @@ mvn -f backend/pom.xml -pl gateway-service spring-boot:run
 |---|---|
 | `GET http://localhost:8081/api/auth/me` | 当前用户模拟接口 |
 | `GET http://localhost:8083/api/courses` | 课程列表模拟接口 |
+
+## 环境说明
+
+当前仓库允许在没有 Maven 和 Docker 的机器上继续编码。后端 Maven 工程和 Docker Compose 配置会持续维护，但本机没有对应命令时可先不执行后端构建和基础设施启动。
+
+前端统一使用 pnpm，不再使用 npm workspace。
 
 ## 开发原则
 
