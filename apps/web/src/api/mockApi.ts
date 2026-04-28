@@ -7,6 +7,7 @@ import type {
   StudentImportPreview,
   SubmissionTask,
   TeachingClassSummary,
+  UploadReceipt,
   UserProfile,
   UserSummary,
 } from './types';
@@ -88,5 +89,14 @@ export const mockApi = {
   },
   listStudentTasks(): SubmissionTask[] {
     return studentTasks;
+  },
+  createUploadReceipt(fileName: string): UploadReceipt {
+    return {
+      submissionId: 2026051001,
+      fileName,
+      version: 1,
+      submittedAt: new Date().toISOString(),
+      status: '已提交',
+    };
   },
 };

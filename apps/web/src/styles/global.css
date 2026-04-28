@@ -458,7 +458,9 @@ button:focus-visible {
 .assignment-card,
 .student-task-card,
 .student-row,
-.import-dropzone {
+.import-dropzone,
+.upload-dropzone,
+.receipt-card {
   border: 1px solid #e2e8f0;
   border-radius: 18px;
   background: linear-gradient(180deg, #ffffff, #f8fafc);
@@ -522,6 +524,107 @@ button:focus-visible {
   text-align: center;
   border-style: dashed;
   background: linear-gradient(135deg, #eff6ff, #f8fafc);
+}
+
+.upload-dropzone {
+  display: grid;
+  gap: 6px;
+  place-items: center;
+  padding: 18px;
+  color: #475569;
+  text-align: center;
+  border-style: dashed;
+  background: linear-gradient(135deg, #eff6ff, #f8fafc);
+}
+
+.upload-dropzone svg {
+  color: #2563eb;
+}
+
+.upload-dropzone strong {
+  color: #0f172a;
+}
+
+.student-upload-card {
+  display: grid;
+  gap: 14px;
+  margin-top: 18px;
+}
+
+.file-name-field {
+  display: grid;
+  gap: 7px;
+  color: #475569;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.file-name-field input {
+  width: 100%;
+  padding: 12px 13px;
+  color: #0f172a;
+  border: 1px solid #cbd5e1;
+  border-radius: 12px;
+  background: #fff;
+}
+
+.detected-profile {
+  padding: 12px;
+  border-radius: 14px;
+  background: #f8fafc;
+}
+
+.detected-profile span,
+.detected-profile strong {
+  display: block;
+}
+
+.detected-profile span {
+  color: #64748b;
+  font-size: 12px;
+}
+
+.detected-profile strong {
+  margin-top: 4px;
+  color: #0f172a;
+}
+
+.upload-progress {
+  height: 10px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: #e2e8f0;
+}
+
+.upload-progress span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(135deg, #2563eb, #14b8a6);
+}
+
+.receipt-card {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  padding: 12px;
+  border-color: #99f6e4;
+  background: #f0fdfa;
+}
+
+.receipt-card svg {
+  color: #0f766e;
+}
+
+.receipt-card span {
+  display: block;
+  margin-top: 3px;
+  color: #64748b;
+  font-size: 13px;
+}
+
+.full-width {
+  width: 100%;
 }
 
 .import-dropzone svg {

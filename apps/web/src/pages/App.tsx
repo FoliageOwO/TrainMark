@@ -361,6 +361,15 @@ function TeacherDashboard({
 }
 
 function StudentDashboard({ tasks }: { tasks: ReturnType<typeof mockApi.listStudentTasks> }) {
+  const [selectedFileName, setSelectedFileName] = useState('JavaWeb综合实训报告-张三-2024010101.pdf');
+  const [uploadProgress, setUploadProgress] = useState(72);
+  const [receipt, setReceipt] = useState<ReturnType<typeof mockApi.createUploadReceipt> | null>(null);
+
+  const confirmUpload = () => {
+    setUploadProgress(100);
+    setReceipt(mockApi.createUploadReceipt(selectedFileName));
+  };
+
   return (
     <section className="student-grid">
       <article className="panel wide-panel">
@@ -394,10 +403,48 @@ function StudentDashboard({ tasks }: { tasks: ReturnType<typeof mockApi.listStud
       <article className="panel">
         <div className="panel-heading">
           <div>
-            <p className="eyebrow">Upload Guide</p>
-            <h3>提交要求</h3>
+            <p className="eyebrow">Upload</p>
+            <h3>上传报告</h3>
           </div>
           <UploadCloud size={22} />
+        </div>
+        <div className="student-upload-card">
+          <div className="upload-dropzone compact">
+            <UploadCloud size={24} />
+            <strong>拖拽报告到这里</strong>
+            <span>PDF / Word / JPG / PNG，最大 50MB</span>
+          </div>
+          <label className="file-name-field">
+            文件名
+            <input
+              value={selectedFileName}
+              onChange={(event) => {
+                setSelectedFileName(event.target.value);
+                setReceipt(null);
+                setUploadProgress(36);
+              }}
+            />
+          </label>
+          <div className="detected-profile">
+            <span>识别信息</span>
+            <strong>张三 / 2024010101 / 软件2401班</strong>
+          </div>
+          <div className="upload-progress" aria-label="上传进度">
+            <span style={{ width: `${uploadProgress}%` }} />
+          </div>
+          {receipt ? (
+            <div className="receipt-card">
+              <CheckCircle2 size={18} />
+              <div>
+                <strong>提交成功</strong>
+                <span>回执 #{receipt.submissionId} · 版本 {receipt.version}</span>
+              </div>
+            </div>
+          ) : (
+            <button className="primary-button full-width" type="button" onClick={confirmUpload}>
+              确认提交
+            </button>
+          )}
         </div>
         <ul className="feature-list">
           <li><FileText size={16} /> 支持 PDF、Word、JPG、PNG</li>

@@ -87,3 +87,11 @@ export type SubmissionTask = {
   deadline: string;
   score?: number;
 };
+
+export type UploadReceipt = {
+  submissionId: number;
+  fileName: string;
+  version: number;
+  submittedAt: string;
+  status: '已提交' | '批改中' | '已发布成绩';
+};
