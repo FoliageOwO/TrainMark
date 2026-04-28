@@ -3,13 +3,11 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev:web": "npm --prefix apps/web run dev",
-    "build:web": "npm --prefix apps/web run build",
+    "dev:web": "pnpm --filter trainmark-ai-web dev",
+    "build:web": "pnpm --filter trainmark-ai-web build",
     "dev:infra": "docker compose -f infra/docker-compose.yml up -d",
     "stop:infra": "docker compose -f infra/docker-compose.yml down",
     "build:backend": "mvn -f backend/pom.xml package -DskipTests"
   },
-  "workspaces": [
-    "apps/web"
-  ]
+  "packageManager": "pnpm@10.17.1"
 }
