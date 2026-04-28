@@ -20,6 +20,11 @@ button {
   font: inherit;
 }
 
+button:focus-visible {
+  outline: 3px solid rgba(37, 99, 235, 0.26);
+  outline-offset: 2px;
+}
+
 .app-shell {
   display: flex;
   min-height: 100vh;
@@ -91,7 +96,7 @@ button {
 }
 
 .nav-item:hover,
-.nav-item:first-child {
+.nav-item.active {
   color: #1d4ed8;
   background: #eff6ff;
 }
@@ -134,6 +139,29 @@ button {
   align-items: center;
 }
 
+.role-switcher {
+  display: flex;
+  gap: 6px;
+  padding: 5px;
+  border: 1px solid rgba(148, 163, 184, 0.24);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.78);
+}
+
+.role-switcher button {
+  padding: 8px 12px;
+  color: #475569;
+  cursor: pointer;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+}
+
+.role-switcher button.selected {
+  color: #fff;
+  background: #0f172a;
+}
+
 .icon-button,
 .avatar {
   display: grid;
@@ -169,6 +197,34 @@ button {
   margin-bottom: 18px;
 }
 
+.hero-actions {
+  display: flex;
+  gap: 14px;
+  align-items: center;
+}
+
+.user-chip {
+  padding: 10px 14px;
+  border: 1px solid rgba(148, 163, 184, 0.22);
+  border-radius: 16px;
+  background: #fff;
+}
+
+.user-chip span,
+.user-chip small {
+  display: block;
+}
+
+.user-chip span {
+  color: #0f172a;
+  font-weight: 800;
+}
+
+.user-chip small {
+  margin-top: 2px;
+  color: #64748b;
+}
+
 .hero-card p {
   max-width: 760px;
   margin: 10px 0 0;
@@ -178,6 +234,10 @@ button {
 
 .primary-button,
 .task-card button {
+  display: inline-flex;
+  gap: 8px;
+  align-items: center;
+  justify-content: center;
   border: 0;
   color: white;
   cursor: pointer;
@@ -189,6 +249,18 @@ button {
 .primary-button {
   padding: 13px 18px;
   white-space: nowrap;
+}
+
+.ghost-button {
+  display: inline-flex;
+  gap: 6px;
+  align-items: center;
+  padding: 9px 12px;
+  color: #2563eb;
+  cursor: pointer;
+  border: 1px solid #bfdbfe;
+  border-radius: 12px;
+  background: #eff6ff;
 }
 
 .stats-grid {
@@ -224,6 +296,14 @@ button {
   gap: 18px;
 }
 
+.management-grid,
+.student-grid {
+  display: grid;
+  grid-template-columns: 1.25fr 1fr;
+  gap: 18px;
+  margin-bottom: 18px;
+}
+
 .panel {
   padding: 22px;
 }
@@ -240,6 +320,15 @@ button {
   font-weight: 700;
   border-radius: 999px;
   background: #ccfbf1;
+}
+
+.score-chip {
+  padding: 6px 10px;
+  color: #1d4ed8;
+  font-size: 12px;
+  font-weight: 800;
+  border-radius: 999px;
+  background: #dbeafe;
 }
 
 .pipeline,
@@ -288,6 +377,129 @@ button {
   list-style: none;
 }
 
+.course-tabs,
+.class-list,
+.assignment-list,
+.student-task-list {
+  display: grid;
+  gap: 12px;
+  margin-top: 18px;
+}
+
+.course-tabs {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.course-tabs button {
+  padding: 14px;
+  text-align: left;
+  cursor: pointer;
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  background: #fff;
+}
+
+.course-tabs button.selected {
+  border-color: #93c5fd;
+  background: linear-gradient(135deg, #eff6ff, #ecfeff);
+}
+
+.course-tabs strong,
+.course-tabs span,
+.course-summary-card span,
+.class-row span,
+.assignment-card span,
+.student-task-card span {
+  display: block;
+}
+
+.course-tabs span,
+.course-summary-card span,
+.class-row span,
+.assignment-card span,
+.student-task-card span {
+  margin-top: 4px;
+  color: #64748b;
+  font-size: 13px;
+}
+
+.course-summary-card {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 18px;
+  margin-top: 14px;
+  border-radius: 18px;
+  background: #0f172a;
+}
+
+.course-summary-card h3,
+.course-summary-card .eyebrow,
+.course-summary-card span {
+  color: #fff;
+}
+
+.summary-metrics {
+  display: grid;
+  gap: 8px;
+  align-content: center;
+  min-width: 120px;
+}
+
+.summary-metrics span {
+  padding: 7px 10px;
+  text-align: center;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.class-row,
+.assignment-card,
+.student-task-card {
+  border: 1px solid #e2e8f0;
+  border-radius: 18px;
+  background: linear-gradient(180deg, #ffffff, #f8fafc);
+}
+
+.class-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px;
+}
+
+.assignment-card,
+.student-task-card {
+  display: grid;
+  gap: 12px;
+  padding: 16px;
+}
+
+.assignment-title,
+.assignment-meta,
+.assignment-flags {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.assignment-title svg {
+  color: #2563eb;
+}
+
+.assignment-flags span {
+  padding: 6px 9px;
+  color: #475569;
+  border-radius: 999px;
+  background: #f1f5f9;
+}
+
+.student-task-card {
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: center;
+}
+
 @media (max-width: 1040px) {
   .app-shell {
     display: block;
@@ -302,7 +514,9 @@ button {
   }
 
   .stats-grid,
-  .content-grid {
+  .content-grid,
+  .management-grid,
+  .student-grid {
     grid-template-columns: 1fr;
   }
 }
@@ -314,9 +528,26 @@ button {
   }
 
   .topbar,
-  .hero-card {
+  .hero-card,
+  .hero-actions,
+  .student-task-card {
     align-items: flex-start;
     flex-direction: column;
+  }
+
+  .topbar-actions,
+  .role-switcher,
+  .course-summary-card {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .role-switcher {
+    border-radius: 18px;
+  }
+
+  .course-tabs {
+    grid-template-columns: 1fr;
   }
 
   .nav-list {
