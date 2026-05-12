@@ -381,7 +381,9 @@ button:focus-visible {
 .class-list,
 .assignment-list,
 .student-task-list,
-.student-list {
+.student-list,
+.rubric-list,
+.grading-job-list {
   display: grid;
   gap: 12px;
   margin-top: 18px;
@@ -461,7 +463,9 @@ button:focus-visible {
 .import-dropzone,
 .upload-dropzone,
 .receipt-card,
-.unsubmitted-row {
+.unsubmitted-row,
+.rubric-row,
+.grading-job-card {
   border: 1px solid #e2e8f0;
   border-radius: 18px;
   background: linear-gradient(180deg, #ffffff, #f8fafc);
@@ -763,6 +767,54 @@ button:focus-visible {
   display: block;
   margin-top: 4px;
   color: #64748b;
+}
+
+.rubric-summary {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: center;
+  padding: 16px;
+  margin-top: 18px;
+  border-radius: 18px;
+  background: linear-gradient(135deg, #0f172a, #1e3a8a);
+}
+
+.rubric-summary strong,
+.rubric-summary span:not(.score-chip) {
+  display: block;
+  color: #fff;
+}
+
+.rubric-summary span:not(.score-chip) {
+  margin-top: 4px;
+  color: #dbeafe;
+}
+
+.rubric-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: center;
+  padding: 14px;
+}
+
+.rubric-row span {
+  display: block;
+  margin-top: 4px;
+  color: #64748b;
+  font-size: 13px;
+}
+
+.rubric-row b {
+  color: #2563eb;
+  white-space: nowrap;
+}
+
+.grading-job-card {
+  display: grid;
+  gap: 12px;
+  padding: 16px;
 }
 
 @media (max-width: 1040px) {

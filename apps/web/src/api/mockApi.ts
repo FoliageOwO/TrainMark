@@ -3,9 +3,11 @@ import type {
   CourseSummary,
   CollectionOverview,
   DashboardMetrics,
+  GradingJobSummary,
   OrganizationSummary,
   ReminderResult,
   RoleCode,
+  RubricSummary,
   StudentImportPreview,
   SubmissionTask,
   TeachingClassSummary,
@@ -82,6 +84,24 @@ const unsubmittedStudents: UnsubmittedStudent[] = [
   { studentId: 43, studentNo: '2024010243', name: '孙可', className: '软件2402班', email: 'sunke@trainmark.local' },
 ];
 
+const rubrics: RubricSummary[] = [
+  {
+    id: 1,
+    assignmentId: 1,
+    name: 'Java Web 实训评分标准',
+    totalScore: 100,
+    items: [
+      { id: 1, title: '需求与设计', score: 20, courseOutcomeCode: 'CO1', points: [{ id: 1, title: '功能模块完整', score: 12, keywords: ['登录', '课程', '任务', '提交'] }] },
+      { id: 2, title: '系统实现', score: 50, courseOutcomeCode: 'CO2', points: [{ id: 2, title: '核心流程可运行', score: 30, keywords: ['上传', '批改', '发布'] }] },
+      { id: 3, title: '报告规范', score: 30, courseOutcomeCode: 'CO3', points: [{ id: 3, title: '结构完整清晰', score: 20, keywords: ['目录', '截图', '总结'] }] },
+    ],
+  },
+];
+
+const gradingJobs: GradingJobSummary[] = [
+  { id: 1, assignmentId: 1, rubricId: 1, totalSubmissions: 65, completedSubmissions: 47, status: 'SCORING', confidence: 86, createdAt: '2026-05-12T10:12:00+08:00' },
+];
+
 export const mockApi = {
   login(role: RoleCode): UserProfile {
     return users[role];
@@ -123,6 +143,15 @@ export const mockApi = {
       channels: ['站内信', '邮件', '企业微信'],
       status: '已发送',
     };
+  },
+  listRubrics(): RubricSummary[] {
+    return rubrics;
+  },
+  listGradingJobs(): GradingJobSummary[] {
+    return gradingJobs;
+  },
+  startGradingJob(): GradingJobSummary {
+    return { id: 2, assignmentId: 1, rubricId: 1, totalSubmissions: 18, completedSubmissions: 0, status: 'PENDING', confidence: 0, createdAt: new Date().toISOString() };
   },
   createUploadReceipt(fileName: string): UploadReceipt {
     return {

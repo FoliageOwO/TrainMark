@@ -46,6 +46,17 @@ const statusText = {
   CLOSED: '已截止',
 };
 
+const gradingStatusText = {
+  PENDING: '等待中',
+  OCR_RUNNING: 'OCR中',
+  STRUCTURING: '结构化',
+  SCORING: '评分中',
+  ANNOTATING: '生成批注',
+  COMPLETED: '已完成',
+  FAILED: '失败',
+  RETRYING: '重试中',
+};
+
 export function App() {
   const [user, setUser] = useState<UserProfile>(() => mockApi.login('TEACHER'));
   const [activeNav, setActiveNav] = useState('工作台');
@@ -63,6 +74,8 @@ export function App() {
   const importPreview = mockApi.getStudentImportPreview();
   const collectionOverview = mockApi.getCollectionOverview();
   const unsubmittedStudents = mockApi.listUnsubmittedStudents();
+  const rubrics = mockApi.listRubrics();
+  const gradingJobs = mockApi.listGradingJobs();
 
   const teacherStats = [
     { label: '进行中任务', value: String(metrics.activeAssignments), trend: '+2 本周', tone: 'blue' },
@@ -159,6 +172,8 @@ export function App() {
             collectionOverview={collectionOverview}
             students={students}
             unsubmittedStudents={unsubmittedStudents}
+            rubrics={rubrics}
+            gradingJobs={gradingJobs}
           />
         )}
       </section>
@@ -179,6 +194,8 @@ function TeacherDashboard({
   collectionOverview,
   students,
   unsubmittedStudents,
+  rubrics,
+  gradingJobs,
 }: {
   assignments: ReturnType<typeof mockApi.listAssignments>;
   classes: ReturnType<typeof mockApi.listClasses>;
@@ -192,9 +209,14 @@ function TeacherDashboard({
   collectionOverview: ReturnType<typeof mockApi.getCollectionOverview>;
   students: ReturnType<typeof mockApi.listUsers>;
   unsubmittedStudents: ReturnType<typeof mockApi.listUnsubmittedStudents>;
+  rubrics: ReturnType<typeof mockApi.listRubrics>;
+  gradingJobs: ReturnType<typeof mockApi.listGradingJobs>;
 }) {
   const [reminderResult, setReminderResult] = useState<ReturnType<typeof mockApi.remindUnsubmitted> | null>(null);
+  const [startedJob, setStartedJob] = useState<ReturnType<typeof mockApi.startGradingJob> | null>(null);
   const submittedRate = Math.round((collectionOverview.submitted / collectionOverview.totalStudents) * 100);
+  const rubric = rubrics[0];
+  const visibleJobs = startedJob ? [startedJob, ...gradingJobs] : gradingJobs;
 
   return (
     <>
@@ -280,6 +302,67 @@ function TeacherDashboard({
                 </div>
               </div>
             ))}
+          </div>
+        </article>
+      </section>
+
+      <section className="management-grid">
+        <article className="panel rubric-panel">
+          <div className="panel-heading">
+            <div>
+              <p className="eyebrow">Rubric</p>
+              <h3>评分标准</h3>
+            </div>
+            <button className="ghost-button" type="button"><Plus size={15} /> 编辑标准</button>
+          </div>
+          <div className="rubric-summary">
+            <div>
+              <strong>{rubric.name}</strong>
+              <span>总分 {rubric.totalScore} · {rubric.items.length} 个评分项</span>
+            </div>
+            <span className="score-chip">可解释评分</span>
+          </div>
+          <div className="rubric-list">
+            {rubric.items.map((item) => (
+              <div className="rubric-row" key={item.id}>
+                <div>
+                  <strong>{item.title}</strong>
+                  <span>{item.courseOutcomeCode} · {item.points[0]?.title ?? '待配置得分点'}</span>
+                </div>
+                <b>{item.score} 分</b>
+              </div>
+            ))}
+          </div>
+        </article>
+
+        <article className="panel grading-panel">
+          <div className="panel-heading">
+            <div>
+              <p className="eyebrow">AI Grading</p>
+              <h3>批改队列</h3>
+            </div>
+            <button className="ghost-button" type="button" onClick={() => setStartedJob(mockApi.startGradingJob())}>
+              <Sparkles size={15} /> 启动批改
+            </button>
+          </div>
+          <div className="grading-job-list">
+            {visibleJobs.map((job) => {
+              const progress = job.totalSubmissions === 0 ? 0 : Math.round((job.completedSubmissions / job.totalSubmissions) * 100);
+              return (
+                <div className="grading-job-card" key={job.id}>
+                  <div className="assignment-title">
+                    <Sparkles size={18} />
+                    <strong>批改任务 #{job.id}</strong>
+                  </div>
+                  <div className="assignment-meta">
+                    <span>{job.completedSubmissions}/{job.totalSubmissions} 份完成</span>
+                    <span className="status-pill">{gradingStatusText[job.status]}</span>
+                    <span>置信度 {job.confidence}%</span>
+                  </div>
+                  <div className="upload-progress"><span style={{ width: `${progress}%` }} /></div>
+                </div>
+              );
+            })}
           </div>
         </article>
       </section>

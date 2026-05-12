@@ -121,3 +121,39 @@ export type ReminderResult = {
   channels: Array<'站内信' | '邮件' | '企业微信'>;
   status: '已发送';
 };
+
+export type RubricPoint = {
+  id: number;
+  title: string;
+  score: number;
+  keywords: string[];
+};
+
+export type RubricItem = {
+  id: number;
+  title: string;
+  score: number;
+  courseOutcomeCode: string;
+  points: RubricPoint[];
+};
+
+export type RubricSummary = {
+  id: number;
+  assignmentId: number;
+  name: string;
+  totalScore: number;
+  items: RubricItem[];
+};
+
+export type GradingJobStatus = 'PENDING' | 'OCR_RUNNING' | 'STRUCTURING' | 'SCORING' | 'ANNOTATING' | 'COMPLETED' | 'FAILED' | 'RETRYING';
+
+export type GradingJobSummary = {
+  id: number;
+  assignmentId: number;
+  rubricId: number;
+  totalSubmissions: number;
+  completedSubmissions: number;
+  status: GradingJobStatus;
+  confidence: number;
+  createdAt: string;
+};
