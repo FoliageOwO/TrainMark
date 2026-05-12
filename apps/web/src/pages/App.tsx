@@ -57,6 +57,15 @@ const gradingStatusText = {
   RETRYING: '重试中',
 };
 
+const ocrStatusText = {
+  PENDING: '等待中',
+  PREPROCESSING: '预处理',
+  RECOGNIZING: '识别中',
+  STRUCTURING: '结构化',
+  COMPLETED: '已完成',
+  FAILED: '失败',
+};
+
 export function App() {
   const [user, setUser] = useState<UserProfile>(() => mockApi.login('TEACHER'));
   const [activeNav, setActiveNav] = useState('工作台');
@@ -76,6 +85,7 @@ export function App() {
   const unsubmittedStudents = mockApi.listUnsubmittedStudents();
   const rubrics = mockApi.listRubrics();
   const gradingJobs = mockApi.listGradingJobs();
+  const ocrJobs = mockApi.listOcrJobs();
 
   const teacherStats = [
     { label: '进行中任务', value: String(metrics.activeAssignments), trend: '+2 本周', tone: 'blue' },
@@ -174,6 +184,7 @@ export function App() {
             unsubmittedStudents={unsubmittedStudents}
             rubrics={rubrics}
             gradingJobs={gradingJobs}
+            ocrJobs={ocrJobs}
           />
         )}
       </section>
@@ -196,6 +207,7 @@ function TeacherDashboard({
   unsubmittedStudents,
   rubrics,
   gradingJobs,
+  ocrJobs,
 }: {
   assignments: ReturnType<typeof mockApi.listAssignments>;
   classes: ReturnType<typeof mockApi.listClasses>;
@@ -211,6 +223,7 @@ function TeacherDashboard({
   unsubmittedStudents: ReturnType<typeof mockApi.listUnsubmittedStudents>;
   rubrics: ReturnType<typeof mockApi.listRubrics>;
   gradingJobs: ReturnType<typeof mockApi.listGradingJobs>;
+  ocrJobs: ReturnType<typeof mockApi.listOcrJobs>;
 }) {
   const [reminderResult, setReminderResult] = useState<ReturnType<typeof mockApi.remindUnsubmitted> | null>(null);
   const [startedJob, setStartedJob] = useState<ReturnType<typeof mockApi.startGradingJob> | null>(null);
@@ -363,6 +376,59 @@ function TeacherDashboard({
                 </div>
               );
             })}
+          </div>
+        </article>
+      </section>
+
+      <section className="management-grid">
+        <article className="panel ocr-panel">
+          <div className="panel-heading">
+            <div>
+              <p className="eyebrow">OCR Pipeline</p>
+              <h3>文档识别与结构化</h3>
+            </div>
+            <span className="status-pill">PaddleOCR</span>
+          </div>
+          <div className="ocr-job-list">
+            {ocrJobs.map((job) => (
+              <div className="ocr-job-card" key={job.id}>
+                <div className="assignment-title">
+                  <FileText size={18} />
+                  <strong>OCR 任务 #{job.id}</strong>
+                </div>
+                <div className="assignment-meta">
+                  <span>{job.pageCount} 页</span>
+                  <span>{job.textBlockCount} 文本块</span>
+                  <span>{job.tableCount} 表格</span>
+                  <span className="status-pill">{ocrStatusText[job.status]}</span>
+                </div>
+                <div className="ocr-confidence">
+                  <span>识别置信度</span>
+                  <strong>{job.confidence}%</strong>
+                </div>
+              </div>
+            ))}
+          </div>
+        </article>
+
+        <article className="panel ocr-panel">
+          <div className="panel-heading">
+            <div>
+              <p className="eyebrow">Structured Blocks</p>
+              <h3>结构识别结果</h3>
+            </div>
+            <span className="status-pill">可用于评分</span>
+          </div>
+          <div className="ocr-block-list">
+            {ocrJobs[0]?.blocks.map((block) => (
+              <div className="ocr-block-row" key={`${block.type}-${block.page}-${block.title}`}>
+                <div>
+                  <strong>{block.title}</strong>
+                  <span>{block.type} · 第 {block.page} 页</span>
+                </div>
+                <b>{block.confidence}%</b>
+              </div>
+            ))}
           </div>
         </article>
       </section>

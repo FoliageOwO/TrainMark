@@ -383,7 +383,9 @@ button:focus-visible {
 .student-task-list,
 .student-list,
 .rubric-list,
-.grading-job-list {
+.grading-job-list,
+.ocr-job-list,
+.ocr-block-list {
   display: grid;
   gap: 12px;
   margin-top: 18px;
@@ -465,7 +467,9 @@ button:focus-visible {
 .receipt-card,
 .unsubmitted-row,
 .rubric-row,
-.grading-job-card {
+.grading-job-card,
+.ocr-job-card,
+.ocr-block-row {
   border: 1px solid #e2e8f0;
   border-radius: 18px;
   background: linear-gradient(180deg, #ffffff, #f8fafc);
@@ -815,6 +819,49 @@ button:focus-visible {
   display: grid;
   gap: 12px;
   padding: 16px;
+}
+
+.ocr-job-card {
+  display: grid;
+  gap: 12px;
+  padding: 16px;
+}
+
+.ocr-confidence {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px;
+  border-radius: 14px;
+  background: #eff6ff;
+}
+
+.ocr-confidence span {
+  color: #475569;
+}
+
+.ocr-confidence strong {
+  color: #2563eb;
+  font-size: 22px;
+}
+
+.ocr-block-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: center;
+  padding: 14px;
+}
+
+.ocr-block-row span {
+  display: block;
+  margin-top: 4px;
+  color: #64748b;
+  font-size: 13px;
+}
+
+.ocr-block-row b {
+  color: #0f766e;
 }
 
 @media (max-width: 1040px) {

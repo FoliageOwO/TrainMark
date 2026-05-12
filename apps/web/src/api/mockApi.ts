@@ -4,6 +4,7 @@ import type {
   CollectionOverview,
   DashboardMetrics,
   GradingJobSummary,
+  OcrJobSummary,
   OrganizationSummary,
   ReminderResult,
   RoleCode,
@@ -102,6 +103,24 @@ const gradingJobs: GradingJobSummary[] = [
   { id: 1, assignmentId: 1, rubricId: 1, totalSubmissions: 65, completedSubmissions: 47, status: 'SCORING', confidence: 86, createdAt: '2026-05-12T10:12:00+08:00' },
 ];
 
+const ocrJobs: OcrJobSummary[] = [
+  {
+    id: 1,
+    submissionId: 1,
+    objectKey: 'assignments/1/students/2/report.pdf',
+    status: 'STRUCTURING',
+    pageCount: 18,
+    textBlockCount: 142,
+    tableCount: 6,
+    confidence: 93,
+    blocks: [
+      { type: 'heading', title: '需求分析', page: 2, confidence: 96 },
+      { type: 'table', title: '数据库表结构', page: 7, confidence: 91 },
+      { type: 'image', title: '系统运行截图', page: 12, confidence: 88 },
+    ],
+  },
+];
+
 export const mockApi = {
   login(role: RoleCode): UserProfile {
     return users[role];
@@ -149,6 +168,9 @@ export const mockApi = {
   },
   listGradingJobs(): GradingJobSummary[] {
     return gradingJobs;
+  },
+  listOcrJobs(): OcrJobSummary[] {
+    return ocrJobs;
   },
   startGradingJob(): GradingJobSummary {
     return { id: 2, assignmentId: 1, rubricId: 1, totalSubmissions: 18, completedSubmissions: 0, status: 'PENDING', confidence: 0, createdAt: new Date().toISOString() };

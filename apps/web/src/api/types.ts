@@ -157,3 +157,24 @@ export type GradingJobSummary = {
   confidence: number;
   createdAt: string;
 };
+
+export type OcrJobStatus = 'PENDING' | 'PREPROCESSING' | 'RECOGNIZING' | 'STRUCTURING' | 'COMPLETED' | 'FAILED';
+
+export type OcrBlock = {
+  type: 'heading' | 'paragraph' | 'table' | 'image';
+  title: string;
+  page: number;
+  confidence: number;
+};
+
+export type OcrJobSummary = {
+  id: number;
+  submissionId: number;
+  objectKey: string;
+  status: OcrJobStatus;
+  pageCount: number;
+  textBlockCount: number;
+  tableCount: number;
+  confidence: number;
+  blocks: OcrBlock[];
+};
