@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, type CSSProperties } from 'react';
 import {
   BarChart3,
   Bell,
@@ -61,6 +61,8 @@ export function App() {
   const organizations = mockApi.listOrganizations();
   const students = mockApi.listUsers('STUDENT');
   const importPreview = mockApi.getStudentImportPreview();
+  const collectionOverview = mockApi.getCollectionOverview();
+  const unsubmittedStudents = mockApi.listUnsubmittedStudents();
 
   const teacherStats = [
     { label: '进行中任务', value: String(metrics.activeAssignments), trend: '+2 本周', tone: 'blue' },
@@ -154,7 +156,9 @@ export function App() {
             stats={teacherStats}
             importPreview={importPreview}
             organizations={organizations}
+            collectionOverview={collectionOverview}
             students={students}
+            unsubmittedStudents={unsubmittedStudents}
           />
         )}
       </section>
@@ -172,7 +176,9 @@ function TeacherDashboard({
   stats,
   importPreview,
   organizations,
+  collectionOverview,
   students,
+  unsubmittedStudents,
 }: {
   assignments: ReturnType<typeof mockApi.listAssignments>;
   classes: ReturnType<typeof mockApi.listClasses>;
@@ -183,8 +189,13 @@ function TeacherDashboard({
   stats: Array<{ label: string; value: string; trend: string; tone: string }>;
   importPreview: ReturnType<typeof mockApi.getStudentImportPreview>;
   organizations: ReturnType<typeof mockApi.listOrganizations>;
+  collectionOverview: ReturnType<typeof mockApi.getCollectionOverview>;
   students: ReturnType<typeof mockApi.listUsers>;
+  unsubmittedStudents: ReturnType<typeof mockApi.listUnsubmittedStudents>;
 }) {
+  const [reminderResult, setReminderResult] = useState<ReturnType<typeof mockApi.remindUnsubmitted> | null>(null);
+  const submittedRate = Math.round((collectionOverview.submitted / collectionOverview.totalStudents) * 100);
+
   return (
     <>
       <section className="stats-grid">
@@ -267,6 +278,59 @@ function TeacherDashboard({
                   <span>{item.aiGradingEnabled ? 'AI 批改开启' : '人工批改'}</span>
                   <span>{item.similarityCheckEnabled ? '查重开启' : '查重关闭'}</span>
                 </div>
+              </div>
+            ))}
+          </div>
+        </article>
+      </section>
+
+      <section className="management-grid">
+        <article className="panel collection-panel">
+          <div className="panel-heading">
+            <div>
+              <p className="eyebrow">Submission Collection</p>
+              <h3>报告收集看板</h3>
+            </div>
+            <button className="ghost-button" type="button" onClick={() => setReminderResult(mockApi.remindUnsubmitted())}>
+              <Bell size={15} /> 一键催交
+            </button>
+          </div>
+          <div className="collection-summary">
+            <div className="collection-ring" style={{ '--rate': `${submittedRate}%` } as CSSProperties}>
+              <strong>{submittedRate}%</strong>
+              <span>提交率</span>
+            </div>
+            <div className="collection-stats">
+              <span><strong>{collectionOverview.totalStudents}</strong>应交</span>
+              <span><strong>{collectionOverview.submitted}</strong>已交</span>
+              <span><strong>{collectionOverview.unsubmitted}</strong>未交</span>
+              <span><strong>{collectionOverview.lateSubmitted}</strong>迟交</span>
+            </div>
+          </div>
+          {reminderResult && (
+            <div className="reminder-result">
+              <CheckCircle2 size={18} />
+              <span>{reminderResult.status}：{reminderResult.recipientCount} 名学生，{reminderResult.messageCount} 条消息</span>
+            </div>
+          )}
+        </article>
+
+        <article className="panel collection-panel">
+          <div className="panel-heading">
+            <div>
+              <p className="eyebrow">Unsubmitted</p>
+              <h3>未交名单</h3>
+            </div>
+            <span className="status-pill">{unsubmittedStudents.length} 人待提醒</span>
+          </div>
+          <div className="unsubmitted-list">
+            {unsubmittedStudents.map((student) => (
+              <div className="unsubmitted-row" key={student.studentId}>
+                <div>
+                  <strong>{student.name}</strong>
+                  <span>{student.studentNo} · {student.className}</span>
+                </div>
+                <small>{student.email}</small>
               </div>
             ))}
           </div>

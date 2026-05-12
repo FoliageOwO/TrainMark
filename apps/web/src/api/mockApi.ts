@@ -1,13 +1,16 @@
 import type {
   AssignmentSummary,
   CourseSummary,
+  CollectionOverview,
   DashboardMetrics,
   OrganizationSummary,
+  ReminderResult,
   RoleCode,
   StudentImportPreview,
   SubmissionTask,
   TeachingClassSummary,
   UploadReceipt,
+  UnsubmittedStudent,
   UserProfile,
   UserSummary,
 } from './types';
@@ -62,6 +65,23 @@ const studentTasks: SubmissionTask[] = [
   { id: 2, title: '数据库设计报告', courseName: '数据库设计实训', status: '已发布成绩', deadline: '2026-04-20T23:59:00+08:00', score: 88 },
 ];
 
+const collectionOverview: CollectionOverview = {
+  assignmentId: 1,
+  totalStudents: 96,
+  submitted: 65,
+  unsubmitted: 31,
+  lateSubmitted: 4,
+  processing: 18,
+  reviewed: 12,
+  published: 0,
+};
+
+const unsubmittedStudents: UnsubmittedStudent[] = [
+  { studentId: 12, studentNo: '2024010112', name: '周明', className: '软件2401班', email: 'zhouming@trainmark.local' },
+  { studentId: 18, studentNo: '2024010118', name: '钱雨', className: '软件2401班', email: 'qianyu@trainmark.local' },
+  { studentId: 43, studentNo: '2024010243', name: '孙可', className: '软件2402班', email: 'sunke@trainmark.local' },
+];
+
 export const mockApi = {
   login(role: RoleCode): UserProfile {
     return users[role];
@@ -89,6 +109,20 @@ export const mockApi = {
   },
   listStudentTasks(): SubmissionTask[] {
     return studentTasks;
+  },
+  getCollectionOverview(): CollectionOverview {
+    return collectionOverview;
+  },
+  listUnsubmittedStudents(): UnsubmittedStudent[] {
+    return unsubmittedStudents;
+  },
+  remindUnsubmitted(): ReminderResult {
+    return {
+      recipientCount: unsubmittedStudents.length,
+      messageCount: unsubmittedStudents.length * 3,
+      channels: ['站内信', '邮件', '企业微信'],
+      status: '已发送',
+    };
   },
   createUploadReceipt(fileName: string): UploadReceipt {
     return {

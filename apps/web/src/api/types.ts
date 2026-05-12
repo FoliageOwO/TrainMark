@@ -95,3 +95,29 @@ export type UploadReceipt = {
   submittedAt: string;
   status: '已提交' | '批改中' | '已发布成绩';
 };
+
+export type CollectionOverview = {
+  assignmentId: number;
+  totalStudents: number;
+  submitted: number;
+  unsubmitted: number;
+  lateSubmitted: number;
+  processing: number;
+  reviewed: number;
+  published: number;
+};
+
+export type UnsubmittedStudent = {
+  studentId: number;
+  studentNo: string;
+  name: string;
+  className: string;
+  email: string;
+};
+
+export type ReminderResult = {
+  recipientCount: number;
+  messageCount: number;
+  channels: Array<'站内信' | '邮件' | '企业微信'>;
+  status: '已发送';
+};
