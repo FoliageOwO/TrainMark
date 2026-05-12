@@ -125,6 +125,43 @@
 - `backend/db/migration/V2__seed_roles_permissions.sql`
 - `infra/docker-compose.yml`
 
+### 10. 评分标准与 AI 批改基础
+
+- 已实现评分标准 DTO。
+- 已实现评分项、得分点、关键词、同义词、课程目标字段。
+- 已实现评分标准列表和创建接口骨架。
+- 已实现 AI 批改任务列表和创建接口骨架。
+- 已在老师端加入评分标准摘要和批改队列面板。
+- 当前批改任务为内存模拟数据，后续需要接入 OCR、规则评分和语义评分。
+
+主要代码：
+
+- `backend/grading-service/src/main/java/com/trainmark/grading/`
+- `backend/shared/src/main/java/com/trainmark/shared/GradingJobStatus.java`
+- `backend/shared/src/main/java/com/trainmark/shared/dto/CreateRubricRequest.java`
+- `backend/shared/src/main/java/com/trainmark/shared/dto/RubricSummary.java`
+- `backend/shared/src/main/java/com/trainmark/shared/dto/CreateGradingJobRequest.java`
+- `backend/shared/src/main/java/com/trainmark/shared/dto/GradingJobSummary.java`
+- `apps/web/src/pages/App.tsx`
+
+### 11. OCR 与文档结构化基础
+
+- 已实现 OCR 任务状态枚举。
+- 已实现 OCR 任务创建 DTO。
+- 已实现 OCR 任务摘要、结构块、识别结果 DTO。
+- 已实现 OCR 任务列表、创建任务、查看结果接口骨架。
+- 已在老师端加入 OCR 处理状态和结构识别结果面板。
+- 当前 OCR 为内存模拟数据，后续需要接入 PaddleOCR 和真实文件转换流程。
+
+主要代码：
+
+- `backend/ocr-service/src/main/java/com/trainmark/ocr/`
+- `backend/shared/src/main/java/com/trainmark/shared/OcrJobStatus.java`
+- `backend/shared/src/main/java/com/trainmark/shared/dto/CreateOcrJobRequest.java`
+- `backend/shared/src/main/java/com/trainmark/shared/dto/OcrJobSummary.java`
+- `backend/shared/src/main/java/com/trainmark/shared/dto/OcrResultSummary.java`
+- `apps/web/src/pages/App.tsx`
+
 ## 已验证
 
 前端构建已多次通过：
@@ -149,50 +186,46 @@ Docker Compose 暂未本地验证，因为当前机器没有 Docker。
 - `feat: add user directory`
 - `feat: add submissions`
 - `feat: add reminders`
+- `feat: add grading`
+- `feat: add ocr`
 
 ## 接下来需要做
 
-### 1. 评分标准与 AI 批改
-
-- 设计评分标准 DTO。
-- 实现评分项、得分点、关键词、权重接口。
-- 实现批改任务创建和状态查询接口。
-- 前端加入评分标准编辑器。
-- 前端加入 AI 批改队列页面。
-
-### 2. OCR 与文档结构化
-
-- 补 `ocr-service` 接口。
-- 定义 OCR 任务、OCR 结果、版面结构 DTO。
-- 设计 PDF / Word / 图片统一处理流程。
-
-### 3. 人工复核
+### 1. 人工复核
 
 - 实现批改结果 DTO。
 - 实现单项分数、扣分原因、评语接口。
 - 前端加入 PDF 预览 + 评分面板布局。
 
-### 4. 成绩发布与学生查看结果
+### 2. 成绩发布与学生查看结果
 
 - 实现成绩发布接口。
 - 实现成绩撤回和修改审计。
 - 学生端加入成绩、批注、申诉入口。
 
-### 5. 统计分析
+### 3. 统计分析
 
 - 实现成绩统计接口。
 - 实现失分分析接口。
 - 实现课程目标达成度接口。
 - 前端加入图表展示。
 
-### 6. 持久化与真实联调
+### 4. 真实 AI / OCR 接入
+
+- 接入 PaddleOCR。
+- 增加 PDF / Word / 图片转换流程。
+- 实现 OCR 结果入库和结构化文本存储。
+- 实现规则评分、关键词匹配和语义相似度评分。
+- 实现批注 PDF 生成。
+
+### 5. 持久化与真实联调
 
 - 安装或配置 Maven 后编译后端。
 - 接入 PostgreSQL / Flyway。
 - 将当前内存服务替换为数据库实现。
 - 安装 Docker 后验证 `infra/docker-compose.yml`。
 
-### 7. 工程质量
+### 6. 工程质量
 
 - 拆分前端页面组件。
 - 增加 ESLint 配置。
