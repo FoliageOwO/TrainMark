@@ -628,6 +628,18 @@
 - `apps/web/src/pages/App.tsx`
 - `PROGRESS.md`
 
+### 22.9 教师端课程任务组件拆分
+
+- 已从教师端工作台中拆出 `TeacherCoursePanel`，顶部指标、课程切换、班级列表和实训任务卡片集中维护。
+- 课程/任务状态文案和任务截止时间格式化随组件下沉，减少 `App.tsx` 课程任务展示逻辑。
+- `App.tsx` 继续负责当前课程选择状态和课程相关数据装配。
+
+主要代码：
+
+- `apps/web/src/components/TeacherCoursePanel.tsx`
+- `apps/web/src/pages/App.tsx`
+- `PROGRESS.md`
+
 ### 23. 前端 HTTP 写操作联调
 
 - 已扩展前端 HTTP API 层，支持在 `VITE_API_MODE=http` 下调用后端写接口。
@@ -1545,6 +1557,14 @@ pnpm verify:mvp
 ```
 
 教师端申诉处理组件拆分后已通过静态检查和构建：
+
+```bash
+pnpm --filter trainmark-ai-web lint
+pnpm --filter trainmark-ai-web build
+pnpm verify:mvp
+```
+
+教师端课程任务组件拆分后已通过静态检查和构建：
 
 ```bash
 pnpm --filter trainmark-ai-web lint
