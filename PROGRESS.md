@@ -310,6 +310,17 @@
 - `README.md`
 - `PROGRESS.md`
 
+### 19. 评阅域持久化迁移
+
+- 已新增评阅域 Flyway 迁移脚本，补齐提交文件、评分点、OCR 任务、OCR 结构块、批改任务、批改结果、分项复核、PDF 批注、发布审计、学生申诉、查重任务、查重片段、成绩统计快照、失分点快照和课程目标达成度快照等表。
+- 已为高频查询路径补充索引，覆盖提交文件、OCR 任务、批改结果状态、学生成绩、发布审计、申诉、查重任务和统计快照。
+- 该模块先建立数据库契约，后续服务实现可以逐步从内存数据切换到 PostgreSQL。
+
+主要代码：
+
+- `backend/db/migration/V3__extend_assessment_schema.sql`
+- `PROGRESS.md`
+
 ## 已验证
 
 前端构建已通过：
@@ -342,6 +353,12 @@ mvn -f backend/pom.xml -pl similarity-service,gateway-service -am package -Dskip
 pnpm build:web
 ```
 
+评阅域持久化迁移加入后，后端全模块打包仍通过：
+
+```bash
+mvn -f backend/pom.xml package -DskipTests
+```
+
 全部后端模块已通过编译：
 
 ```bash
@@ -371,6 +388,7 @@ Docker Compose 暂未本地验证，因为当前机器没有 Docker。
 - `docs: update mvp runbook`
 - `feat: add similarity checks`
 - `feat: add frontend http api`
+- `feat: extend assessment schema`
 
 ## 接下来需要做
 
@@ -384,7 +402,7 @@ Docker Compose 暂未本地验证，因为当前机器没有 Docker。
 
 ### 2. 持久化与真实联调
 
-- 接入 PostgreSQL / Flyway。
+- 基于现有 Flyway 迁移补服务层数据库实现。
 - 将当前内存服务替换为数据库实现。
 - 安装 Docker 后验证 `infra/docker-compose.yml`。
 
@@ -394,4 +412,3 @@ Docker Compose 暂未本地验证，因为当前机器没有 Docker。
 - 增加 ESLint 配置。
 - 增加基础测试。
 - 补接口文档。
-- 补 `.env.example`。
