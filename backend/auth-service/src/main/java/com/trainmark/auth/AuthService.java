@@ -36,6 +36,10 @@ public class AuthService {
         .orElseGet(() -> mockUser("teacher"));
   }
 
+  public void logout(String authorizationHeader) {
+    currentAuthUser(authorizationHeader);
+  }
+
   private Optional<AuthUserStore.AuthUser> currentAuthUser(String authorizationHeader) {
     var username = usernameFromBearer(authorizationHeader);
     if (username.isEmpty()) {

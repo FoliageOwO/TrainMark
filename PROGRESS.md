@@ -2170,6 +2170,23 @@
 - `README.md`
 - `PROGRESS.md`
 
+### 75. Auth Logout 校验当前身份
+
+- 已将 `/api/auth/logout` 从无条件成功改为读取 `Authorization` bearer token，并复用当前认证用户解析逻辑。
+- JDBC 模式下缺失、无效或不存在的 token 调用 logout 会返回统一认证错误；内存模式继续保留演示兜底。
+- 已扩展 API smoke 脚本，teacher、student、course owner、supervisor 和 admin 五类登录后都会继续调用 logout，避免登出接口在严格 HTTP/JDBC 联调中退化为空操作。
+- 已同步 `docs/API.md`，将 logout 请求说明从 `none` 改为 bearer access token。
+- 本模块已通过 auth-service 编译、smoke dry-run、MVP 主验证，以及单独启动 JDBC auth-service 后的 owner token logout 成功和无 token logout 失败 live 验证。
+
+主要代码：
+
+- `backend/auth-service/src/main/java/com/trainmark/auth/AuthController.java`
+- `backend/auth-service/src/main/java/com/trainmark/auth/AuthService.java`
+- `scripts/smoke-api.sh`
+- `docs/API.md`
+- `README.md`
+- `PROGRESS.md`
+
 ## 已验证
 
 前端构建已通过：
@@ -3294,6 +3311,7 @@ pnpm verify:mvp
 - `feat: seed jdbc demo roles`
 - `fix: reject unknown jdbc auth`
 - `fix: refresh current auth user`
+- `fix: validate auth logout`
 
 ## 接下来需要做
 

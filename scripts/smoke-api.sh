@@ -225,12 +225,14 @@ check_login_role() {
     post_json "$label login" "$GATEWAY_URL/api/auth/login" "{\"username\":\"$username\",\"password\":\"trainmark\"}"
     check_api_auth "$label profile" "$GATEWAY_URL/api/auth/me" "<from $label login>"
     post_auth "$label refresh" "$GATEWAY_URL/api/auth/refresh" "<from $label login>"
+    post_auth "$label logout" "$GATEWAY_URL/api/auth/logout" "<from $label login>"
     return
   fi
 
   local login_response
   local access_token
   local profile_response
+  local refresh_response
   login_response="$(post_json "$label login" "$GATEWAY_URL/api/auth/login" "{\"username\":\"$username\",\"password\":\"trainmark\"}")"
   access_token="$(json_field accessToken <<< "$login_response")"
   profile_response="$(curl --noproxy '*' --fail --silent --show-error --max-time 5 \
@@ -240,6 +242,7 @@ check_login_role() {
   assert_profile_role "$expected_role" <<< "$profile_response"
   refresh_response="$(post_auth "$label refresh" "$GATEWAY_URL/api/auth/refresh" "$access_token")"
   assert_profile_role "$expected_role" <<< "$refresh_response"
+  post_auth "$label logout" "$GATEWAY_URL/api/auth/logout" "$access_token" >/dev/null
 }
 
 check_url "gateway health" "$GATEWAY_URL/actuator/health"
