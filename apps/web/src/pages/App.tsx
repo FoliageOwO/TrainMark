@@ -1,7 +1,6 @@
-import { useEffect, useState, type CSSProperties, type FormEvent } from 'react';
+import { useEffect, useState, type FormEvent } from 'react';
 import {
   BarChart3,
-  Bell,
   CalendarClock,
   CheckCircle2,
   Clock3,
@@ -33,6 +32,7 @@ import { AppChrome } from '../components/AppChrome';
 import { StudentDashboard } from '../components/StudentDashboard';
 import { TeacherAnalyticsPanel } from '../components/TeacherAnalyticsPanel';
 import { TeacherAiPipeline } from '../components/TeacherAiPipeline';
+import { TeacherCollectionPanel } from '../components/TeacherCollectionPanel';
 import { TeacherReviewWorkspace } from '../components/TeacherReviewWorkspace';
 import { formatDate } from '../utils/formatDate';
 
@@ -255,7 +255,6 @@ function TeacherDashboard({
   const [appealRows, setAppealRows] = useState(appeals);
   const [similarityRows, setSimilarityRows] = useState(similarityJobs);
   const [exportRows, setExportRows] = useState(gradeExports);
-  const submittedRate = Math.round((collectionOverview.submitted / collectionOverview.totalStudents) * 100);
   const rubric = rubrics[0];
   const visibleJobs = startedJob ? [startedJob, ...gradingJobs] : gradingJobs;
   const selectedReview = reviewResults.find((item) => item.id === selectedReviewId) ?? reviewResults[0]!;
@@ -504,58 +503,12 @@ function TeacherDashboard({
         </article>
       </section>
 
-      <section className="management-grid">
-        <article className="panel collection-panel">
-          <div className="panel-heading">
-            <div>
-              <p className="eyebrow">Submission Collection</p>
-              <h3>报告收集看板</h3>
-            </div>
-            <button className="ghost-button" type="button" onClick={handleRemindUnsubmitted}>
-              <Bell size={15} /> 一键催交
-            </button>
-          </div>
-          <div className="collection-summary">
-            <div className="collection-ring" style={{ '--rate': `${submittedRate}%` } as CSSProperties}>
-              <strong>{submittedRate}%</strong>
-              <span>提交率</span>
-            </div>
-            <div className="collection-stats">
-              <span><strong>{collectionOverview.totalStudents}</strong>应交</span>
-              <span><strong>{collectionOverview.submitted}</strong>已交</span>
-              <span><strong>{collectionOverview.unsubmitted}</strong>未交</span>
-              <span><strong>{collectionOverview.lateSubmitted}</strong>迟交</span>
-            </div>
-          </div>
-          {reminderResult && (
-            <div className="reminder-result">
-              <CheckCircle2 size={18} />
-              <span>{reminderResult.status}：{reminderResult.recipientCount} 名学生，{reminderResult.messageCount} 条消息</span>
-            </div>
-          )}
-        </article>
-
-        <article className="panel collection-panel">
-          <div className="panel-heading">
-            <div>
-              <p className="eyebrow">Unsubmitted</p>
-              <h3>未交名单</h3>
-            </div>
-            <span className="status-pill">{unsubmittedStudents.length} 人待提醒</span>
-          </div>
-          <div className="unsubmitted-list">
-            {unsubmittedStudents.map((student) => (
-              <div className="unsubmitted-row" key={student.studentId}>
-                <div>
-                  <strong>{student.name}</strong>
-                  <span>{student.studentNo} · {student.className}</span>
-                </div>
-                <small>{student.email}</small>
-              </div>
-            ))}
-          </div>
-        </article>
-      </section>
+      <TeacherCollectionPanel
+        collectionOverview={collectionOverview}
+        unsubmittedStudents={unsubmittedStudents}
+        reminderResult={reminderResult}
+        onRemindUnsubmitted={handleRemindUnsubmitted}
+      />
 
       <section className="management-grid">
         <article className="panel roster-panel">

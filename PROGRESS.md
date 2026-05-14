@@ -592,6 +592,18 @@
 - `apps/web/src/pages/App.tsx`
 - `PROGRESS.md`
 
+### 22.6 教师端收集催交组件拆分
+
+- 已从教师端工作台中拆出 `TeacherCollectionPanel`，报告收集率、未交名单和一键催交结果集中维护。
+- 提交率环形进度的 CSS 变量计算随组件下沉，`App.tsx` 不再暴露 `CSSProperties` 展示细节。
+- `App.tsx` 继续负责调用催交接口并保存催交回执。
+
+主要代码：
+
+- `apps/web/src/components/TeacherCollectionPanel.tsx`
+- `apps/web/src/pages/App.tsx`
+- `PROGRESS.md`
+
 ### 23. 前端 HTTP 写操作联调
 
 - 已扩展前端 HTTP API 层，支持在 `VITE_API_MODE=http` 下调用后端写接口。
@@ -1485,6 +1497,14 @@ pnpm verify:mvp
 ```
 
 教师端成绩分析组件拆分后已通过静态检查和构建：
+
+```bash
+pnpm --filter trainmark-ai-web lint
+pnpm --filter trainmark-ai-web build
+pnpm verify:mvp
+```
+
+教师端收集催交组件拆分后已通过静态检查和构建：
 
 ```bash
 pnpm --filter trainmark-ai-web lint
