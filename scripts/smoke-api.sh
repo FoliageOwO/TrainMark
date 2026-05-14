@@ -163,6 +163,7 @@ if [[ "$SMOKE_INCLUDE_WRITES" == "1" ]]; then
     object_key="$(json_field objectKey <<< "$init_response")"
     post_json "upload complete" "$GATEWAY_URL/api/submissions/upload/complete" "{\"uploadId\":\"$upload_id\",\"objectKey\":\"$object_key\",\"checksum\":null}"
   fi
+  post_json "assignment" "$GATEWAY_URL/api/assignments" '{"courseId":1,"title":"Smoke 实训任务","description":"Smoke assignment creation","deadline":"2030-05-20T23:59:00+08:00","totalScore":100,"classIds":[1,2],"similarityCheckEnabled":true,"aiGradingEnabled":true}'
   post_json "grading job" "$GATEWAY_URL/api/grading/jobs" '{"assignmentId":1,"rubricId":1,"submissionIds":[1]}'
   if [[ "$SMOKE_DRY_RUN" == "1" ]]; then
     post_json "ocr job" "$GATEWAY_URL/api/ocr/jobs" '{"submissionId":1,"objectKey":"assignments/1/students/2/database-report.docx","mode":"STRUCTURE"}'

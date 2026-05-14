@@ -700,6 +700,23 @@
 - `apps/web/src/pages/App.tsx`
 - `PROGRESS.md`
 
+### 23.2 前端实训任务创建联调
+
+- 已在教师端实训任务面板加入创建任务表单，可填写任务标题、截止时间、总分、说明，并切换 AI 批改和查重检测。
+- 已扩展前端 HTTP API 层，`VITE_API_MODE=http` 时调用 `POST /api/assignments` 创建真实任务，失败或 mock 模式回退本地追加。
+- 创建成功后当前课程任务列表即时插入新任务，减少老师端从查看到配置任务的断点。
+- 已将 `POST /api/assignments` 加入写接口 smoke dry-run 清单，后续 MVP 验证会覆盖任务创建端点。
+
+主要代码：
+
+- `apps/web/src/api/httpApi.ts`
+- `apps/web/src/api/mockApi.ts`
+- `apps/web/src/components/TeacherDashboard.tsx`
+- `apps/web/src/components/TeacherCoursePanel.tsx`
+- `apps/web/src/styles/global.css`
+- `scripts/smoke-api.sh`
+- `PROGRESS.md`
+
 ### 24. Gateway 本地跨域联调
 
 - 已为 gateway 增加本地 Vite 开发端口 CORS 配置。
@@ -1651,6 +1668,14 @@ pnpm build:web
 ```
 
 前端申诉数据源联调修正后已通过静态检查和构建：
+
+```bash
+pnpm --filter trainmark-ai-web lint
+pnpm --filter trainmark-ai-web build
+pnpm verify:mvp
+```
+
+前端实训任务创建联调后已通过静态检查和构建：
 
 ```bash
 pnpm --filter trainmark-ai-web lint

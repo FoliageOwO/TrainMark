@@ -316,6 +316,27 @@ export const mockApi = {
   listAssignments(courseId?: number): AssignmentSummary[] {
     return assignments.filter((item) => courseId === undefined || item.courseId === courseId);
   },
+  createAssignment(input: {
+    courseId: number;
+    title: string;
+    deadline: string;
+    totalScore: number;
+    similarityCheckEnabled: boolean;
+    aiGradingEnabled: boolean;
+  }): AssignmentSummary {
+    const assignment: AssignmentSummary = {
+      id: Math.max(...assignments.map((item) => item.id)) + 1,
+      courseId: input.courseId,
+      title: input.title,
+      deadline: input.deadline,
+      totalScore: input.totalScore,
+      status: 'DRAFT',
+      similarityCheckEnabled: input.similarityCheckEnabled,
+      aiGradingEnabled: input.aiGradingEnabled,
+    };
+    assignments.push(assignment);
+    return assignment;
+  },
   listStudentTasks(): SubmissionTask[] {
     return studentTasks;
   },

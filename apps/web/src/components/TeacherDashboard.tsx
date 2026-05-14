@@ -1,6 +1,7 @@
-import { useState, type FormEvent } from 'react';
+import { useEffect, useState, type FormEvent } from 'react';
 import { mockApi } from '../api/mockApi';
 import {
+  createAssignment,
   approveGradingResult,
   createGradeExport,
   createGradingJob,
@@ -11,6 +12,7 @@ import {
   startSimilarityJob,
   updateReviewItem,
   withdrawGradingResult,
+  type CreateAssignmentInput,
 } from '../api/httpApi';
 import type { CourseSummary } from '../api/types';
 import { TeacherAnalyticsPanel } from './TeacherAnalyticsPanel';
@@ -82,9 +84,15 @@ export function TeacherDashboard({
   const [appealRows, setAppealRows] = useState(appeals);
   const [similarityRows, setSimilarityRows] = useState(similarityJobs);
   const [exportRows, setExportRows] = useState(gradeExports);
+  const [assignmentRows, setAssignmentRows] = useState(assignments);
+  const [assignmentNotice, setAssignmentNotice] = useState('');
   const rubric = rubrics[0];
   const visibleJobs = startedJob ? [startedJob, ...gradingJobs] : gradingJobs;
   const selectedReview = reviewResults.find((item) => item.id === selectedReviewId) ?? reviewResults[0]!;
+
+  useEffect(() => {
+    setAssignmentRows(assignments);
+  }, [assignments]);
 
   const syncReviewResult = (updated: NonNullable<typeof selectedReview>) => {
     setReviewResults((current) => current.map((item) => (item.id === updated.id ? { ...updated } : item)));
@@ -147,15 +155,23 @@ export function TeacherDashboard({
     setExportRows((current) => [exportJob, ...current.filter((item) => item.id !== exportJob.id)]);
   };
 
+  const handleCreateAssignment = async (input: CreateAssignmentInput) => {
+    const assignment = await createAssignment(input);
+    setAssignmentRows((current) => [assignment, ...current.filter((item) => item.id !== assignment.id)]);
+    setAssignmentNotice(`已创建任务：${assignment.title}`);
+  };
+
   return (
     <>
       <TeacherCoursePanel
-        assignments={assignments}
+        assignments={assignmentRows}
         classes={classes}
         courses={courses}
         selectedCourse={selectedCourse}
         selectedCourseId={selectedCourseId}
         stats={stats}
+        assignmentNotice={assignmentNotice}
+        onCreateAssignment={handleCreateAssignment}
         onSelectCourse={setSelectedCourseId}
       />
 

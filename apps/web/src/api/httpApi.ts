@@ -52,6 +52,17 @@ export type WorkspaceData = {
   systemSettings: SystemSettingSummary[];
 };
 
+export type CreateAssignmentInput = {
+  courseId: number;
+  title: string;
+  description?: string;
+  deadline: string;
+  totalScore: number;
+  classIds: number[];
+  similarityCheckEnabled: boolean;
+  aiGradingEnabled: boolean;
+};
+
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8080';
 const API_MODE = import.meta.env.VITE_API_MODE ?? 'mock';
 
@@ -268,6 +279,15 @@ export async function startSimilarityJob(assignmentId: number): Promise<Similari
     '/api/similarity/jobs',
     { assignmentId, submissionIds: [1, 18, 43], includeHistory: true },
     () => mockApi.startSimilarityJob(),
+  );
+}
+
+export async function createAssignment(input: CreateAssignmentInput): Promise<AssignmentSummary> {
+  return mutateOr(
+    'POST',
+    '/api/assignments',
+    input,
+    () => mockApi.createAssignment(input),
   );
 }
 
