@@ -310,7 +310,7 @@ pnpm smoke:api
 SMOKE_RETRIES=30 SMOKE_RETRY_DELAY_SECONDS=2 pnpm smoke:api
 ```
 
-需要覆盖提交、批改、复核、发布审计、申诉、导出、催交和查重写接口时：
+需要覆盖提交、OCR、批改、复核、发布审计、申诉、导出、催交和查重写接口时：
 
 ```bash
 SMOKE_INCLUDE_WRITES=1 SMOKE_RETRIES=30 SMOKE_RETRY_DELAY_SECONDS=2 pnpm smoke:api

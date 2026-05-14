@@ -164,6 +164,14 @@ if [[ "$SMOKE_INCLUDE_WRITES" == "1" ]]; then
     post_json "upload complete" "$GATEWAY_URL/api/submissions/upload/complete" "{\"uploadId\":\"$upload_id\",\"objectKey\":\"$object_key\",\"checksum\":null}"
   fi
   post_json "grading job" "$GATEWAY_URL/api/grading/jobs" '{"assignmentId":1,"rubricId":1,"submissionIds":[1]}'
+  if [[ "$SMOKE_DRY_RUN" == "1" ]]; then
+    post_json "ocr job" "$GATEWAY_URL/api/ocr/jobs" '{"submissionId":1,"objectKey":"assignments/1/students/2/database-report.docx","mode":"STRUCTURE"}'
+    check_api "gateway OCR result" "$GATEWAY_URL/api/ocr/jobs/<from ocr job>/result"
+  else
+    ocr_response="$(post_json "ocr job" "$GATEWAY_URL/api/ocr/jobs" '{"submissionId":1,"objectKey":"assignments/1/students/2/database-report.docx","mode":"STRUCTURE"}')"
+    ocr_job_id="$(json_field id <<< "$ocr_response")"
+    check_api "gateway OCR result" "$GATEWAY_URL/api/ocr/jobs/$ocr_job_id/result"
+  fi
   patch_json "review item" "$GATEWAY_URL/api/grading/results/1/items" '{"rubricItemId":1,"teacherScore":18,"teacherComment":"Smoke review comment"}'
   post_json "approve result" "$GATEWAY_URL/api/grading/results/1/approve" '{"reviewerName":"Smoke Reviewer","overallComment":"Smoke approved"}'
   post_json "publish result" "$GATEWAY_URL/api/grading/results/1/publish" '{"operatorName":"Smoke","message":"Smoke publish"}'

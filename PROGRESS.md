@@ -1122,7 +1122,7 @@
 ### 55. 写接口冒烟检查
 
 - 已为 `scripts/smoke-api.sh` 增加可选写接口检查模式。
-- 设置 `SMOKE_INCLUDE_WRITES=1` 时会覆盖上传初始化、上传完成、创建批改任务、复核改分、复核通过、成绩发布、发布审计、学生申诉、处理申诉、创建成绩导出、一键催交和启动查重。
+- 设置 `SMOKE_INCLUDE_WRITES=1` 时会覆盖上传初始化、上传完成、创建 OCR 任务、OCR 结果读取、创建批改任务、复核改分、复核通过、成绩发布、发布审计、学生申诉、处理申诉、创建成绩导出、一键催交和启动查重。
 - 上传完成会复用上传初始化返回的 `uploadId` 和 `objectKey`，避免使用伪造会话。
 - 复核改分使用 `PATCH` 请求，匹配后端 `GradingReviewController` 的真实接口方法。
 - API 读取端点会校验 `ApiResponse.success=true`，下载资源和 actuator health 继续按 HTTP 状态检查。
@@ -1618,6 +1618,15 @@ pnpm verify:mvp
 API smoke 的读取端点响应体校验已通过主验证和真实 gateway 写入联调：
 
 ```bash
+pnpm verify:mvp
+SMOKE_INCLUDE_WRITES=1 SMOKE_RETRIES=60 SMOKE_RETRY_DELAY_SECONDS=2 pnpm smoke:api
+```
+
+写接口 smoke 已覆盖 OCR 任务创建和 OCR 结果读取，并通过脚本语法检查、dry-run、MVP 主验证和真实 gateway 联调：
+
+```bash
+bash -n scripts/smoke-api.sh
+SMOKE_DRY_RUN=1 SMOKE_INCLUDE_WRITES=1 pnpm smoke:api
 pnpm verify:mvp
 SMOKE_INCLUDE_WRITES=1 SMOKE_RETRIES=60 SMOKE_RETRY_DELAY_SECONDS=2 pnpm smoke:api
 ```
