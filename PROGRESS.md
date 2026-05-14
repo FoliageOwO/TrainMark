@@ -373,6 +373,19 @@
 - `apps/web/src/pages/App.tsx`
 - `PROGRESS.md`
 
+### 24. Gateway 本地跨域联调
+
+- 已为 gateway 增加本地 Vite 开发端口 CORS 配置。
+- 已允许 `localhost` / `127.0.0.1` 的 `5173` 和 `5174` 访问 gateway。
+- 已覆盖 `GET`、`POST`、`PATCH`、`PUT`、`DELETE`、`OPTIONS` 方法，支持前端 HTTP 读写联调。
+- 已在 README 的 HTTP 模式说明中记录本地跨域支持。
+
+主要代码：
+
+- `backend/gateway-service/src/main/resources/application.yml`
+- `README.md`
+- `PROGRESS.md`
+
 ## 已验证
 
 前端构建已通过：
@@ -437,6 +450,12 @@ pnpm lint:web
 pnpm build:web
 ```
 
+Gateway 本地跨域配置加入后模块打包通过：
+
+```bash
+mvn -f backend/pom.xml -pl gateway-service -am package -DskipTests
+```
+
 全部后端模块已通过编译：
 
 ```bash
@@ -471,6 +490,7 @@ Docker Compose 暂未本地验证，因为当前机器没有 Docker。
 - `docs: add api reference`
 - `refactor: split app chrome`
 - `feat: connect frontend actions`
+- `feat: add gateway cors`
 
 ## 接下来需要做
 

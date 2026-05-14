@@ -63,6 +63,7 @@ VITE_API_MODE=http pnpm dev:web
 ```
 
 HTTP 模式会从 `VITE_API_BASE_URL` 读取课程、名单、复核、发布、申诉、统计和查重数据；单个接口不可用时会自动回退到本地 mock 数据，便于分服务联调。
+Gateway 已允许本地 Vite 开发端口 `5173` / `5174` 的跨域请求。
 
 ### 3. 启动前端
 
