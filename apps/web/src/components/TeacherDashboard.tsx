@@ -16,7 +16,7 @@ import {
   type CreateAssignmentInput,
   type CreateRubricInput,
 } from '../api/httpApi';
-import type { CourseSummary, RubricSummary, SubmissionSummary } from '../api/types';
+import type { CourseSummary, GradingResultSummary, RubricSummary, SubmissionSummary } from '../api/types';
 import { TeacherAnalyticsPanel } from './TeacherAnalyticsPanel';
 import { TeacherAiPipeline } from './TeacherAiPipeline';
 import { TeacherAppealPanel } from './TeacherAppealPanel';
@@ -99,7 +99,7 @@ export function TeacherDashboard({
     ?? collectionOverview.assignmentId;
   const rubric = rubricRows.find((item) => item.assignmentId === selectedAssignmentId) ?? rubricRows[0] ?? null;
   const visibleJobs = startedJob ? [startedJob, ...gradingJobs] : gradingJobs;
-  const selectedReview = reviewResults.find((item) => item.id === selectedReviewId) ?? reviewResults[0]!;
+  const selectedReview = reviewResults.find((item) => item.id === selectedReviewId) ?? reviewResults[0] ?? null;
 
   useEffect(() => {
     setAssignmentRows(assignments);
@@ -111,6 +111,8 @@ export function TeacherDashboard({
 
   useEffect(() => {
     if (gradingResults.length === 0) {
+      setReviewResults([]);
+      setSelectedReviewId(0);
       return;
     }
     setReviewResults(gradingResults);
@@ -135,7 +137,7 @@ export function TeacherDashboard({
     setPublicationAuditRows(publicationAudits);
   }, [publicationAudits]);
 
-  const syncReviewResult = (updated: NonNullable<typeof selectedReview>) => {
+  const syncReviewResult = (updated: GradingResultSummary) => {
     setReviewResults((current) => current.map((item) => (item.id === updated.id ? { ...updated } : item)));
     setSelectedReviewId(updated.id);
   };
@@ -152,6 +154,9 @@ export function TeacherDashboard({
 
   const handleReviewItemSubmit = async (event: FormEvent<HTMLFormElement>, rubricItemId: number) => {
     event.preventDefault();
+    if (!selectedReview) {
+      return;
+    }
     const formData = new FormData(event.currentTarget);
     const teacherScore = Number(formData.get('teacherScore'));
     const teacherComment = String(formData.get('teacherComment') ?? '');
@@ -159,15 +164,24 @@ export function TeacherDashboard({
   };
 
   const handleApproveResult = async () => {
+    if (!selectedReview) {
+      return;
+    }
     syncReviewResult(await approveGradingResult(selectedReview.id, operatorName, selectedReview.overallComment));
   };
 
   const handlePublishResult = async () => {
+    if (!selectedReview) {
+      return;
+    }
     syncReviewResult(await publishGradingResult(selectedReview.id, operatorName));
     setPublicationAuditRows(await loadPublicationAudits(selectedReview.id));
   };
 
   const handleWithdrawResult = async () => {
+    if (!selectedReview) {
+      return;
+    }
     syncReviewResult(await withdrawGradingResult(selectedReview.id, operatorName));
     setPublicationAuditRows(await loadPublicationAudits(selectedReview.id));
   };
@@ -243,16 +257,34 @@ export function TeacherDashboard({
 
       <TeacherSimilarityPanel similarityJobs={similarityRows} onStartSimilarity={handleStartSimilarity} />
 
-      <TeacherReviewWorkspace
-        reviewResults={reviewResults}
-        selectedReview={selectedReview}
-        publicationAudits={publicationAuditRows}
-        onSelectReview={setSelectedReviewId}
-        onReviewItemSubmit={handleReviewItemSubmit}
-        onApproveResult={handleApproveResult}
-        onPublishResult={handlePublishResult}
-        onWithdrawResult={handleWithdrawResult}
-      />
+      {selectedReview ? (
+        <TeacherReviewWorkspace
+          reviewResults={reviewResults}
+          selectedReview={selectedReview}
+          publicationAudits={publicationAuditRows}
+          onSelectReview={setSelectedReviewId}
+          onReviewItemSubmit={handleReviewItemSubmit}
+          onApproveResult={handleApproveResult}
+          onPublishResult={handlePublishResult}
+          onWithdrawResult={handleWithdrawResult}
+        />
+      ) : (
+        <section className="review-layout">
+          <article className="panel wide-panel">
+            <div className="panel-heading">
+              <div>
+                <p className="eyebrow">Manual Review</p>
+                <h3>人工复核工作区</h3>
+              </div>
+              <span className="status-pill">暂无结果</span>
+            </div>
+            <div className="empty-result">
+              <strong>暂无复核结果</strong>
+              <span>当前作业还没有可复核的批改结果。启动 AI 批改后，结果会出现在这里。</span>
+            </div>
+          </article>
+        </section>
+      )}
 
       <TeacherAnalyticsPanel
         gradeExports={exportRows}

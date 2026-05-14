@@ -856,6 +856,21 @@
 - `apps/web/src/api/mockApi.ts`
 - `PROGRESS.md`
 
+### 23.13 Mock 工作区作业维度与空态兜底
+
+- 已让单前端 Mock 模式按当前作业 ID 读取收交统计、未交名单、评分标准、批改任务、复核结果、成绩导出、成绩分析、失分点、课程目标和查重任务。
+- 已让 mock 数据层在非演示作业下返回空收交、空统计、空分析和空列表，避免切换课程后继续展示作业 1 的演示数据。
+- 已为教师端人工复核工作区补充空结果状态，并修复 0 人作业收交率计算，避免暂无批改结果时页面崩溃或出现 `NaN%`。
+- 本模块已通过前端 lint、生产构建和 MVP 验证脚本。
+
+主要代码：
+
+- `apps/web/src/pages/App.tsx`
+- `apps/web/src/api/mockApi.ts`
+- `apps/web/src/components/TeacherDashboard.tsx`
+- `apps/web/src/components/TeacherCollectionPanel.tsx`
+- `PROGRESS.md`
+
 ### 24. Gateway 本地跨域联调
 
 - 已为 gateway 增加本地 Vite 开发端口 CORS 配置。
@@ -2492,6 +2507,14 @@ pnpm verify:mvp
 ```
 
 教师端批改链路作业维度收敛后已通过静态检查、构建和 MVP 验证：
+
+```bash
+pnpm --filter trainmark-ai-web lint
+pnpm --filter trainmark-ai-web build
+pnpm verify:mvp
+```
+
+Mock 工作区作业维度与空态兜底后已通过静态检查、构建和 MVP 验证：
 
 ```bash
 pnpm --filter trainmark-ai-web lint

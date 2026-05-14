@@ -49,28 +49,29 @@ export function App() {
   const selectedCourse = courses.find((course) => course.id === selectedCourseId) ?? courses[0];
   const classes = workspaceData?.classes ?? mockApi.listClasses(selectedCourse.id);
   const assignments = workspaceData?.assignments ?? mockApi.listAssignments(selectedCourse.id);
+  const selectedAssignmentId = assignments.find((assignment) => assignment.courseId === selectedCourse.id)?.id ?? assignments[0]?.id ?? 1;
   const studentTasks = workspaceData?.studentTasks ?? mockApi.listStudentTasks();
   const organizations = workspaceData?.organizations ?? mockApi.listOrganizations();
   const students = workspaceData?.students ?? mockApi.listUsers('STUDENT');
   const importPreview = mockApi.getStudentImportPreview();
-  const collectionOverview = workspaceData?.collectionOverview ?? mockApi.getCollectionOverview();
-  const unsubmittedStudents = workspaceData?.unsubmittedStudents ?? mockApi.listUnsubmittedStudents();
-  const rubrics = workspaceData?.rubrics ?? mockApi.listRubrics();
-  const gradingJobs = workspaceData?.gradingJobs ?? mockApi.listGradingJobs();
+  const collectionOverview = workspaceData?.collectionOverview ?? mockApi.getCollectionOverview(selectedAssignmentId);
+  const unsubmittedStudents = workspaceData?.unsubmittedStudents ?? mockApi.listUnsubmittedStudents(selectedAssignmentId);
+  const rubrics = workspaceData?.rubrics ?? mockApi.listRubrics(selectedAssignmentId);
+  const gradingJobs = workspaceData?.gradingJobs ?? mockApi.listGradingJobs(selectedAssignmentId);
   const ocrJobs = workspaceData?.ocrJobs ?? mockApi.listOcrJobs();
-  const gradingResults = workspaceData?.gradingResults ?? mockApi.listGradingResults();
+  const gradingResults = workspaceData?.gradingResults ?? mockApi.listGradingResults(selectedAssignmentId);
   const publicationAudits = workspaceData?.publicationAudits ?? mockApi.listPublicationAudits();
   const publishedResults = workspaceData?.publishedResults ?? mockApi.listPublishedResults(user.id);
-  const gradeExports = workspaceData?.gradeExports ?? mockApi.listGradeExports(1);
-  const gradeStatistics = workspaceData?.gradeStatistics ?? mockApi.getGradeStatistics();
-  const lossPoints = workspaceData?.lossPoints ?? mockApi.listLossPoints();
-  const courseOutcomes = workspaceData?.courseOutcomes ?? mockApi.listCourseOutcomes();
+  const gradeExports = workspaceData?.gradeExports ?? mockApi.listGradeExports(selectedAssignmentId);
+  const gradeStatistics = workspaceData?.gradeStatistics ?? mockApi.getGradeStatistics(selectedAssignmentId);
+  const lossPoints = workspaceData?.lossPoints ?? mockApi.listLossPoints(selectedAssignmentId);
+  const courseOutcomes = workspaceData?.courseOutcomes ?? mockApi.listCourseOutcomes(selectedAssignmentId);
   const allAppeals = workspaceData?.appeals ?? mockApi.listAppeals();
   const studentAppeals = useMemo(
     () => allAppeals.filter((item) => item.studentId === user.id),
     [allAppeals, user.id],
   );
-  const similarityJobs = workspaceData?.similarityJobs ?? mockApi.listSimilarityJobs();
+  const similarityJobs = workspaceData?.similarityJobs ?? mockApi.listSimilarityJobs(selectedAssignmentId);
   const auditLogs = workspaceData?.auditLogs ?? mockApi.listAuditLogs();
   const systemSettings = workspaceData?.systemSettings ?? mockApi.listSystemSettings();
 

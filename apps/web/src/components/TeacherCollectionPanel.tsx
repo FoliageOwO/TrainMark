@@ -15,7 +15,9 @@ export function TeacherCollectionPanel({
   reminderResult,
   onRemindUnsubmitted,
 }: TeacherCollectionPanelProps) {
-  const submittedRate = Math.round((collectionOverview.submitted / collectionOverview.totalStudents) * 100);
+  const submittedRate = collectionOverview.totalStudents === 0
+    ? 0
+    : Math.round((collectionOverview.submitted / collectionOverview.totalStudents) * 100);
 
   return (
     <section className="management-grid">

@@ -340,11 +340,23 @@ export const mockApi = {
   listStudentTasks(): SubmissionTask[] {
     return studentTasks;
   },
-  getCollectionOverview(): CollectionOverview {
-    return collectionOverview;
+  getCollectionOverview(assignmentId?: number): CollectionOverview {
+    if (assignmentId === undefined || assignmentId === collectionOverview.assignmentId) {
+      return collectionOverview;
+    }
+    return {
+      assignmentId,
+      totalStudents: 0,
+      submitted: 0,
+      unsubmitted: 0,
+      lateSubmitted: 0,
+      processing: 0,
+      reviewed: 0,
+      published: 0,
+    };
   },
-  listUnsubmittedStudents(): UnsubmittedStudent[] {
-    return unsubmittedStudents;
+  listUnsubmittedStudents(assignmentId?: number): UnsubmittedStudent[] {
+    return assignmentId === undefined || assignmentId === collectionOverview.assignmentId ? unsubmittedStudents : [];
   },
   remindUnsubmitted(): ReminderResult {
     return {
@@ -495,14 +507,29 @@ export const mockApi = {
       item.publicationStatus === 'PUBLISHED' && (studentId === undefined || item.studentId === studentId)
     ));
   },
-  getGradeStatistics(): GradeStatisticsSummary {
-    return gradeStatistics;
+  getGradeStatistics(assignmentId?: number): GradeStatisticsSummary {
+    if (assignmentId === undefined || assignmentId === gradeStatistics.assignmentId) {
+      return gradeStatistics;
+    }
+    return {
+      ...gradeStatistics,
+      assignmentId,
+      submittedCount: 0,
+      publishedCount: 0,
+      averageScore: 0,
+      standardDeviation: 0,
+      maxScore: 0,
+      minScore: 0,
+      difficultyIndex: 0,
+      discriminationIndex: 0,
+      scoreBuckets: gradeStatistics.scoreBuckets.map((bucket) => ({ ...bucket, studentCount: 0 })),
+    };
   },
-  listLossPoints(): LossPointSummary[] {
-    return lossPoints;
+  listLossPoints(assignmentId?: number): LossPointSummary[] {
+    return assignmentId === undefined || assignmentId === gradeStatistics.assignmentId ? lossPoints : [];
   },
-  listCourseOutcomes(): CourseOutcomeAchievement[] {
-    return courseOutcomes;
+  listCourseOutcomes(assignmentId?: number): CourseOutcomeAchievement[] {
+    return assignmentId === undefined || assignmentId === gradeStatistics.assignmentId ? courseOutcomes : [];
   },
   listSimilarityJobs(assignmentId?: number): SimilarityJobSummary[] {
     return similarityJobs.filter((item) => assignmentId === undefined || item.assignmentId === assignmentId);
