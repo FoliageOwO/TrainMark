@@ -10,6 +10,12 @@ management:
         include: health,info
 
 trainmark:
+  file:
+    store: ${TRAINMARK_FILE_STORE:memory}
+    jdbc:
+      url: ${TRAINMARK_FILE_JDBC_URL:}
+      username: ${TRAINMARK_FILE_JDBC_USERNAME:}
+      password: ${TRAINMARK_FILE_JDBC_PASSWORD:}
   upload:
     max-file-size-mb: ${UPLOAD_MAX_FILE_SIZE_MB:50}
     allowed-content-types: ${UPLOAD_ALLOWED_CONTENT_TYPES:application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,image/png,image/jpeg}

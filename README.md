@@ -35,6 +35,7 @@ TrainMark AI，中文名“智训批”，是面向高校实训教学场景的�
 | 后端运行参数绑定 | 已修复 |
 | 用户与组织 PostgreSQL 存储 | 已支持 |
 | 课程与任务 PostgreSQL 存储 | 已支持 |
+| 上传与提交 PostgreSQL 存储 | 已支持 |
 | 管理端审计日志 | 已实现 |
 | 管理端系统配置 | 已实现 |
 | PWA 安装、离线外壳与角色快捷入口 | 已实现 |
@@ -163,6 +164,16 @@ TRAINMARK_COURSE_JDBC_URL=jdbc:postgresql://localhost:5432/trainmark_ai \
 TRAINMARK_COURSE_JDBC_USERNAME=trainmark \
 TRAINMARK_COURSE_JDBC_PASSWORD=trainmark_dev \
 pnpm dev:backend:course
+```
+
+文件服务默认使用内存上传会话和提交记录。需要让上传初始化、上传完成和提交列表写入 PostgreSQL 时，设置：
+
+```bash
+TRAINMARK_FILE_STORE=jdbc \
+TRAINMARK_FILE_JDBC_URL=jdbc:postgresql://localhost:5432/trainmark_ai \
+TRAINMARK_FILE_JDBC_USERNAME=trainmark \
+TRAINMARK_FILE_JDBC_PASSWORD=trainmark_dev \
+pnpm dev:backend:file
 ```
 
 也可以只启动单个服务：

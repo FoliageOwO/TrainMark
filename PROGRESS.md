@@ -995,6 +995,27 @@
 - `infra/README.md`
 - `PROGRESS.md`
 
+### 61. 上传与提交 PostgreSQL 存储
+
+- 已将文件服务上传数据拆成 `UploadStore` 存储接口，默认仍使用内存实现，保证现有无数据库开发和 smoke 不受影响。
+- 已新增 `JdbcUploadStore`，设置 `TRAINMARK_FILE_STORE=jdbc` 后可将上传会话、上传完成状态和提交记录写入 PostgreSQL。
+- 已为 `file-service` 增加 PostgreSQL JDBC runtime 驱动，并通过环境变量配置 JDBC URL、用户名和密码。
+- 已补充迁移 `V5__upload_sessions.sql`，为 `submissions` 增加 `file_name` / `object_key`，并新增 `upload_sessions` 表。
+- 已在 README、infra README 和 `.env.example` 中补充文件服务 JDBC 模式说明。
+
+主要代码：
+
+- `backend/file-service/src/main/java/com/trainmark/file/UploadStore.java`
+- `backend/file-service/src/main/java/com/trainmark/file/InMemoryUploadStore.java`
+- `backend/file-service/src/main/java/com/trainmark/file/JdbcUploadStore.java`
+- `backend/file-service/src/main/java/com/trainmark/file/UploadService.java`
+- `backend/db/migration/V5__upload_sessions.sql`
+- `infra/postgres/init.sql`
+- `.env.example`
+- `README.md`
+- `infra/README.md`
+- `PROGRESS.md`
+
 ## 已验证
 
 前端构建已通过：
@@ -1343,6 +1364,21 @@ curl --noproxy '*' http://localhost:8083/api/courses/1/classes
 curl --noproxy '*' http://localhost:8083/api/assignments
 ```
 
+上传与提交 PostgreSQL 存储已通过后端模块编译：
+
+```bash
+mvn -f backend/pom.xml -pl file-service -am package -DskipTests
+```
+
+文件服务默认内存模式已通过单服务启动和上传/提交接口验证：
+
+```bash
+timeout 75s bash scripts/dev-service.sh file-service
+curl --noproxy '*' http://localhost:8084/api/submissions
+curl --noproxy '*' -H 'Content-Type: application/json' -d '{...}' http://localhost:8084/api/submissions/upload/init
+curl --noproxy '*' -H 'Content-Type: application/json' -d '{...}' http://localhost:8084/api/submissions/upload/complete
+```
+
 全部后端模块已通过编译：
 
 ```bash
@@ -1414,6 +1450,7 @@ Docker Compose 已完成配置展开校验，暂未拉起 PostgreSQL、Redis、R
 - `fix: retain spring parameter names`
 - `feat: add user jdbc store`
 - `feat: add course jdbc store`
+- `feat: add file jdbc store`
 
 ## 接下来需要做
 
