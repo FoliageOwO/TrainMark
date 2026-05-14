@@ -38,6 +38,7 @@ TrainMark AI，中文名“智训批”，是面向高校实训教学场景的�
 | 上传与提交 PostgreSQL 存储 | 已支持 |
 | 催交通知 PostgreSQL 存储 | 已支持 |
 | 查重任务 PostgreSQL 存储 | 已支持 |
+| 统计分析 PostgreSQL 存储 | 已支持 |
 | 管理端审计日志 | 已实现 |
 | 管理端系统配置 | 已实现 |
 | PWA 安装、离线外壳与角色快捷入口 | 已实现 |
@@ -196,6 +197,16 @@ TRAINMARK_SIMILARITY_JDBC_URL=jdbc:postgresql://localhost:5432/trainmark_ai \
 TRAINMARK_SIMILARITY_JDBC_USERNAME=trainmark \
 TRAINMARK_SIMILARITY_JDBC_PASSWORD=trainmark_dev \
 pnpm dev:backend:similarity
+```
+
+统计分析服务默认使用内存数据。需要从 PostgreSQL 最新快照读取成绩统计、失分点和课程目标达成度时，设置：
+
+```bash
+TRAINMARK_ANALYTICS_STORE=jdbc \
+TRAINMARK_ANALYTICS_JDBC_URL=jdbc:postgresql://localhost:5432/trainmark_ai \
+TRAINMARK_ANALYTICS_JDBC_USERNAME=trainmark \
+TRAINMARK_ANALYTICS_JDBC_PASSWORD=trainmark_dev \
+pnpm dev:backend:analytics
 ```
 
 也可以只启动单个服务：

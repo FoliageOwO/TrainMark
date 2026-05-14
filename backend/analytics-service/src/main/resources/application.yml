@@ -8,3 +8,10 @@ management:
     web:
       exposure:
         include: health,info
+trainmark:
+  analytics:
+    store: ${TRAINMARK_ANALYTICS_STORE:memory}
+    jdbc:
+      url: ${TRAINMARK_ANALYTICS_JDBC_URL:}
+      username: ${TRAINMARK_ANALYTICS_JDBC_USERNAME:}
+      password: ${TRAINMARK_ANALYTICS_JDBC_PASSWORD:}

@@ -233,6 +233,24 @@
 - `apps/web/src/api/mockApi.ts`
 - `apps/web/src/styles/global.css`
 
+### 14.1 统计分析 PostgreSQL 存储
+
+- 已为统计分析服务抽象 `AnalyticsStore`，默认保留内存实现，继续支持无数据库演示。
+- 已新增 JDBC 实现，可从 `grade_statistics_snapshots` 读取最新成绩统计快照。
+- 已新增 JDBC 失分点和课程目标达成度读取，分别对接 `loss_point_snapshots` 和 `course_outcome_snapshots`。
+- 已补充 PostgreSQL 切换环境变量和 README 启动说明。
+
+主要代码：
+
+- `backend/analytics-service/src/main/java/com/trainmark/analytics/AnalyticsStore.java`
+- `backend/analytics-service/src/main/java/com/trainmark/analytics/InMemoryAnalyticsStore.java`
+- `backend/analytics-service/src/main/java/com/trainmark/analytics/JdbcAnalyticsStore.java`
+- `backend/analytics-service/src/main/java/com/trainmark/analytics/AnalyticsService.java`
+- `backend/analytics-service/src/main/resources/application.yml`
+- `.env.example`
+- `README.md`
+- `PROGRESS.md`
+
 ### 15. 学生申诉
 
 - 已实现申诉状态枚举。
@@ -1480,6 +1498,21 @@ curl --noproxy '*' -H 'Content-Type: application/json' -d '{...}' http://localho
 curl --noproxy '*' http://localhost:8087/api/similarity/jobs/2
 ```
 
+统计分析 PostgreSQL 存储已通过后端模块编译：
+
+```bash
+mvn -f backend/pom.xml -pl analytics-service -am package -DskipTests
+```
+
+统计分析服务默认内存模式已通过单服务启动和成绩统计/失分点/课程目标接口验证：
+
+```bash
+timeout 90s bash scripts/dev-service.sh analytics-service
+curl --noproxy '*' 'http://localhost:8091/api/analytics/grade-statistics?assignmentId=1'
+curl --noproxy '*' 'http://localhost:8091/api/analytics/loss-points?assignmentId=1'
+curl --noproxy '*' 'http://localhost:8091/api/analytics/course-outcomes?assignmentId=1'
+```
+
 ## 已提交记录
 
 主要提交：
@@ -1547,6 +1580,7 @@ curl --noproxy '*' http://localhost:8087/api/similarity/jobs/2
 - `fix: renumber db migrations`
 - `feat: add notification jdbc store`
 - `feat: add similarity jdbc store`
+- `feat: add analytics jdbc store`
 
 ## 接下来需要做
 
