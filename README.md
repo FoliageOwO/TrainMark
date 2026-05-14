@@ -208,7 +208,7 @@ BACKUP_DIR=backups/20260514-120000 CONFIRM_RESTORE=trainmark-ai-restore pnpm res
 
 ## 环境说明
 
-当前仓库允许在没有 Docker 的机器上继续编码。后端 Maven 工程和 Docker Compose 配置会持续维护，但本机没有 Docker 时可先不执行基础设施启动。
+当前仓库允许在没有 Docker 的机器上继续编码。后端 Maven 工程和 Docker Compose 配置会持续维护；如果本机没有 Docker 或暂不需要联调基础设施，可先不执行基础设施启动。
 
 前端统一使用 pnpm，不再使用 npm workspace。
 

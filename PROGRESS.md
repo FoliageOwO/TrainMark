@@ -765,7 +765,7 @@ pnpm verify:mvp
 mvn -f backend/pom.xml package -DskipTests
 ```
 
-Docker Compose 暂未本地验证，因为当前机器没有 Docker。
+Docker Compose 已完成配置展开校验，暂未拉起 PostgreSQL、Redis、RabbitMQ、MinIO 和 Nginx 容器做完整本地联调。
 
 ## 已提交记录
 
