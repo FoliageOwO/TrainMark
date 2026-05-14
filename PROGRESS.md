@@ -348,6 +348,18 @@
 - `README.md`
 - `PROGRESS.md`
 
+### 22. 前端页面外壳组件拆分
+
+- 已从 `App.tsx` 拆出 `AppChrome` 组件，统一承载侧边栏、顶部角色切换和 hero 区域。
+- `App.tsx` 保留业务状态、老师端工作台和学生端工作台，减少单文件职责。
+- 拆分后前端 lint 和构建均已通过。
+
+主要代码：
+
+- `apps/web/src/components/AppChrome.tsx`
+- `apps/web/src/pages/App.tsx`
+- `PROGRESS.md`
+
 ## 已验证
 
 前端构建已通过：
@@ -398,6 +410,13 @@ MVP 接口文档已根据当前控制器注解和 gateway 路由核对：
 rg -n "@(GetMapping|PostMapping|PatchMapping|RequestMapping)" backend/*-service/src/main/java -g "*.java"
 ```
 
+前端页面外壳组件拆分后已通过静态检查和构建：
+
+```bash
+pnpm lint:web
+pnpm build:web
+```
+
 全部后端模块已通过编译：
 
 ```bash
@@ -430,6 +449,7 @@ Docker Compose 暂未本地验证，因为当前机器没有 Docker。
 - `feat: extend assessment schema`
 - `chore: add frontend lint config`
 - `docs: add api reference`
+- `refactor: split app chrome`
 
 ## 接下来需要做
 
@@ -449,5 +469,5 @@ Docker Compose 暂未本地验证，因为当前机器没有 Docker。
 
 ### 3. 工程质量
 
-- 拆分前端页面组件。
+- 继续拆分老师端/学生端工作台内部组件。
 - 增加基础测试。
