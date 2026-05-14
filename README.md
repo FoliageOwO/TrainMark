@@ -92,6 +92,12 @@ pnpm lint:web
 pnpm verify:mvp
 ```
 
+AI provider 契约验证：
+
+```bash
+pnpm verify:ai
+```
+
 ### 4. 启动本地基础设施
 
 ```bash

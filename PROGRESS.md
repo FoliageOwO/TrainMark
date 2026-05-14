@@ -655,6 +655,20 @@
 - `README.md`
 - `PROGRESS.md`
 
+### 40. AI Provider 验证脚本
+
+- 已新增 `pnpm verify:ai` 脚本入口。
+- 已新增 `scripts/verify-ai.sh`，统一验证 OCR、评分和批注 provider。
+- 验证脚本会执行 Python 编译检查、运行 OCR 样例、运行评分样例、运行批注 PDF 样例，并校验 JSON 输出和 PDF 文件头。
+- 已在 README 补充 AI provider 契约验证命令。
+
+主要代码：
+
+- `scripts/verify-ai.sh`
+- `package.json`
+- `README.md`
+- `PROGRESS.md`
+
 ## 已验证
 
 前端构建已通过：
@@ -838,6 +852,12 @@ python3 ai/annotation/local_provider.py --result-id 3001 --submission-id 7 --stu
 file /tmp/*/annotated-7.pdf
 ```
 
+AI Provider 验证脚本已通过：
+
+```bash
+pnpm verify:ai
+```
+
 全部后端模块已通过编译：
 
 ```bash
@@ -888,6 +908,7 @@ Docker Compose 已完成配置展开校验，暂未拉起 PostgreSQL、Redis、R
 - `feat: add ocr provider cli`
 - `feat: add scoring provider cli`
 - `feat: add annotation provider cli`
+- `chore: add ai verifier`
 
 ## 接下来需要做
 

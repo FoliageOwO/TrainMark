@@ -7,6 +7,7 @@
     "build:web": "pnpm --filter trainmark-ai-web build",
     "lint:web": "pnpm --filter trainmark-ai-web lint",
     "verify:mvp": "bash scripts/verify-mvp.sh",
+    "verify:ai": "bash scripts/verify-ai.sh",
     "backup": "bash scripts/backup.sh",
     "restore": "bash scripts/restore.sh",
     "smoke:api": "bash scripts/smoke-api.sh",
