@@ -1,4 +1,4 @@
-import { useState, type CSSProperties, type FormEvent } from 'react';
+import { useEffect, useState, type CSSProperties, type FormEvent } from 'react';
 import {
   BarChart3,
   Bell,
@@ -17,6 +17,7 @@ import {
   Users,
 } from 'lucide-react';
 import { mockApi } from '../api/mockApi';
+import { loadWorkspaceData, shouldUseHttpApi, type WorkspaceData } from '../api/httpApi';
 import type { CourseSummary, RoleCode, UserProfile } from '../api/types';
 
 const roleOptions: Array<{ role: RoleCode; label: string; hint: string }> = [
@@ -89,29 +90,50 @@ export function App() {
   const [user, setUser] = useState<UserProfile>(() => mockApi.login('TEACHER'));
   const [activeNav, setActiveNav] = useState('工作台');
   const [selectedCourseId, setSelectedCourseId] = useState(1);
+  const [workspaceData, setWorkspaceData] = useState<WorkspaceData | null>(null);
+  const [apiModeLabel, setApiModeLabel] = useState(shouldUseHttpApi() ? 'HTTP API' : 'Mock 数据');
 
   const primaryRole = user.roles[0];
   const metrics = mockApi.getMetrics();
-  const courses = mockApi.listCourses();
+  const courses = workspaceData?.courses ?? mockApi.listCourses();
   const selectedCourse = courses.find((course) => course.id === selectedCourseId) ?? courses[0];
-  const classes = mockApi.listClasses(selectedCourse.id);
-  const assignments = mockApi.listAssignments(selectedCourse.id);
+  const classes = workspaceData?.classes ?? mockApi.listClasses(selectedCourse.id);
+  const assignments = workspaceData?.assignments ?? mockApi.listAssignments(selectedCourse.id);
   const studentTasks = mockApi.listStudentTasks();
-  const organizations = mockApi.listOrganizations();
-  const students = mockApi.listUsers('STUDENT');
+  const organizations = workspaceData?.organizations ?? mockApi.listOrganizations();
+  const students = workspaceData?.students ?? mockApi.listUsers('STUDENT');
   const importPreview = mockApi.getStudentImportPreview();
-  const collectionOverview = mockApi.getCollectionOverview();
-  const unsubmittedStudents = mockApi.listUnsubmittedStudents();
-  const rubrics = mockApi.listRubrics();
-  const gradingJobs = mockApi.listGradingJobs();
-  const ocrJobs = mockApi.listOcrJobs();
-  const gradingResults = mockApi.listGradingResults();
-  const publishedResults = mockApi.listPublishedResults(user.id);
-  const gradeStatistics = mockApi.getGradeStatistics();
-  const lossPoints = mockApi.listLossPoints();
-  const courseOutcomes = mockApi.listCourseOutcomes();
-  const appeals = mockApi.listAppeals(undefined, user.id);
-  const similarityJobs = mockApi.listSimilarityJobs();
+  const collectionOverview = workspaceData?.collectionOverview ?? mockApi.getCollectionOverview();
+  const unsubmittedStudents = workspaceData?.unsubmittedStudents ?? mockApi.listUnsubmittedStudents();
+  const rubrics = workspaceData?.rubrics ?? mockApi.listRubrics();
+  const gradingJobs = workspaceData?.gradingJobs ?? mockApi.listGradingJobs();
+  const ocrJobs = workspaceData?.ocrJobs ?? mockApi.listOcrJobs();
+  const gradingResults = workspaceData?.gradingResults ?? mockApi.listGradingResults();
+  const publishedResults = workspaceData?.publishedResults ?? mockApi.listPublishedResults(user.id);
+  const gradeStatistics = workspaceData?.gradeStatistics ?? mockApi.getGradeStatistics();
+  const lossPoints = workspaceData?.lossPoints ?? mockApi.listLossPoints();
+  const courseOutcomes = workspaceData?.courseOutcomes ?? mockApi.listCourseOutcomes();
+  const appeals = workspaceData?.appeals.filter((item) => item.studentId === user.id) ?? mockApi.listAppeals(undefined, user.id);
+  const similarityJobs = workspaceData?.similarityJobs ?? mockApi.listSimilarityJobs();
+
+  useEffect(() => {
+    if (!shouldUseHttpApi()) {
+      setWorkspaceData(null);
+      setApiModeLabel('Mock 数据');
+      return;
+    }
+
+    let cancelled = false;
+    loadWorkspaceData(selectedCourseId, user.id).then((data) => {
+      if (!cancelled) {
+        setWorkspaceData(data);
+        setApiModeLabel('HTTP API / Mock 兜底');
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedCourseId, user.id]);
 
   const teacherStats = [
     { label: '进行中任务', value: String(metrics.activeAssignments), trend: '+2 本周', tone: 'blue' },
@@ -184,7 +206,7 @@ export function App() {
           <div className="hero-actions">
             <div className="user-chip">
               <span>{user.name}</span>
-              <small>{roleOptions.find((item) => item.role === primaryRole)?.hint}</small>
+              <small>{roleOptions.find((item) => item.role === primaryRole)?.hint} · {apiModeLabel}</small>
             </div>
             <button className="primary-button" type="button">
               <Plus size={16} /> {primaryRole === 'STUDENT' ? '上传报告' : '创建实训任务'}

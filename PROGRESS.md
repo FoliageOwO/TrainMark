@@ -291,6 +291,25 @@
 - `apps/web/src/api/mockApi.ts`
 - `apps/web/src/styles/global.css`
 
+### 18. 前端 HTTP API 数据层
+
+- 已补充前端 HTTP API 数据层，支持通过 `VITE_API_MODE=http` 从 gateway 拉取数据。
+- 已覆盖课程、班级、任务、组织、学生、收集概览、未交名单、评分标准、批改任务、OCR、复核结果、统计分析、申诉和查重等主流程读取接口。
+- 已实现单接口失败回退 mock 数据，避免后端部分服务未启动时阻断前端演示。
+- 已在界面用户信息处显示当前数据来源。
+- 已修正 gateway 通知路由为 `/api/notifications/**`。
+- 已补充 Vite 环境变量类型声明。
+
+主要代码：
+
+- `apps/web/src/api/httpApi.ts`
+- `apps/web/src/pages/App.tsx`
+- `apps/web/src/vite-env.d.ts`
+- `backend/gateway-service/src/main/resources/application.yml`
+- `.env.example`
+- `README.md`
+- `PROGRESS.md`
+
 ## 已验证
 
 前端构建已通过：
@@ -315,6 +334,12 @@ mvn -f backend/pom.xml -pl analytics-service -am package -DskipTests
 
 ```bash
 mvn -f backend/pom.xml -pl similarity-service,gateway-service -am package -DskipTests
+```
+
+前端 HTTP API 数据层已通过构建：
+
+```bash
+pnpm build:web
 ```
 
 全部后端模块已通过编译：
@@ -345,6 +370,7 @@ Docker Compose 暂未本地验证，因为当前机器没有 Docker。
 - `feat: add appeals`
 - `docs: update mvp runbook`
 - `feat: add similarity checks`
+- `feat: add frontend http api`
 
 ## 接下来需要做
 

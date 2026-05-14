@@ -55,6 +55,14 @@ cp .env.example .env
 
 当前前端 MVP 使用内存 mock 数据，不依赖后端即可演示主流程。后端和基础设施启动后，可逐步切换到真实接口。
 
+切换到后端 gateway 读取数据：
+
+```bash
+VITE_API_MODE=http pnpm dev:web
+```
+
+HTTP 模式会从 `VITE_API_BASE_URL` 读取课程、名单、复核、发布、申诉、统计和查重数据；单个接口不可用时会自动回退到本地 mock 数据，便于分服务联调。
+
 ### 3. 启动前端
 
 ```bash
