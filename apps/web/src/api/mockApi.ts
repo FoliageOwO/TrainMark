@@ -15,6 +15,7 @@ import type {
   RoleCode,
   RubricSummary,
   LossPointSummary,
+  SimilarityJobSummary,
   StudentImportPreview,
   SubmissionTask,
   TeachingClassSummary,
@@ -239,6 +240,22 @@ const courseOutcomes: CourseOutcomeAchievement[] = [
   { courseOutcomeCode: 'CO3', title: '工程表达与报告规范', targetValue: 0.75, achievedValue: 0.72, status: '临界' },
 ];
 
+const similarityJobs: SimilarityJobSummary[] = [
+  {
+    id: 1,
+    assignmentId: 1,
+    checkedSubmissionCount: 65,
+    status: 'COMPLETED',
+    maxSimilarity: 0.82,
+    highRiskPairCount: 1,
+    createdAt: '2026-05-14T10:30:00+08:00',
+    matches: [
+      { sourceSubmissionId: 1, targetSubmissionId: 18, sourceStudentName: '张三', targetStudentName: '钱雨', similarity: 0.82, matchedSection: '系统实现-上传流程', riskLevel: 'HIGH' },
+      { sourceSubmissionId: 7, targetSubmissionId: 23, sourceStudentName: '李四', targetStudentName: '孙可', similarity: 0.68, matchedSection: '数据库表结构说明', riskLevel: 'MEDIUM' },
+    ],
+  },
+];
+
 export const mockApi = {
   login(role: RoleCode): UserProfile {
     return users[role];
@@ -375,6 +392,25 @@ export const mockApi = {
   },
   listCourseOutcomes(): CourseOutcomeAchievement[] {
     return courseOutcomes;
+  },
+  listSimilarityJobs(): SimilarityJobSummary[] {
+    return similarityJobs;
+  },
+  startSimilarityJob(): SimilarityJobSummary {
+    const job: SimilarityJobSummary = {
+      id: similarityJobs.length + 1,
+      assignmentId: 1,
+      checkedSubmissionCount: 65,
+      status: 'COMPLETED',
+      maxSimilarity: 0.74,
+      highRiskPairCount: 0,
+      createdAt: new Date().toISOString(),
+      matches: [
+        { sourceSubmissionId: 3, targetSubmissionId: 9, sourceStudentName: '待检测学生A', targetStudentName: '待检测学生B', similarity: 0.74, matchedSection: '需求分析章节', riskLevel: 'MEDIUM' },
+      ],
+    };
+    similarityJobs.unshift(job);
+    return job;
   },
   listAppeals(resultId?: number, studentId?: number): AppealSummary[] {
     return appeals.filter((item) => (

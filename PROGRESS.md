@@ -267,6 +267,30 @@
 - `README.md`
 - `PROGRESS.md`
 
+### 17. 查重检测与网关路由
+
+- 已实现查重任务状态枚举。
+- 已实现查重任务创建请求、任务摘要和相似片段匹配 DTO。
+- 已实现查重任务列表、创建任务、查看任务详情接口骨架。
+- 已在老师端加入查重检测面板，展示检测份数、最高相似度、高风险组数和相似片段。
+- 已补充 gateway 路由，覆盖用户、文件、评分、OCR、查重、通知和统计接口。
+- 当前查重结果仍为内存模拟数据，后续需要接入真实文本指纹、向量相似度和跨班历史样本库。
+
+主要代码：
+
+- `backend/similarity-service/src/main/java/com/trainmark/similarity/SimilarityController.java`
+- `backend/similarity-service/src/main/java/com/trainmark/similarity/SimilarityService.java`
+- `backend/similarity-service/pom.xml`
+- `backend/gateway-service/src/main/resources/application.yml`
+- `backend/shared/src/main/java/com/trainmark/shared/SimilarityJobStatus.java`
+- `backend/shared/src/main/java/com/trainmark/shared/dto/CreateSimilarityJobRequest.java`
+- `backend/shared/src/main/java/com/trainmark/shared/dto/SimilarityJobSummary.java`
+- `backend/shared/src/main/java/com/trainmark/shared/dto/SimilarityMatchSummary.java`
+- `apps/web/src/pages/App.tsx`
+- `apps/web/src/api/types.ts`
+- `apps/web/src/api/mockApi.ts`
+- `apps/web/src/styles/global.css`
+
 ## 已验证
 
 前端构建已通过：
@@ -285,6 +309,18 @@ mvn -f backend/pom.xml -pl grading-service -am package -DskipTests
 
 ```bash
 mvn -f backend/pom.xml -pl analytics-service -am package -DskipTests
+```
+
+查重与网关模块已通过编译：
+
+```bash
+mvn -f backend/pom.xml -pl similarity-service,gateway-service -am package -DskipTests
+```
+
+全部后端模块已通过编译：
+
+```bash
+mvn -f backend/pom.xml package -DskipTests
 ```
 
 Docker Compose 暂未本地验证，因为当前机器没有 Docker。
@@ -308,6 +344,7 @@ Docker Compose 暂未本地验证，因为当前机器没有 Docker。
 - `feat: add analytics`
 - `feat: add appeals`
 - `docs: update mvp runbook`
+- `feat: add similarity checks`
 
 ## 接下来需要做
 

@@ -111,6 +111,7 @@ export function App() {
   const lossPoints = mockApi.listLossPoints();
   const courseOutcomes = mockApi.listCourseOutcomes();
   const appeals = mockApi.listAppeals(undefined, user.id);
+  const similarityJobs = mockApi.listSimilarityJobs();
 
   const teacherStats = [
     { label: '进行中任务', value: String(metrics.activeAssignments), trend: '+2 本周', tone: 'blue' },
@@ -215,6 +216,7 @@ export function App() {
             lossPoints={lossPoints}
             courseOutcomes={courseOutcomes}
             appeals={mockApi.listAppeals()}
+            similarityJobs={similarityJobs}
           />
         )}
       </section>
@@ -243,6 +245,7 @@ function TeacherDashboard({
   lossPoints,
   courseOutcomes,
   appeals,
+  similarityJobs,
 }: {
   assignments: ReturnType<typeof mockApi.listAssignments>;
   classes: ReturnType<typeof mockApi.listClasses>;
@@ -264,6 +267,7 @@ function TeacherDashboard({
   lossPoints: ReturnType<typeof mockApi.listLossPoints>;
   courseOutcomes: ReturnType<typeof mockApi.listCourseOutcomes>;
   appeals: ReturnType<typeof mockApi.listAppeals>;
+  similarityJobs: ReturnType<typeof mockApi.listSimilarityJobs>;
 }) {
   const [reminderResult, setReminderResult] = useState<ReturnType<typeof mockApi.remindUnsubmitted> | null>(null);
   const [startedJob, setStartedJob] = useState<ReturnType<typeof mockApi.startGradingJob> | null>(null);
@@ -271,6 +275,7 @@ function TeacherDashboard({
   const [selectedReviewId, setSelectedReviewId] = useState(gradingResults[0]?.id ?? 0);
   const [publicationAudits, setPublicationAudits] = useState(mockApi.listPublicationAudits());
   const [appealRows, setAppealRows] = useState(appeals);
+  const [similarityRows, setSimilarityRows] = useState(similarityJobs);
   const submittedRate = Math.round((collectionOverview.submitted / collectionOverview.totalStudents) * 100);
   const rubric = rubrics[0];
   const visibleJobs = startedJob ? [startedJob, ...gradingJobs] : gradingJobs;
@@ -305,6 +310,11 @@ function TeacherDashboard({
       : '已复核原始报告和评分依据，维持当前评分。';
     mockApi.resolveAppeal(appealId, accepted, reply);
     setAppealRows(mockApi.listAppeals());
+  };
+
+  const handleStartSimilarity = () => {
+    mockApi.startSimilarityJob();
+    setSimilarityRows(mockApi.listSimilarityJobs());
   };
 
   return (
@@ -503,6 +513,41 @@ function TeacherDashboard({
                   <span>{block.type} · 第 {block.page} 页</span>
                 </div>
                 <b>{block.confidence}%</b>
+              </div>
+            ))}
+          </div>
+        </article>
+      </section>
+
+      <section className="management-grid">
+        <article className="panel similarity-panel">
+          <div className="panel-heading">
+            <div>
+              <p className="eyebrow">Similarity Check</p>
+              <h3>查重检测</h3>
+            </div>
+            <button className="ghost-button" type="button" onClick={handleStartSimilarity}>
+              <ShieldCheck size={15} /> 启动查重
+            </button>
+          </div>
+          <div className="similarity-job-list">
+            {similarityRows.map((job) => (
+              <div className="similarity-card" key={job.id}>
+                <div className="similarity-summary">
+                  <strong>查重任务 #{job.id}</strong>
+                  <span>{job.checkedSubmissionCount} 份 · 最高相似度 {Math.round(job.maxSimilarity * 100)}% · 高风险 {job.highRiskPairCount} 组</span>
+                </div>
+                <div className="similarity-match-list">
+                  {job.matches.map((match) => (
+                    <div className={`similarity-match ${match.riskLevel.toLowerCase()}`} key={`${job.id}-${match.sourceSubmissionId}-${match.targetSubmissionId}`}>
+                      <div>
+                        <strong>{match.sourceStudentName} / {match.targetStudentName}</strong>
+                        <span>{match.matchedSection}</span>
+                      </div>
+                      <b>{Math.round(match.similarity * 100)}%</b>
+                    </div>
+                  ))}
+                </div>
               </div>
             ))}
           </div>

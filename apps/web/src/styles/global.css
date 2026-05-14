@@ -887,6 +887,67 @@ button:focus-visible {
   color: #0f766e;
 }
 
+.similarity-job-list {
+  display: grid;
+  gap: 12px;
+  margin-top: 18px;
+}
+
+.similarity-card {
+  display: grid;
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid #e2e8f0;
+  border-radius: 18px;
+  background: linear-gradient(180deg, #ffffff, #f8fafc);
+}
+
+.similarity-summary strong,
+.similarity-summary span {
+  display: block;
+}
+
+.similarity-summary span {
+  margin-top: 4px;
+  color: #64748b;
+  font-size: 13px;
+}
+
+.similarity-match-list {
+  display: grid;
+  gap: 8px;
+}
+
+.similarity-match {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: center;
+  padding: 10px;
+  border-radius: 14px;
+  background: #eff6ff;
+}
+
+.similarity-match.high {
+  background: #fff7ed;
+}
+
+.similarity-match.medium {
+  background: #fffbeb;
+}
+
+.similarity-match span {
+  display: block;
+  margin-top: 3px;
+  color: #64748b;
+  font-size: 13px;
+}
+
+.similarity-match b {
+  color: #f97316;
+  font-size: 22px;
+}
+
 .review-switcher {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));

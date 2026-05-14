@@ -287,3 +287,26 @@ export type AppealSummary = {
   createdAt: string;
   resolvedAt: string | null;
 };
+
+export type SimilarityJobStatus = 'PENDING' | 'RUNNING' | 'COMPLETED' | 'FAILED';
+
+export type SimilarityMatch = {
+  sourceSubmissionId: number;
+  targetSubmissionId: number;
+  sourceStudentName: string;
+  targetStudentName: string;
+  similarity: number;
+  matchedSection: string;
+  riskLevel: 'HIGH' | 'MEDIUM' | 'LOW';
+};
+
+export type SimilarityJobSummary = {
+  id: number;
+  assignmentId: number;
+  checkedSubmissionCount: number;
+  status: SimilarityJobStatus;
+  maxSimilarity: number;
+  highRiskPairCount: number;
+  createdAt: string;
+  matches: SimilarityMatch[];
+};
