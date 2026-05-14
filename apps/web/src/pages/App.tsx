@@ -34,6 +34,7 @@ import { TeacherAnalyticsPanel } from '../components/TeacherAnalyticsPanel';
 import { TeacherAiPipeline } from '../components/TeacherAiPipeline';
 import { TeacherCollectionPanel } from '../components/TeacherCollectionPanel';
 import { TeacherReviewWorkspace } from '../components/TeacherReviewWorkspace';
+import { TeacherSimilarityPanel } from '../components/TeacherSimilarityPanel';
 import { formatDate } from '../utils/formatDate';
 
 const pipelineSteps = ['文件预处理', 'OCR 识别', '结构化提取', '语义评分', 'PDF 批注', '教师复核'];
@@ -415,40 +416,7 @@ function TeacherDashboard({
         onStartGrading={handleStartGrading}
       />
 
-      <section className="management-grid">
-        <article className="panel similarity-panel">
-          <div className="panel-heading">
-            <div>
-              <p className="eyebrow">Similarity Check</p>
-              <h3>查重检测</h3>
-            </div>
-            <button className="ghost-button" type="button" onClick={handleStartSimilarity}>
-              <ShieldCheck size={15} /> 启动查重
-            </button>
-          </div>
-          <div className="similarity-job-list">
-            {similarityRows.map((job) => (
-              <div className="similarity-card" key={job.id}>
-                <div className="similarity-summary">
-                  <strong>查重任务 #{job.id}</strong>
-                  <span>{job.checkedSubmissionCount} 份 · 最高相似度 {Math.round(job.maxSimilarity * 100)}% · 高风险 {job.highRiskPairCount} 组</span>
-                </div>
-                <div className="similarity-match-list">
-                  {job.matches.map((match) => (
-                    <div className={`similarity-match ${match.riskLevel.toLowerCase()}`} key={`${job.id}-${match.sourceSubmissionId}-${match.targetSubmissionId}`}>
-                      <div>
-                        <strong>{match.sourceStudentName} / {match.targetStudentName}</strong>
-                        <span>{match.matchedSection}</span>
-                      </div>
-                      <b>{Math.round(match.similarity * 100)}%</b>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            ))}
-          </div>
-        </article>
-      </section>
+      <TeacherSimilarityPanel similarityJobs={similarityRows} onStartSimilarity={handleStartSimilarity} />
 
       <TeacherReviewWorkspace
         reviewResults={reviewResults}

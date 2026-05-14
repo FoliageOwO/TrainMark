@@ -604,6 +604,18 @@
 - `apps/web/src/pages/App.tsx`
 - `PROGRESS.md`
 
+### 22.7 教师端查重检测组件拆分
+
+- 已从教师端工作台中拆出 `TeacherSimilarityPanel`，查重任务列表、匹配明细和启动查重按钮集中维护。
+- 查重风险等级展示和相似度百分比格式化随组件下沉，减少 `App.tsx` 查重展示逻辑。
+- `App.tsx` 继续负责启动查重并合并最新查重任务状态。
+
+主要代码：
+
+- `apps/web/src/components/TeacherSimilarityPanel.tsx`
+- `apps/web/src/pages/App.tsx`
+- `PROGRESS.md`
+
 ### 23. 前端 HTTP 写操作联调
 
 - 已扩展前端 HTTP API 层，支持在 `VITE_API_MODE=http` 下调用后端写接口。
@@ -1505,6 +1517,14 @@ pnpm verify:mvp
 ```
 
 教师端收集催交组件拆分后已通过静态检查和构建：
+
+```bash
+pnpm --filter trainmark-ai-web lint
+pnpm --filter trainmark-ai-web build
+pnpm verify:mvp
+```
+
+教师端查重检测组件拆分后已通过静态检查和构建：
 
 ```bash
 pnpm --filter trainmark-ai-web lint
