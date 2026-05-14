@@ -3,16 +3,16 @@ services:
     image: postgres:16-alpine
     container_name: trainmark-postgres
     environment:
-      POSTGRES_DB: trainmark_ai
-      POSTGRES_USER: trainmark
-      POSTGRES_PASSWORD: trainmark_dev
+      POSTGRES_DB: ${POSTGRES_DB:-trainmark_ai}
+      POSTGRES_USER: ${POSTGRES_USER:-trainmark}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-trainmark_dev}
     ports:
       - "5432:5432"
     volumes:
       - postgres-data:/var/lib/postgresql/data
       - ./postgres/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U trainmark -d trainmark_ai"]
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER:-trainmark} -d $${POSTGRES_DB:-trainmark_ai}"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -30,8 +30,8 @@ services:
     image: rabbitmq:3-management-alpine
     container_name: trainmark-rabbitmq
     environment:
-      RABBITMQ_DEFAULT_USER: trainmark
-      RABBITMQ_DEFAULT_PASS: trainmark_dev
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USERNAME:-trainmark}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:-trainmark_dev}
     ports:
       - "5672:5672"
       - "15672:15672"
@@ -42,8 +42,8 @@ services:
     image: minio/minio:latest
     container_name: trainmark-minio
     environment:
-      MINIO_ROOT_USER: trainmark
-      MINIO_ROOT_PASSWORD: trainmark_dev_password
+      MINIO_ROOT_USER: ${MINIO_ACCESS_KEY:-trainmark}
+      MINIO_ROOT_PASSWORD: ${MINIO_SECRET_KEY:-trainmark_dev_password}
     ports:
       - "9000:9000"
       - "9001:9001"

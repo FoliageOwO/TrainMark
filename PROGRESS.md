@@ -533,6 +533,26 @@
 - `README.md`
 - `PROGRESS.md`
 
+### 33. 本地备份脚本与环境默认值
+
+- 已将 `.env.example` 的 PostgreSQL 和 RabbitMQ 默认值与 Docker Compose 默认值对齐。
+- 已让 Docker Compose 读取环境变量并提供默认值，避免本地联调时 `.env` 与 compose 配置漂移。
+- 已将 `backups/` 加入 Git 忽略，防止本地备份产物误提交。
+- 已新增 `pnpm backup` 脚本入口。
+- 已将 `scripts/backup.sh` 从占位提示升级为可执行备份脚本，支持 PostgreSQL custom dump 和 MinIO / S3 对象同步。
+- 已生成备份 manifest，记录备份时间、环境文件、数据库目标和对象存储目标。
+- 已在 README 补充本地备份用法和关键环境变量。
+
+主要代码：
+
+- `.env.example`
+- `.gitignore`
+- `infra/docker-compose.yml`
+- `package.json`
+- `scripts/backup.sh`
+- `README.md`
+- `PROGRESS.md`
+
 ## 已验证
 
 前端构建已通过：
@@ -664,6 +684,14 @@ pnpm lint:web
 pnpm build:web
 ```
 
+本地备份脚本与环境默认值已通过脚本语法检查和 Docker Compose 配置展开校验：
+
+```bash
+bash -n scripts/backup.sh
+bash -n scripts/verify-mvp.sh
+docker compose -f infra/docker-compose.yml config
+```
+
 全部后端模块已通过编译：
 
 ```bash
@@ -707,6 +735,7 @@ Docker Compose 暂未本地验证，因为当前机器没有 Docker。
 - `feat: add admin settings`
 - `feat: add pwa shell`
 - `feat: add role deep links`
+- `chore: add backup script`
 
 ## 接下来需要做
 

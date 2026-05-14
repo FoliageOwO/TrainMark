@@ -163,6 +163,22 @@ pnpm build:web
 mvn -f backend/pom.xml package -DskipTests
 ```
 
+## 本地备份
+
+备份脚本会读取 `.env`，默认输出到 `backups/<时间戳>/`，其中 PostgreSQL 使用 custom dump 格式，MinIO / S3 兼容对象存储会优先使用 `mc mirror`，没有 `mc` 时尝试 `aws s3 sync`。
+
+```bash
+pnpm backup
+```
+
+常用环境变量：
+
+| 变量 | 说明 |
+|---|---|
+| `ENV_FILE` | 指定环境变量文件，默认 `.env` |
+| `BACKUP_ROOT` | 指定备份根目录，默认 `backups` |
+| `REQUIRE_OBJECT_BACKUP=1` | 缺少 `mc` / `aws` 时让对象存储备份失败退出 |
+
 ## 环境说明
 
 当前仓库允许在没有 Docker 的机器上继续编码。后端 Maven 工程和 Docker Compose 配置会持续维护，但本机没有 Docker 时可先不执行基础设施启动。
