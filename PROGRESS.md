@@ -600,6 +600,25 @@
 - `README.md`
 - `PROGRESS.md`
 
+### 37. OCR Provider CLI 契约
+
+- 已补齐 `ai/ocr/` 目录，承接 PROJECT 中 OCR、评分和批注相关 AI 能力的仓库结构。
+- 已新增无第三方依赖的 `local_provider.py`，输出与后端 `OcrResultSummary` 兼容的 JSON。
+- 已让本地 OCR CLI 覆盖数据库报告、图片截图和普通报告三类 deterministic 结构识别场景。
+- 已新增 PaddleOCR 配置样例，明确后续 PaddleOCR provider 的运行参数、预处理选项和 stdout JSON 输出契约。
+- 已新增 OCR provider README，记录本地 provider 调用方式和 PaddleOCR 迁移边界。
+- 已忽略 Python `__pycache__` 和 `.pyc` 文件，避免本地校验产物误提交。
+- 已更新 README 状态表和进度记录。
+
+主要代码：
+
+- `ai/ocr/README.md`
+- `ai/ocr/local_provider.py`
+- `ai/ocr/paddleocr.example.yml`
+- `.gitignore`
+- `README.md`
+- `PROGRESS.md`
+
 ## 已验证
 
 前端构建已通过：
@@ -759,6 +778,14 @@ bash -n scripts/deploy.sh
 pnpm verify:mvp
 ```
 
+OCR Provider CLI 契约已通过 Python 编译检查和样例输出验证：
+
+```bash
+python3 -m py_compile ai/ocr/local_provider.py
+python3 ai/ocr/local_provider.py --job-id 1001 --submission-id 1 --object-key assignments/1/students/2/database-report.pdf
+python3 ai/ocr/local_provider.py --job-id 1002 --submission-id 2 --object-key assignments/1/students/3/screenshot.png
+```
+
 全部后端模块已通过编译：
 
 ```bash
@@ -806,6 +833,7 @@ Docker Compose 已完成配置展开校验，暂未拉起 PostgreSQL、Redis、R
 - `chore: add restore script`
 - `chore: add api smoke script`
 - `chore: add local deploy bundle`
+- `feat: add ocr provider cli`
 
 ## 接下来需要做
 

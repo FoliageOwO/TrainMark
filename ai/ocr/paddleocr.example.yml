@@ -1,0 +1,14 @@
+provider: paddleocr
+runtime:
+  device: cpu
+  language: ch
+  max_pages_per_document: 80
+  timeout_seconds: 60
+preprocess:
+  deskew: true
+  denoise: true
+  split_tables: true
+output:
+  format: trainmark-ocr-result-v1
+  stdout_json: true
+  log_to_stderr: true

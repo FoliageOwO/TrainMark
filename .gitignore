@@ -11,6 +11,8 @@ target/
 .npm-cache/
 .vite/
 *.tsbuildinfo
+__pycache__/
+*.pyc
 
 # Logs
 *.log
