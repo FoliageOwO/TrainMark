@@ -34,3 +34,18 @@ Use `pdf-annotation.example.yml` as the first production configuration shape.
 Future providers should preserve the JSON manifest contract and write generated
 PDFs to the configured object-storage staging path.
 
+## Backend Switch
+
+`grading-service` defaults to the in-process local annotation provider. To call
+an external PDF annotation command during grading:
+
+```bash
+ANNOTATION_PROVIDER=command \
+ANNOTATION_COMMAND='python3 ai/annotation/local_provider.py --result-id {resultId} --submission-id {submissionId} --student-name {studentName} --output-dir {outputDir} --comment {comment}' \
+ANNOTATION_OUTPUT_DIR=/tmp/trainmark-annotations \
+mvn -f backend/pom.xml -pl grading-service spring-boot:run
+```
+
+Placeholders are shell-quoted by the backend before execution. The command must
+print a JSON manifest containing `annotationPdfUrl`; optional `annotations`
+entries are mapped back to `GradingAnnotationSummary`.

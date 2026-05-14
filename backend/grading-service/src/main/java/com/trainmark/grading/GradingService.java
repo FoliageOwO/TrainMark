@@ -35,6 +35,7 @@ import org.springframework.stereotype.Service;
 @Service
 public class GradingService {
   private final ScoringProvider scoringProvider;
+  private final AnnotationProvider annotationProvider;
   private final AtomicLong rubricIds = new AtomicLong(2);
   private final AtomicLong itemIds = new AtomicLong(10);
   private final AtomicLong pointIds = new AtomicLong(100);
@@ -50,8 +51,9 @@ public class GradingService {
   private final Map<Long, AppealSummary> appeals = new LinkedHashMap<>();
   private final Map<Long, GradeExportSummary> exports = new LinkedHashMap<>();
 
-  public GradingService(ScoringProvider scoringProvider) {
+  public GradingService(ScoringProvider scoringProvider, AnnotationProvider annotationProvider) {
     this.scoringProvider = scoringProvider;
+    this.annotationProvider = annotationProvider;
     var points = List.of(
         new RubricPointSummary(1L, "功能模块完整", "覆盖登录、课程、任务、提交核心流程", 12, List.of("登录", "课程", "任务", "提交"), List.of("上传", "报告提交")),
         new RubricPointSummary(2L, "数据库设计合理", "实体关系清晰，字段和约束完整", 8, List.of("ER图", "表结构", "约束"), List.of("实体关系", "数据表"))
@@ -474,7 +476,7 @@ public class GradingService {
         .findFirst()
         .orElse(rubrics.values().iterator().next());
     var resultId = resultIds.getAndIncrement();
-    results.put(resultId, scoringProvider.score(new ScoringRequest(
+    var scored = scoringProvider.score(new ScoringRequest(
         resultId,
         assignmentId,
         submissionId,
@@ -483,6 +485,7 @@ public class GradingService {
         "2024010101",
         "自动批改报告-" + submissionId + ".pdf",
         rubric
-    )));
+    ));
+    results.put(resultId, annotationProvider.annotate(scored));
   }
 }

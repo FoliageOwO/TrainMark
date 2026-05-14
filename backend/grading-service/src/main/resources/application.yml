@@ -14,3 +14,8 @@ trainmark:
     provider: ${SCORING_PROVIDER:local}
     command: ${SCORING_COMMAND:}
     timeout-seconds: ${SCORING_TIMEOUT_SECONDS:90}
+  annotation:
+    provider: ${ANNOTATION_PROVIDER:local}
+    command: ${ANNOTATION_COMMAND:}
+    output-dir: ${ANNOTATION_OUTPUT_DIR:/tmp/trainmark-annotations}
+    timeout-seconds: ${ANNOTATION_TIMEOUT_SECONDS:60}

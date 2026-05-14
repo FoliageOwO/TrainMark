@@ -788,6 +788,29 @@
 - `README.md`
 - `PROGRESS.md`
 
+### 48. 批注后端 Provider 切换
+
+- 已为 `grading-service` 抽象 `AnnotationProvider` 接口。
+- 已新增 `LocalAnnotationProvider`，评分完成后生成本地 deterministic 批注 PDF URL 和批注摘要。
+- 已新增 `CommandAnnotationProvider`，支持通过 `ANNOTATION_PROVIDER=command` 和 `ANNOTATION_COMMAND` 调用外部批注 PDF CLI。
+- 已新增 `AnnotationProviderConfig`，默认使用本地 provider，配置为 command 时校验命令模板。
+- 已让创建批改任务时先执行评分 provider，再执行批注 provider，并把批注 PDF URL 与批注摘要写回批改结果。
+- 已为 `grading-service` 增加 `trainmark.annotation.provider`、`trainmark.annotation.command`、输出目录和超时配置。
+- 已更新 `.env.example`、批注 provider README、README 状态表和进度记录。
+
+主要代码：
+
+- `backend/grading-service/src/main/java/com/trainmark/grading/AnnotationProvider.java`
+- `backend/grading-service/src/main/java/com/trainmark/grading/LocalAnnotationProvider.java`
+- `backend/grading-service/src/main/java/com/trainmark/grading/CommandAnnotationProvider.java`
+- `backend/grading-service/src/main/java/com/trainmark/grading/AnnotationProviderConfig.java`
+- `backend/grading-service/src/main/java/com/trainmark/grading/GradingService.java`
+- `backend/grading-service/src/main/resources/application.yml`
+- `.env.example`
+- `ai/annotation/README.md`
+- `README.md`
+- `PROGRESS.md`
+
 ## 已验证
 
 前端构建已通过：
@@ -1021,6 +1044,12 @@ bash -n scripts/verify-mvp.sh
 SMOKE_DRY_RUN=1 pnpm smoke:api
 ```
 
+批注后端 Provider 切换已通过后端模块编译：
+
+```bash
+mvn -f backend/pom.xml -pl grading-service -am package -DskipTests
+```
+
 全部后端模块已通过编译：
 
 ```bash
@@ -1079,6 +1108,7 @@ Docker Compose 已完成配置展开校验，暂未拉起 PostgreSQL、Redis、R
 - `feat: add upload error responses`
 - `feat: add ai error responses`
 - `chore: expand smoke coverage`
+- `feat: add annotation provider switch`
 
 ## 接下来需要做
 
