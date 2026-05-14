@@ -1094,8 +1094,9 @@
 ### 55. 写接口冒烟检查
 
 - 已为 `scripts/smoke-api.sh` 增加可选写接口检查模式。
-- 设置 `SMOKE_INCLUDE_WRITES=1` 时会覆盖上传初始化、上传完成、创建批改任务、创建成绩导出、一键催交和启动查重。
+- 设置 `SMOKE_INCLUDE_WRITES=1` 时会覆盖上传初始化、上传完成、创建批改任务、复核改分、复核通过、成绩发布、发布审计、学生申诉、处理申诉、创建成绩导出、一键催交和启动查重。
 - 上传完成会复用上传初始化返回的 `uploadId` 和 `objectKey`，避免使用伪造会话。
+- 复核改分使用 `PATCH` 请求，匹配后端 `GradingReviewController` 的真实接口方法。
 - 写接口响应会校验 `ApiResponse.success=true`，不再只依赖 HTTP 2xx。
 - 已在 README 补充写接口冒烟检查示例。
 
@@ -1556,6 +1557,16 @@ mvn -f backend/pom.xml clean package -DskipTests
 
 ```bash
 SMOKE_INCLUDE_WRITES=1 SMOKE_RETRIES=90 SMOKE_RETRY_DELAY_SECONDS=2 pnpm smoke:api
+```
+
+扩展后的写接口 smoke 已通过脚本语法检查、dry-run、MVP 主验证和真实 gateway 联调：
+
+```bash
+bash -n scripts/smoke-api.sh
+SMOKE_DRY_RUN=1 SMOKE_INCLUDE_WRITES=1 pnpm smoke:api
+pnpm verify:mvp
+SMOKE_RETRIES=60 SMOKE_RETRY_DELAY_SECONDS=2 pnpm smoke:api
+SMOKE_INCLUDE_WRITES=1 SMOKE_RETRIES=30 SMOKE_RETRY_DELAY_SECONDS=2 pnpm smoke:api
 ```
 
 用户与组织 PostgreSQL 存储已通过后端模块编译：

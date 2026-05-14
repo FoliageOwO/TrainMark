@@ -59,6 +59,36 @@ post_json() {
   done
 }
 
+patch_json() {
+  local label="$1"
+  local url="$2"
+  local body="$3"
+  local attempt=1
+  local response
+
+  if [[ "$SMOKE_DRY_RUN" == "1" ]]; then
+    echo "[smoke:dry-run] PATCH $label -> $url :: $body"
+    return
+  fi
+
+  while true; do
+    echo "[smoke] PATCH $label (attempt $attempt/$SMOKE_RETRIES)" >&2
+    if response="$(curl --noproxy '*' --fail --silent --show-error --max-time 5 \
+      -X PATCH \
+      -H 'Content-Type: application/json' \
+      -d "$body" \
+      "$url")" && api_success "$response"; then
+      printf '%s' "$response"
+      return
+    fi
+    if ((attempt >= SMOKE_RETRIES)); then
+      return 1
+    fi
+    attempt=$((attempt + 1))
+    sleep "$SMOKE_RETRY_DELAY_SECONDS"
+  done
+}
+
 api_success() {
   python3 -c 'import json, sys; payload=json.load(sys.stdin); raise SystemExit(0 if payload.get("success") is True else 1)' <<< "$1"
 }
@@ -110,6 +140,20 @@ if [[ "$SMOKE_INCLUDE_WRITES" == "1" ]]; then
     post_json "upload complete" "$GATEWAY_URL/api/submissions/upload/complete" "{\"uploadId\":\"$upload_id\",\"objectKey\":\"$object_key\",\"checksum\":null}"
   fi
   post_json "grading job" "$GATEWAY_URL/api/grading/jobs" '{"assignmentId":1,"rubricId":1,"submissionIds":[1]}'
+  patch_json "review item" "$GATEWAY_URL/api/grading/results/1/items" '{"rubricItemId":1,"teacherScore":18,"teacherComment":"Smoke review comment"}'
+  post_json "approve result" "$GATEWAY_URL/api/grading/results/1/approve" '{"reviewerName":"Smoke Reviewer","overallComment":"Smoke approved"}'
+  post_json "publish result" "$GATEWAY_URL/api/grading/results/1/publish" '{"operatorName":"Smoke","message":"Smoke publish"}'
+  check_url "gateway publications" "$GATEWAY_URL/api/grading/results/publications?assignmentId=1"
+  check_url "gateway publication audits" "$GATEWAY_URL/api/grading/results/1/publication-audits"
+  if [[ "$SMOKE_DRY_RUN" == "1" ]]; then
+    post_json "grade appeal" "$GATEWAY_URL/api/grading/results/appeals" '{"resultId":1,"rubricItemId":1,"studentId":2,"reason":"Smoke appeal reason","requestedChange":"Smoke requested change"}'
+    post_json "resolve grade appeal" "$GATEWAY_URL/api/grading/results/appeals/<from grade appeal>/resolve" '{"status":"REJECTED","teacherReply":"Smoke appeal reply"}'
+  else
+    appeal_response="$(post_json "grade appeal" "$GATEWAY_URL/api/grading/results/appeals" '{"resultId":1,"rubricItemId":1,"studentId":2,"reason":"Smoke appeal reason","requestedChange":"Smoke requested change"}')"
+    appeal_id="$(json_field id <<< "$appeal_response")"
+    post_json "resolve grade appeal" "$GATEWAY_URL/api/grading/results/appeals/$appeal_id/resolve" '{"status":"REJECTED","teacherReply":"Smoke appeal reply"}'
+  fi
+  check_url "gateway grade appeals" "$GATEWAY_URL/api/grading/results/appeals?resultId=1"
   post_json "grade export" "$GATEWAY_URL/api/grading/exports" '{"assignmentId":1,"format":"CSV","operatorName":"Smoke"}'
   post_json "remind unsubmitted" "$GATEWAY_URL/api/notifications/remind-unsubmitted" '{"assignmentId":1,"studentIds":[2],"channels":["IN_APP"],"message":"Smoke reminder"}'
   post_json "similarity job" "$GATEWAY_URL/api/similarity/jobs" '{"assignmentId":1,"submissionIds":[1,2],"includeHistory":true}'
