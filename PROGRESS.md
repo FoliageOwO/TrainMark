@@ -1712,6 +1712,30 @@
 - `infra/README.md`
 - `PROGRESS.md`
 
+### 61.1 学生上传文件内容本地存储
+
+- 已新增 `UploadObjectStore` 与本地文件系统实现，默认将上传文件内容写入 `.data/uploads`。
+- 已新增 `PUT /api/submissions/upload/content`，接收 `uploadId`、`objectKey` 和 multipart `file`，返回对象写入摘要。
+- 已让学生端 HTTP 模式在初始化上传后发送真实文件内容，再完成提交；没有选择文件时仍生成本地占位文件以保留演示闭环。
+- 已将上传内容接口纳入写接口 smoke dry-run，后续 MVP 验证会覆盖该入口。
+- 已补充 `.gitignore`、`.env.example`、API 文档和 README 中的本地对象目录说明。
+- 本模块已通过前端 lint、前端构建、后端打包、smoke dry-run、MVP 验证脚本和 file-service 真实上传写入验证。
+
+主要代码：
+
+- `backend/shared/src/main/java/com/trainmark/shared/dto/UploadObjectSummary.java`
+- `backend/file-service/src/main/java/com/trainmark/file/UploadObjectStore.java`
+- `backend/file-service/src/main/java/com/trainmark/file/LocalUploadObjectStore.java`
+- `backend/file-service/src/main/java/com/trainmark/file/UploadController.java`
+- `backend/file-service/src/main/java/com/trainmark/file/UploadService.java`
+- `apps/web/src/api/httpApi.ts`
+- `apps/web/src/components/StudentDashboard.tsx`
+- `scripts/smoke-api.sh`
+- `.env.example`
+- `README.md`
+- `docs/API.md`
+- `PROGRESS.md`
+
 ### 62. 数据库迁移版本修复
 
 - 已修复 demo 数据和上传会话迁移文件与既有迁移版本号重复的问题。
@@ -2657,6 +2681,21 @@ pnpm verify:mvp
 mvn -f backend/pom.xml package -DskipTests
 SMOKE_DRY_RUN=1 pnpm smoke:api
 pnpm verify:mvp
+```
+
+学生上传文件内容本地存储已通过前端静态检查、构建、后端打包、smoke dry-run、MVP 主验证和 file-service 真实上传写入验证：
+
+```bash
+pnpm --filter trainmark-ai-web lint
+pnpm --filter trainmark-ai-web build
+mvn -f backend/pom.xml package -DskipTests
+SMOKE_DRY_RUN=1 SMOKE_INCLUDE_WRITES=1 pnpm smoke:api
+pnpm verify:mvp
+UPLOAD_OBJECT_ROOT=.data/test-uploads pnpm dev:backend:file
+curl --noproxy '*' -H 'Content-Type: application/json' -d '{...}' http://localhost:8084/api/submissions/upload/init
+curl --noproxy '*' -X PUT -F 'uploadId=...' -F 'objectKey=...' -F 'file=@...;type=application/pdf' http://localhost:8084/api/submissions/upload/content
+curl --noproxy '*' -H 'Content-Type: application/json' -d '{...}' http://localhost:8084/api/submissions/upload/complete
+curl --noproxy '*' 'http://localhost:8084/api/submissions?assignmentId=1&studentId=2'
 ```
 
 覆盖内容：

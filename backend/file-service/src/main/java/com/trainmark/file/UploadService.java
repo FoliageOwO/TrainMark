@@ -6,6 +6,9 @@ import com.trainmark.shared.dto.InitializeUploadRequest;
 import com.trainmark.shared.dto.InitializeUploadResponse;
 import com.trainmark.shared.dto.SubmissionReceipt;
 import com.trainmark.shared.dto.SubmissionSummary;
+import com.trainmark.shared.dto.UploadObjectSummary;
+import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Set;
@@ -22,11 +25,15 @@ public class UploadService {
   private final long maxFileSizeBytes;
   private final Set<String> allowedContentTypes;
   private final UploadStore store;
+  private final UploadObjectStore objectStore;
+  private final boolean requireObjectContent;
 
   public UploadService(
       @Value("${trainmark.upload.max-file-size-mb:50}") long maxFileSizeMb,
       @Value("${trainmark.upload.allowed-content-types:application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,image/png,image/jpeg}") String allowedContentTypes,
-      UploadStore store
+      @Value("${trainmark.upload.require-object-content:false}") boolean requireObjectContent,
+      UploadStore store,
+      UploadObjectStore objectStore
   ) {
     this.maxFileSizeBytes = maxFileSizeMb * 1024 * 1024;
     this.allowedContentTypes = Arrays.stream(allowedContentTypes.split(","))
@@ -34,6 +41,8 @@ public class UploadService {
         .filter(item -> !item.isBlank())
         .collect(Collectors.toUnmodifiableSet());
     this.store = store;
+    this.objectStore = objectStore;
+    this.requireObjectContent = requireObjectContent;
   }
 
   public InitializeUploadResponse initialize(InitializeUploadRequest request) {
@@ -58,11 +67,24 @@ public class UploadService {
   }
 
   public SubmissionReceipt complete(CompleteUploadRequest request) {
+    if (requireObjectContent && !objectStore.exists(request.objectKey())) {
+      throw new IllegalArgumentException("Upload object content not found: " + request.objectKey());
+    }
     return store.completeUpload(request);
   }
 
   public Collection<SubmissionSummary> listSubmissions(Long assignmentId, Long studentId) {
     return store.listSubmissions(assignmentId, studentId);
+  }
+
+  public UploadObjectSummary storeContent(String uploadId, String objectKey, String contentType, long size, java.io.InputStream content) {
+    validateObjectContent(objectKey, contentType, size);
+    try {
+      objectStore.put(objectKey, content);
+      return new UploadObjectSummary(uploadId, objectKey, size, java.time.OffsetDateTime.now());
+    } catch (IOException error) {
+      throw new UncheckedIOException("Failed to store upload object", error);
+    }
   }
 
   private String sanitizeFileName(String fileName) {
@@ -80,6 +102,20 @@ public class UploadService {
     var allowedExtension = ALLOWED_EXTENSIONS.stream().anyMatch(fileName::endsWith);
     if (!allowedExtension) {
       throw new IllegalArgumentException("Unsupported file extension: " + request.fileName());
+    }
+  }
+
+  private void validateObjectContent(String objectKey, String contentType, long size) {
+    if (size > maxFileSizeBytes) {
+      throw new IllegalArgumentException("File size exceeds limit: " + objectKey);
+    }
+    if (contentType == null || !allowedContentTypes.contains(contentType)) {
+      throw new IllegalArgumentException("Unsupported content type: " + contentType);
+    }
+    var fileName = objectKey.toLowerCase();
+    var allowedExtension = ALLOWED_EXTENSIONS.stream().anyMatch(fileName::endsWith);
+    if (!allowedExtension) {
+      throw new IllegalArgumentException("Unsupported file extension: " + objectKey);
     }
   }
 

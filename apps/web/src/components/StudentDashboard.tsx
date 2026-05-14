@@ -31,9 +31,19 @@ export function StudentDashboard({ tasks, publishedResults, appeals, userId }: S
   const [receipt, setReceipt] = useState<UploadReceipt | null>(null);
   const [appealRows, setAppealRows] = useState(appeals);
   const [taskRows, setTaskRows] = useState(tasks);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [selectedTaskId, setSelectedTaskId] = useState(() => tasks[0]?.id ?? 0);
 
   const selectedTask = taskRows.find((task) => task.id === selectedTaskId) ?? taskRows[0];
+
+  const selectUploadFile = (file: File | null) => {
+    setSelectedFile(file);
+    if (file) {
+      setSelectedFileName(file.name);
+    }
+    setReceipt(null);
+    setUploadProgress(file ? 64 : 36);
+  };
 
   useEffect(() => {
     setTaskRows((current) => reconcileTaskRows(tasks, current));
@@ -58,7 +68,7 @@ export function StudentDashboard({ tasks, publishedResults, appeals, userId }: S
       return;
     }
     setUploadProgress(100);
-    const nextReceipt = await createUploadReceipt(selectedFileName, selectedTask.id, userId);
+    const nextReceipt = await createUploadReceipt(selectedFileName, selectedTask.id, userId, selectedFile);
     setReceipt(nextReceipt);
     setTaskRows((current) => current.map((task) => (
       task.id === selectedTask.id ? { ...task, status: '已提交', score: undefined } : task
@@ -184,11 +194,25 @@ export function StudentDashboard({ tasks, publishedResults, appeals, userId }: S
           <UploadCloud size={22} />
         </div>
         <div className="student-upload-card">
-          <div className="upload-dropzone compact">
+          <label
+            className="upload-dropzone compact"
+            onDragOver={(event) => event.preventDefault()}
+            onDrop={(event) => {
+              event.preventDefault();
+              selectUploadFile(event.dataTransfer.files?.[0] ?? null);
+            }}
+          >
             <UploadCloud size={24} />
             <strong>拖拽报告到这里</strong>
             <span>PDF / Word / JPG / PNG，最大 50MB</span>
-          </div>
+            <input
+              type="file"
+              accept=".pdf,.doc,.docx,.png,.jpg,.jpeg,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,image/png,image/jpeg"
+              onChange={(event) => {
+                selectUploadFile(event.target.files?.[0] ?? null);
+              }}
+            />
+          </label>
           <label className="file-name-field">
             提交任务
             <select
@@ -212,6 +236,7 @@ export function StudentDashboard({ tasks, publishedResults, appeals, userId }: S
               value={selectedFileName}
               onChange={(event) => {
                 setSelectedFileName(event.target.value);
+                setSelectedFile(null);
                 setReceipt(null);
                 setUploadProgress(36);
               }}

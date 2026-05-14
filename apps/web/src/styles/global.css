@@ -644,6 +644,7 @@ button:focus-visible {
   text-align: center;
   border-style: dashed;
   background: linear-gradient(135deg, #eff6ff, #f8fafc);
+  cursor: pointer;
 }
 
 .upload-dropzone svg {
@@ -652,6 +653,10 @@ button:focus-visible {
 
 .upload-dropzone strong {
   color: #0f172a;
+}
+
+.upload-dropzone input[type='file'] {
+  display: none;
 }
 
 .student-upload-card {

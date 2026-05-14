@@ -113,6 +113,39 @@ patch_json() {
   done
 }
 
+put_upload_content() {
+  local label="$1"
+  local url="$2"
+  local upload_id="$3"
+  local object_key="$4"
+  local file_path="$5"
+  local attempt=1
+  local response
+
+  if [[ "$SMOKE_DRY_RUN" == "1" ]]; then
+    echo "[smoke:dry-run] PUT multipart $label -> $url :: uploadId=$upload_id objectKey=$object_key file=@$file_path"
+    return
+  fi
+
+  while true; do
+    echo "[smoke] PUT multipart $label (attempt $attempt/$SMOKE_RETRIES)" >&2
+    if response="$(curl --noproxy '*' --fail --silent --show-error --max-time 5 \
+      -X PUT \
+      -F "uploadId=$upload_id" \
+      -F "objectKey=$object_key" \
+      -F "file=@$file_path;type=application/pdf" \
+      "$url")" && api_success "$response"; then
+      printf '%s' "$response"
+      return
+    fi
+    if ((attempt >= SMOKE_RETRIES)); then
+      return 1
+    fi
+    attempt=$((attempt + 1))
+    sleep "$SMOKE_RETRY_DELAY_SECONDS"
+  done
+}
+
 api_success() {
   python3 -c 'import json, sys; payload=json.load(sys.stdin); raise SystemExit(0 if payload.get("success") is True else 1)' <<< "$1"
 }
@@ -157,11 +190,16 @@ check_api "gateway admin settings" "$GATEWAY_URL/api/admin/settings"
 if [[ "$SMOKE_INCLUDE_WRITES" == "1" ]]; then
   if [[ "$SMOKE_DRY_RUN" == "1" ]]; then
     post_json "upload init" "$GATEWAY_URL/api/submissions/upload/init" '{"assignmentId":1,"studentId":2,"fileName":"smoke-report.pdf","contentType":"application/pdf","fileSize":1048576,"checksum":null}'
+    put_upload_content "upload content" "$GATEWAY_URL/api/submissions/upload/content" "<from upload init>" "<from upload init>" "smoke-report.pdf"
     post_json "upload complete" "$GATEWAY_URL/api/submissions/upload/complete" '{"uploadId":"<from upload init>","objectKey":"<from upload init>","checksum":null}'
   else
     init_response="$(post_json "upload init" "$GATEWAY_URL/api/submissions/upload/init" '{"assignmentId":1,"studentId":2,"fileName":"smoke-report.pdf","contentType":"application/pdf","fileSize":1048576,"checksum":null}')"
     upload_id="$(json_field uploadId <<< "$init_response")"
     object_key="$(json_field objectKey <<< "$init_response")"
+    tmp_upload="$(mktemp)"
+    printf 'TrainMark smoke upload\n' > "$tmp_upload"
+    put_upload_content "upload content" "$GATEWAY_URL/api/submissions/upload/content" "$upload_id" "$object_key" "$tmp_upload" >/dev/null
+    rm -f "$tmp_upload"
     post_json "upload complete" "$GATEWAY_URL/api/submissions/upload/complete" "{\"uploadId\":\"$upload_id\",\"objectKey\":\"$object_key\",\"checksum\":null}"
   fi
   post_json "assignment" "$GATEWAY_URL/api/assignments" '{"courseId":1,"title":"Smoke 实训任务","description":"Smoke assignment creation","deadline":"2030-05-20T23:59:00+08:00","totalScore":100,"classIds":[1,2],"similarityCheckEnabled":true,"aiGradingEnabled":true}'

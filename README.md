@@ -16,6 +16,7 @@ TrainMark AI，中文名“智训批”，是面向高校实训教学场景的�
 | 老师端/学生端/管理端角色切换 | 已实现 |
 | 课程、班级、任务、名单导入展示 | 已实现 |
 | 学生报告上传交互 | 已实现 |
+| 学生报告文件内容本地存储 | 已实现 |
 | 上传格式、大小和完成校验 | 已实现 |
 | 上传错误统一响应 | 已实现 |
 | 报告收集、未交名单、一键催交 | 已实现 |
@@ -184,6 +185,8 @@ TRAINMARK_FILE_JDBC_USERNAME=trainmark \
 TRAINMARK_FILE_JDBC_PASSWORD=trainmark_dev \
 pnpm dev:backend:file
 ```
+
+HTTP 模式下学生端会先初始化上传会话，再将报告文件以 multipart 写入本地对象目录，最后完成提交。默认对象目录为 `.data/uploads`，可通过 `UPLOAD_OBJECT_ROOT` 调整；如需强制完成提交前必须存在对象内容，可设置 `UPLOAD_REQUIRE_OBJECT_CONTENT=true`。
 
 OCR 服务默认使用内存任务结果。需要让 OCR 任务和结构化块写入 PostgreSQL 时，设置：
 

@@ -78,14 +78,17 @@ Most services still use in-memory data for local MVP demonstration. The gateway 
 
 Upload initialization validates file extension, content type and file size. The
 default accepted formats are PDF, Word, PNG and JPG/JPEG. The default max file
-size is 50MB and can be overridden with `UPLOAD_MAX_FILE_SIZE_MB`. Upload
-initialization and completion return `ApiResponse.fail(...)` with HTTP 400 when
-the request body is invalid, file constraints fail, the upload session is
-missing, the object key does not match, or the checksum is inconsistent.
+size is 50MB and can be overridden with `UPLOAD_MAX_FILE_SIZE_MB`. The local
+object store writes multipart upload bytes under `UPLOAD_OBJECT_ROOT` before
+completion. Upload initialization and completion return `ApiResponse.fail(...)`
+with HTTP 400 when the request body is invalid, file constraints fail, the
+upload session is missing, the object key does not match, or the checksum is
+inconsistent.
 
 | Method | Path | Request | Response data |
 |---|---|---|---|
 | `POST` | `/api/submissions/upload/init` | `InitializeUploadRequest` | `InitializeUploadResponse` |
+| `PUT` | `/api/submissions/upload/content` | multipart `uploadId`, `objectKey`, `file` | `UploadObjectSummary` |
 | `POST` | `/api/submissions/upload/complete` | `CompleteUploadRequest` | `SubmissionReceipt` |
 | `GET` | `/api/submissions?assignmentId=1&studentId=2` | optional `assignmentId`, `studentId` query | `SubmissionSummary[]` |
 

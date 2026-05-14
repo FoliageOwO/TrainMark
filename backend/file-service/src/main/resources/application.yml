@@ -19,3 +19,5 @@ trainmark:
   upload:
     max-file-size-mb: ${UPLOAD_MAX_FILE_SIZE_MB:50}
     allowed-content-types: ${UPLOAD_ALLOWED_CONTENT_TYPES:application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,image/png,image/jpeg}
+    object-root: ${UPLOAD_OBJECT_ROOT:.data/uploads}
+    require-object-content: ${UPLOAD_REQUIRE_OBJECT_CONTENT:false}

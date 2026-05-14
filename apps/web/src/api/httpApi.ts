@@ -401,20 +401,24 @@ export async function createRubric(input: CreateRubricInput): Promise<RubricSumm
   );
 }
 
-export async function createUploadReceipt(fileName: string, assignmentId: number, studentId: number): Promise<UploadReceipt> {
+export async function createUploadReceipt(fileName: string, assignmentId: number, studentId: number, file?: File | null): Promise<UploadReceipt> {
   if (!shouldUseHttpApi()) {
     return mockApi.createUploadReceipt(fileName);
   }
 
   try {
+    const uploadFile = file ?? new File(['TrainMark AI local upload placeholder'], fileName, {
+      type: guessContentType(fileName),
+    });
     const init = await request<{ uploadId: string; objectKey: string }>('/api/submissions/upload/init', 'POST', {
       assignmentId,
       studentId,
-      fileName,
-      contentType: guessContentType(fileName),
-      fileSize: 1024 * 1024,
+      fileName: uploadFile.name,
+      contentType: uploadFile.type || guessContentType(uploadFile.name),
+      fileSize: uploadFile.size,
       checksum: null,
     });
+    await uploadObjectContent(init.uploadId, init.objectKey, uploadFile);
     const receipt = await request<BackendSubmissionReceipt>('/api/submissions/upload/complete', 'POST', {
       uploadId: init.uploadId,
       objectKey: init.objectKey,
@@ -423,6 +427,24 @@ export async function createUploadReceipt(fileName: string, assignmentId: number
     return normalizeUploadReceipt(receipt);
   } catch {
     return mockApi.createUploadReceipt(fileName);
+  }
+}
+
+async function uploadObjectContent(uploadId: string, objectKey: string, file: File): Promise<void> {
+  const body = new FormData();
+  body.append('uploadId', uploadId);
+  body.append('objectKey', objectKey);
+  body.append('file', file);
+  const response = await fetch(`${API_BASE_URL}/api/submissions/upload/content`, {
+    method: 'PUT',
+    body,
+  });
+  if (!response.ok) {
+    throw new Error(`HTTP ${response.status} for upload content`);
+  }
+  const payload = (await response.json()) as ApiResponse<unknown>;
+  if (!payload.success) {
+    throw new Error(payload.message || 'Upload content failed');
   }
 }
 

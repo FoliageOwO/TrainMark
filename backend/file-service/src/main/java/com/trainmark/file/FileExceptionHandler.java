@@ -1,6 +1,7 @@
 package com.trainmark.file;
 
 import com.trainmark.shared.ApiResponse;
+import java.io.UncheckedIOException;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import org.springframework.http.HttpStatus;
@@ -35,5 +36,12 @@ public class FileExceptionHandler {
     return ResponseEntity
         .status(HttpStatus.BAD_REQUEST)
         .body(ApiResponse.fail("Request body is invalid"));
+  }
+
+  @ExceptionHandler(UncheckedIOException.class)
+  public ResponseEntity<ApiResponse<Void>> handleStorageFailure(UncheckedIOException exception) {
+    return ResponseEntity
+        .status(HttpStatus.INTERNAL_SERVER_ERROR)
+        .body(ApiResponse.fail(exception.getMessage()));
   }
 }
