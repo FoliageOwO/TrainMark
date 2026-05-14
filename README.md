@@ -166,6 +166,14 @@ pnpm dev:backend:gateway
 
 这些脚本会启用 Maven 的 `dev` profile，加载 Spring Boot DevTools。修改 Java 源码后需要 IDE 或 Maven 编译生成新的 class 文件，DevTools 会检测 classpath 变化并重启对应服务。
 
+### 7. 一键启动 MVP 联调
+
+```bash
+pnpm dev:mvp
+```
+
+该脚本会先启动所有后端服务，等待 `pnpm smoke:api` 通过后，再以 `VITE_API_MODE=http` 启动前端。后端总控日志写入 `.logs/dev-mvp-backend.log`，各服务日志仍写入 `.logs/backend/`。
+
 示例接口：
 
 | 接口 | 说明 |

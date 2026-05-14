@@ -13,6 +13,7 @@
     "smoke:api": "bash scripts/smoke-api.sh",
     "dev:infra": "docker compose -f infra/docker-compose.yml up -d",
     "stop:infra": "docker compose -f infra/docker-compose.yml down",
+    "dev:mvp": "bash scripts/dev-mvp.sh",
     "dev:backend": "bash scripts/dev-backend.sh",
     "dev:backend:gateway": "mvn -f backend/pom.xml -pl gateway-service -am -Pdev spring-boot:run",
     "dev:backend:auth": "mvn -f backend/pom.xml -pl auth-service -am -Pdev spring-boot:run",

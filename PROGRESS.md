@@ -885,6 +885,21 @@
 - `README.md`
 - `PROGRESS.md`
 
+### 54. MVP 一键联调脚本
+
+- 已新增 `pnpm dev:mvp` 脚本入口。
+- 已新增 `scripts/dev-mvp.sh`，可启动所有后端服务、等待 API 冒烟检查通过，再以前端 HTTP 模式启动 Web。
+- 后端总控日志写入 `.logs/dev-mvp-backend.log`，各服务日志继续写入 `.logs/backend/`。
+- 已支持通过 `SMOKE_RETRIES`、`SMOKE_RETRY_DELAY_SECONDS`、`VITE_API_MODE` 和 `VITE_API_BASE_URL` 覆盖默认联调参数。
+- 已在 README 补充一键启动 MVP 联调说明。
+
+主要代码：
+
+- `scripts/dev-mvp.sh`
+- `package.json`
+- `README.md`
+- `PROGRESS.md`
+
 ## 已验证
 
 前端构建已通过：
@@ -1159,6 +1174,12 @@ bash -n scripts/smoke-api.sh
 SMOKE_DRY_RUN=1 SMOKE_RETRIES=2 SMOKE_RETRY_DELAY_SECONDS=1 pnpm smoke:api
 ```
 
+MVP 一键联调脚本已通过脚本语法检查：
+
+```bash
+bash -n scripts/dev-mvp.sh
+```
+
 全部后端模块已通过编译：
 
 ```bash
@@ -1223,6 +1244,7 @@ Docker Compose 已完成配置展开校验，暂未拉起 PostgreSQL、Redis、R
 - `feat: link grade exports`
 - `feat: serve grading assets`
 - `chore: add smoke retries`
+- `chore: add mvp dev launcher`
 
 ## 接下来需要做
 
