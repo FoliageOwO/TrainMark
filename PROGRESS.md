@@ -544,6 +544,18 @@
 - `apps/web/src/pages/App.tsx`
 - `PROGRESS.md`
 
+### 22.2 管理端工作台组件拆分
+
+- 已从 `App.tsx` 拆出 `AdminDashboard`，组织账号、审计日志和系统配置视图独立维护。
+- `AdminDashboard` 改用前端类型定义描述 props，避免继续依赖 `mockApi` 返回类型。
+- `App.tsx` 继续保留角色切换、课程选择和数据装配，工作台展示职责继续下沉。
+
+主要代码：
+
+- `apps/web/src/components/AdminDashboard.tsx`
+- `apps/web/src/pages/App.tsx`
+- `PROGRESS.md`
+
 ### 23. 前端 HTTP 写操作联调
 
 - 已扩展前端 HTTP API 层，支持在 `VITE_API_MODE=http` 下调用后端写接口。
@@ -1405,6 +1417,14 @@ pnpm build:web
 ```
 
 学生端工作台组件拆分后已通过静态检查和构建：
+
+```bash
+pnpm --filter trainmark-ai-web lint
+pnpm --filter trainmark-ai-web build
+pnpm verify:mvp
+```
+
+管理端工作台组件拆分后已通过静态检查和构建：
 
 ```bash
 pnpm --filter trainmark-ai-web lint
