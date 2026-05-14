@@ -33,6 +33,7 @@ import { AdminDashboard } from '../components/AdminDashboard';
 import { AppChrome } from '../components/AppChrome';
 import { StudentDashboard } from '../components/StudentDashboard';
 import { TeacherAiPipeline } from '../components/TeacherAiPipeline';
+import { TeacherReviewWorkspace } from '../components/TeacherReviewWorkspace';
 import { formatDate } from '../utils/formatDate';
 
 const pipelineSteps = ['文件预处理', 'OCR 识别', '结构化提取', '语义评分', 'PDF 批注', '教师复核'];
@@ -48,19 +49,6 @@ const statusText = {
   ARCHIVED: '已归档',
   PUBLISHED: '已发布',
   CLOSED: '已截止',
-};
-
-const reviewStatusText = {
-  NEEDS_REVIEW: '待复核',
-  IN_REVIEW: '复核中',
-  APPROVED: '已通过',
-  RETURNED: '已退回',
-};
-
-const publicationStatusText = {
-  NOT_PUBLISHED: '未发布',
-  PUBLISHED: '已发布',
-  WITHDRAWN: '已撤回',
 };
 
 const appealStatusText = {
@@ -463,138 +451,16 @@ function TeacherDashboard({
         </article>
       </section>
 
-      <section className="review-layout">
-        <article className="panel review-preview-panel">
-          <div className="panel-heading">
-            <div>
-              <p className="eyebrow">Manual Review</p>
-              <h3>人工复核工作区</h3>
-            </div>
-            <span className="status-pill">{reviewStatusText[selectedReview.reviewStatus]}</span>
-          </div>
-          <div className="review-switcher">
-            {reviewResults.map((result) => (
-              <button
-                className={selectedReview.id === result.id ? 'selected' : ''}
-                key={result.id}
-                type="button"
-                onClick={() => setSelectedReviewId(result.id)}
-              >
-                <strong>{result.studentName}</strong>
-                <span>{result.studentNo} · {result.teacherScore}/{result.totalScore} 分</span>
-              </button>
-            ))}
-          </div>
-          <div className="pdf-preview">
-            <div className="pdf-page">
-              <div className="pdf-toolbar">
-                <span>{selectedReview.fileName}</span>
-                <a className="ghost-button compact-link" href={resolveApiAssetUrl(selectedReview.annotationPdfUrl)} rel="noreferrer" target="_blank">
-                  <FileText size={14} /> 打开批注
-                </a>
-              </div>
-              <h4>Java Web 综合实训报告</h4>
-              <p>需求分析、系统设计、核心功能实现、数据库表结构、测试截图、实训总结。</p>
-              <div className="pdf-highlight">数据库表结构：外键约束说明不完整</div>
-              <div className="pdf-highlight muted">系统运行截图：建议补充失败场景截图</div>
-              <div className="pdf-comment">AI 批注 PDF：{selectedReview.annotationPdfUrl}</div>
-            </div>
-          </div>
-          <div className="annotation-list">
-            {selectedReview.annotations.map((annotation) => (
-              <div className={`annotation-row ${annotation.severity}`} key={annotation.id}>
-                <strong>第 {annotation.page} 页 · {annotation.anchorText}</strong>
-                <span>{annotation.comment}</span>
-              </div>
-            ))}
-          </div>
-        </article>
-
-        <article className="panel review-score-panel">
-          <div className="review-score-summary">
-            <div>
-              <span>AI 初评</span>
-              <strong>{selectedReview.aiScore}</strong>
-            </div>
-            <div>
-              <span>教师复核</span>
-              <strong>{selectedReview.teacherScore}</strong>
-            </div>
-            <div>
-              <span>置信度</span>
-              <strong>{selectedReview.confidence}%</strong>
-            </div>
-          </div>
-          <div className="publication-actions">
-            <div>
-              <span>发布状态</span>
-              <strong>{publicationStatusText[selectedReview.publicationStatus]}</strong>
-              {selectedReview.publishedAt && <small>{formatDate(selectedReview.publishedAt)} 发布</small>}
-            </div>
-            <div className="publication-buttons">
-              <button
-                className="primary-button"
-                type="button"
-                onClick={handlePublishResult}
-                disabled={selectedReview.reviewStatus !== 'APPROVED'}
-              >
-                <CheckCircle2 size={16} /> 发布成绩
-              </button>
-              <button className="ghost-button" type="button" onClick={handleWithdrawResult}>
-                撤回发布
-              </button>
-            </div>
-          </div>
-          <div className="overall-comment">
-            <span>总评</span>
-            <p>{selectedReview.overallComment}</p>
-          </div>
-          <div className="review-item-list">
-            {selectedReview.items.map((item) => (
-              <form className="review-item-card" key={item.rubricItemId} onSubmit={(event) => handleReviewItemSubmit(event, item.rubricItemId)}>
-                <div className="review-item-heading">
-                  <div>
-                    <strong>{item.title}</strong>
-                    <span>AI {item.aiScore}/{item.maxScore} · 置信度 {item.confidence}%</span>
-                  </div>
-                  <label>
-                    教师分
-                    <input name="teacherScore" type="number" min="0" max={item.maxScore} defaultValue={item.teacherScore} />
-                  </label>
-                </div>
-                <div className="deduction-box">
-                  <span>扣分原因</span>
-                  <p>{item.deductionReason}</p>
-                </div>
-                <div className="evidence-tags">
-                  {item.evidence.map((evidence) => <span key={evidence}>{evidence}</span>)}
-                </div>
-                <label className="comment-field">
-                  教师评语
-                  <textarea name="teacherComment" rows={2} defaultValue={item.teacherComment} />
-                </label>
-                <button className="ghost-button" type="submit">保存分项复核</button>
-              </form>
-            ))}
-          </div>
-          <button className="primary-button full-width" type="button" onClick={handleApproveResult}>
-            <CheckCircle2 size={16} /> 通过复核，等待发布
-          </button>
-          <div className="audit-list">
-            <strong>发布审计</strong>
-            {publicationAudits.filter((item) => item.resultId === selectedReview.id).length === 0 ? (
-              <span>暂无发布操作记录</span>
-            ) : (
-              publicationAudits.filter((item) => item.resultId === selectedReview.id).map((audit) => (
-                <div className="audit-row" key={audit.id}>
-                  <span>{audit.action === 'PUBLISH' ? '发布' : '撤回'} · {audit.operatorName}</span>
-                  <small>{audit.reason} · {formatDate(audit.createdAt)}</small>
-                </div>
-              ))
-            )}
-          </div>
-        </article>
-      </section>
+      <TeacherReviewWorkspace
+        reviewResults={reviewResults}
+        selectedReview={selectedReview}
+        publicationAudits={publicationAudits}
+        onSelectReview={setSelectedReviewId}
+        onReviewItemSubmit={handleReviewItemSubmit}
+        onApproveResult={handleApproveResult}
+        onPublishResult={handlePublishResult}
+        onWithdrawResult={handleWithdrawResult}
+      />
 
       <section className="analytics-grid">
         <article className="panel analytics-panel">

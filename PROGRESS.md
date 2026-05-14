@@ -568,6 +568,18 @@
 - `apps/web/src/pages/App.tsx`
 - `PROGRESS.md`
 
+### 22.4 教师端人工复核组件拆分
+
+- 已从教师端工作台中拆出 `TeacherReviewWorkspace`，人工复核、批注预览、分项复核、发布/撤回和发布审计视图集中维护。
+- 复核状态、发布状态和批注 PDF 链接解析随组件下沉，减少 `App.tsx` 展示职责。
+- `App.tsx` 继续负责复核结果状态更新和 HTTP/mock 写操作兜底。
+
+主要代码：
+
+- `apps/web/src/components/TeacherReviewWorkspace.tsx`
+- `apps/web/src/pages/App.tsx`
+- `PROGRESS.md`
+
 ### 23. 前端 HTTP 写操作联调
 
 - 已扩展前端 HTTP API 层，支持在 `VITE_API_MODE=http` 下调用后端写接口。
@@ -1445,6 +1457,14 @@ pnpm verify:mvp
 ```
 
 教师端 AI 流水线组件拆分后已通过静态检查和构建：
+
+```bash
+pnpm --filter trainmark-ai-web lint
+pnpm --filter trainmark-ai-web build
+pnpm verify:mvp
+```
+
+教师端人工复核组件拆分后已通过静态检查和构建：
 
 ```bash
 pnpm --filter trainmark-ai-web lint
