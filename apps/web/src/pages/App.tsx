@@ -32,6 +32,7 @@ import { AppChrome } from '../components/AppChrome';
 import { StudentDashboard } from '../components/StudentDashboard';
 import { TeacherAnalyticsPanel } from '../components/TeacherAnalyticsPanel';
 import { TeacherAiPipeline } from '../components/TeacherAiPipeline';
+import { TeacherAppealPanel } from '../components/TeacherAppealPanel';
 import { TeacherCollectionPanel } from '../components/TeacherCollectionPanel';
 import { TeacherReviewWorkspace } from '../components/TeacherReviewWorkspace';
 import { TeacherSimilarityPanel } from '../components/TeacherSimilarityPanel';
@@ -50,12 +51,6 @@ const statusText = {
   ARCHIVED: '已归档',
   PUBLISHED: '已发布',
   CLOSED: '已截止',
-};
-
-const appealStatusText = {
-  SUBMITTED: '待处理',
-  ACCEPTED: '已采纳',
-  REJECTED: '已驳回',
 };
 
 function getRoleFromLocation(): RoleCode {
@@ -437,39 +432,7 @@ function TeacherDashboard({
         onCreateGradeExport={handleCreateGradeExport}
       />
 
-      <section className="management-grid">
-        <article className="panel appeal-panel">
-          <div className="panel-heading">
-            <div>
-              <p className="eyebrow">Appeals</p>
-              <h3>学生申诉处理</h3>
-            </div>
-            <span className="status-pill">{appealRows.filter((item) => item.status === 'SUBMITTED').length} 条待处理</span>
-          </div>
-          <div className="appeal-list">
-            {appealRows.map((appeal) => (
-              <div className="appeal-card" key={appeal.id}>
-                <div className="appeal-heading">
-                  <div>
-                    <strong>{appeal.studentName}</strong>
-                    <span>结果 #{appeal.resultId} · 评分项 {appeal.rubricItemId ?? '总评'}</span>
-                  </div>
-                  <b>{appealStatusText[appeal.status]}</b>
-                </div>
-                <p>{appeal.reason}</p>
-                <div className="appeal-request">{appeal.requestedChange}</div>
-                {appeal.teacherReply && <div className="appeal-reply">{appeal.teacherReply}</div>}
-                {appeal.status === 'SUBMITTED' && (
-                  <div className="publication-buttons">
-                    <button className="primary-button" type="button" onClick={() => handleResolveAppeal(appeal.id, true)}>采纳申诉</button>
-                    <button className="ghost-button" type="button" onClick={() => handleResolveAppeal(appeal.id, false)}>驳回申诉</button>
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
-        </article>
-      </section>
+      <TeacherAppealPanel appeals={appealRows} onResolveAppeal={handleResolveAppeal} />
 
       <TeacherCollectionPanel
         collectionOverview={collectionOverview}

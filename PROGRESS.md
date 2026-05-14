@@ -616,6 +616,18 @@
 - `apps/web/src/pages/App.tsx`
 - `PROGRESS.md`
 
+### 22.8 教师端申诉处理组件拆分
+
+- 已从教师端工作台中拆出 `TeacherAppealPanel`，学生申诉列表、状态文案和采纳/驳回操作集中维护。
+- 申诉状态文案随组件下沉，减少 `App.tsx` 顶层展示常量。
+- `App.tsx` 继续负责调用申诉处理接口并合并处理结果。
+
+主要代码：
+
+- `apps/web/src/components/TeacherAppealPanel.tsx`
+- `apps/web/src/pages/App.tsx`
+- `PROGRESS.md`
+
 ### 23. 前端 HTTP 写操作联调
 
 - 已扩展前端 HTTP API 层，支持在 `VITE_API_MODE=http` 下调用后端写接口。
@@ -1525,6 +1537,14 @@ pnpm verify:mvp
 ```
 
 教师端查重检测组件拆分后已通过静态检查和构建：
+
+```bash
+pnpm --filter trainmark-ai-web lint
+pnpm --filter trainmark-ai-web build
+pnpm verify:mvp
+```
+
+教师端申诉处理组件拆分后已通过静态检查和构建：
 
 ```bash
 pnpm --filter trainmark-ai-web lint
