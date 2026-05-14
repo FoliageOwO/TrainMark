@@ -26,4 +26,8 @@ SMOKE_DRY_RUN=1 SMOKE_INCLUDE_WRITES=1 pnpm smoke:api
 echo "[verify] API route surface"
 rg -n "@(GetMapping|PostMapping|PatchMapping|RequestMapping)" backend/*-service/src/main/java -g "*.java" >/dev/null
 
+echo "[verify] MVP launcher scripts"
+bash -n scripts/dev-mvp.sh
+bash -n scripts/dev-mvp-jdbc.sh
+
 echo "[verify] MVP verification completed"

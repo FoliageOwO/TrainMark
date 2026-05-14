@@ -14,6 +14,7 @@
     "dev:infra": "docker compose -f infra/docker-compose.yml up -d",
     "stop:infra": "docker compose -f infra/docker-compose.yml down",
     "dev:mvp": "bash scripts/dev-mvp.sh",
+    "dev:mvp:jdbc": "bash scripts/dev-mvp-jdbc.sh",
     "dev:backend": "bash scripts/dev-backend.sh",
     "dev:backend:gateway": "bash scripts/dev-service.sh gateway-service",
     "dev:backend:auth": "bash scripts/dev-service.sh auth-service",

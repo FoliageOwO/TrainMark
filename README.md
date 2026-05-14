@@ -7,7 +7,7 @@ TrainMark AI，中文名“智训批”，是面向高校实训教学场景的�
 
 ## 当前进度
 
-已形成可本地演示的 MVP 闭环，当前前端使用内存 mock 数据，后端各服务提供接口骨架和内存模拟实现：
+已形成可本地演示的 MVP 闭环：前端默认可用内存 mock 数据独立演示，也可切换到 gateway HTTP 模式联调后端；后端服务默认保留内存实现，并已提供 PostgreSQL/JDBC 模式用于持久化联调。
 
 | 模块 | 状态 |
 |---|---|
@@ -26,6 +26,7 @@ TrainMark AI，中文名“智训批”，是面向高校实训教学场景的�
 | 教师端提交报告 OCR 启动 | 已实现 |
 | 上传格式、大小和完成校验 | 已实现 |
 | 上传错误统一响应 | 已实现 |
+| MVP 服务统一错误响应 | 已实现 |
 | 报告收集、未交名单、一键催交 | 已实现 |
 | 评分标准、AI 批改队列、OCR 结构化 | 已实现 |
 | 人工复核、分项改分、批注预览 | 已实现 |
@@ -55,6 +56,7 @@ TrainMark AI，中文名“智训批”，是面向高校实训教学场景的�
 | 管理端组织与账号创建 | 已实现 |
 | 管理端系统配置 | 已支持读取与写入 |
 | PWA 安装、离线外壳与角色快捷入口 | 已实现 |
+| JDBC 模式一键 MVP 联调 | 已支持 |
 | 文档预处理 Provider CLI 契约 | 已创建 |
 | OCR Provider CLI 契约 | 已创建 |
 | OCR 后端 Provider 切换 | 已实现 |
@@ -305,6 +307,14 @@ pnpm dev:mvp
 ```
 
 该脚本会先启动所有后端服务，等待 `pnpm smoke:api` 通过后，再以 `VITE_API_MODE=http` 启动前端。后端总控日志写入 `.logs/dev-mvp-backend.log`，各服务日志仍写入 `.logs/backend/`。
+
+如果需要同时启动 Docker Compose 基础设施，并让认证、用户、课程、文件、OCR、批改、通知、查重、统计和管理端服务切换到 PostgreSQL/JDBC 模式：
+
+```bash
+pnpm dev:mvp:jdbc
+```
+
+该脚本会使用 `.env` / 环境变量中的 PostgreSQL 默认值，先执行 `docker compose -f infra/docker-compose.yml up -d`，再复用 `pnpm dev:mvp` 启动后端和 HTTP 前端。已经手动启动基础设施时，可设置 `TRAINMARK_SKIP_INFRA=1 pnpm dev:mvp:jdbc`。
 
 示例接口：
 

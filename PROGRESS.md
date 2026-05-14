@@ -2068,6 +2068,22 @@
 - `backend/analytics-service/src/main/java/com/trainmark/analytics/AnalyticsExceptionHandler.java`
 - `PROGRESS.md`
 
+### 69. JDBC 模式一键 MVP 联调入口
+
+- 已新增 `pnpm dev:mvp:jdbc`，用于启动 Docker Compose 基础设施，并将认证、用户、课程、文件、OCR、批改、通知、查重、统计和管理端服务统一切换到 PostgreSQL/JDBC 模式。
+- 脚本复用现有 `scripts/dev-mvp.sh`，保持后端总控、API smoke 等待和 HTTP 前端启动链路一致，避免维护两套联调流程。
+- 已支持 `TRAINMARK_SKIP_INFRA=1` 跳过基础设施启动，便于本机已有 Docker Compose 环境时复用同一入口。
+- 已将新启动脚本纳入 `pnpm verify:mvp` 的 shell 语法检查。
+- 本模块已通过脚本语法检查、`package.json` 解析校验和 MVP 主验证。
+
+主要代码：
+
+- `scripts/dev-mvp-jdbc.sh`
+- `scripts/verify-mvp.sh`
+- `package.json`
+- `README.md`
+- `PROGRESS.md`
+
 ## 已验证
 
 前端构建已通过：
@@ -3091,6 +3107,15 @@ MVP 服务统一错误响应补齐已通过多服务后端编译、写接口 smo
 ```bash
 mvn -f backend/pom.xml -pl user-service,course-service,notification-service,similarity-service,analytics-service -am package -DskipTests
 SMOKE_DRY_RUN=1 SMOKE_INCLUDE_WRITES=1 pnpm smoke:api
+pnpm verify:mvp
+```
+
+JDBC 模式一键 MVP 联调入口已通过脚本语法检查、`package.json` 解析校验和 MVP 主验证：
+
+```bash
+bash -n scripts/dev-mvp-jdbc.sh
+bash -n scripts/verify-mvp.sh
+node -e "JSON.parse(require('fs').readFileSync('package.json','utf8')); console.log('package.json ok')"
 pnpm verify:mvp
 ```
 
