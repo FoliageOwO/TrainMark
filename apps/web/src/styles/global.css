@@ -738,6 +738,14 @@ button:focus-visible {
   font-size: 13px;
 }
 
+.receipt-card a {
+  display: inline-flex;
+  margin-top: 6px;
+  color: #0f766e;
+  font-size: 13px;
+  font-weight: 700;
+}
+
 .full-width {
   width: 100%;
 }

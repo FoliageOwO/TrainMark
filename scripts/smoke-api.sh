@@ -192,6 +192,7 @@ if [[ "$SMOKE_INCLUDE_WRITES" == "1" ]]; then
     post_json "upload init" "$GATEWAY_URL/api/submissions/upload/init" '{"assignmentId":1,"studentId":2,"fileName":"smoke-report.pdf","contentType":"application/pdf","fileSize":1048576,"checksum":null}'
     put_upload_content "upload content" "$GATEWAY_URL/api/submissions/upload/content" "<from upload init>" "<from upload init>" "smoke-report.pdf"
     post_json "upload complete" "$GATEWAY_URL/api/submissions/upload/complete" '{"uploadId":"<from upload init>","objectKey":"<from upload init>","checksum":null}'
+    check_url "uploaded report file" "$GATEWAY_URL/api/submissions/<from upload complete>/file"
   else
     init_response="$(post_json "upload init" "$GATEWAY_URL/api/submissions/upload/init" '{"assignmentId":1,"studentId":2,"fileName":"smoke-report.pdf","contentType":"application/pdf","fileSize":1048576,"checksum":null}')"
     upload_id="$(json_field uploadId <<< "$init_response")"
@@ -200,7 +201,9 @@ if [[ "$SMOKE_INCLUDE_WRITES" == "1" ]]; then
     printf 'TrainMark smoke upload\n' > "$tmp_upload"
     put_upload_content "upload content" "$GATEWAY_URL/api/submissions/upload/content" "$upload_id" "$object_key" "$tmp_upload" >/dev/null
     rm -f "$tmp_upload"
-    post_json "upload complete" "$GATEWAY_URL/api/submissions/upload/complete" "{\"uploadId\":\"$upload_id\",\"objectKey\":\"$object_key\",\"checksum\":null}"
+    complete_response="$(post_json "upload complete" "$GATEWAY_URL/api/submissions/upload/complete" "{\"uploadId\":\"$upload_id\",\"objectKey\":\"$object_key\",\"checksum\":null}")"
+    submission_id="$(json_field submissionId <<< "$complete_response")"
+    check_url "uploaded report file" "$GATEWAY_URL/api/submissions/$submission_id/file"
   fi
   post_json "assignment" "$GATEWAY_URL/api/assignments" '{"courseId":1,"title":"Smoke 实训任务","description":"Smoke assignment creation","deadline":"2030-05-20T23:59:00+08:00","totalScore":100,"classIds":[1,2],"similarityCheckEnabled":true,"aiGradingEnabled":true}'
   post_json "rubric" "$GATEWAY_URL/api/rubrics" '{"assignmentId":1,"name":"Smoke 评分标准","totalScore":100,"items":[{"title":"需求与设计","score":20,"courseOutcomeCode":"CO1","points":[{"title":"需求完整","description":"覆盖需求、设计和约束","score":20,"keywords":["需求","设计"],"synonyms":[]}]},{"title":"系统实现","score":50,"courseOutcomeCode":"CO2","points":[{"title":"实现完整","description":"覆盖核心功能和异常处理","score":50,"keywords":["功能","接口"],"synonyms":[]}]},{"title":"报告规范","score":30,"courseOutcomeCode":"CO3","points":[{"title":"报告规范","description":"覆盖截图、总结和格式","score":30,"keywords":["截图","总结"],"synonyms":[]}]}]}'

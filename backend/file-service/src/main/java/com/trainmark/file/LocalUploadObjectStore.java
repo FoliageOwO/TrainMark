@@ -24,6 +24,15 @@ public class LocalUploadObjectStore implements UploadObjectStore {
   }
 
   @Override
+  public byte[] get(String objectKey) throws IOException {
+    var target = resolveObjectPath(objectKey);
+    if (!Files.isRegularFile(target)) {
+      throw new IllegalArgumentException("Upload object content not found: " + objectKey);
+    }
+    return Files.readAllBytes(target);
+  }
+
+  @Override
   public boolean exists(String objectKey) {
     return Files.isRegularFile(resolveObjectPath(objectKey));
   }

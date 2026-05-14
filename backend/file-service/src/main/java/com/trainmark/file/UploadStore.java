@@ -13,4 +13,6 @@ public interface UploadStore {
   SubmissionReceipt completeUpload(CompleteUploadRequest request);
 
   Collection<SubmissionSummary> listSubmissions(Long assignmentId, Long studentId);
+
+  SubmissionFileDescriptor getSubmissionFile(Long submissionId);
 }

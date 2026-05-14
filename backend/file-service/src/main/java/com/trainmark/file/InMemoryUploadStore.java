@@ -20,6 +20,7 @@ public class InMemoryUploadStore implements UploadStore {
   private final AtomicLong submissionIds = new AtomicLong(2);
   private final Map<String, PendingUpload> pendingUploads = new LinkedHashMap<>();
   private final Map<Long, SubmissionSummary> submissions = new LinkedHashMap<>();
+  private final Map<Long, String> objectKeys = new LinkedHashMap<>();
 
   public InMemoryUploadStore() {
     submissions.put(1L, new SubmissionSummary(
@@ -33,6 +34,7 @@ public class InMemoryUploadStore implements UploadStore {
         SubmissionStatus.PUBLISHED,
         OffsetDateTime.now().minusDays(4)
     ));
+    objectKeys.put(1L, "assignments/1/students/2/database-report.pdf");
   }
 
   @Override
@@ -62,6 +64,7 @@ public class InMemoryUploadStore implements UploadStore {
         submittedAt
     );
     submissions.put(id, summary);
+    objectKeys.put(id, upload.objectKey());
     return new SubmissionReceipt(
         id,
         summary.assignmentId(),
@@ -81,6 +84,16 @@ public class InMemoryUploadStore implements UploadStore {
         .filter(item -> studentId == null || studentId.equals(item.studentId()))
         .sorted(Comparator.comparing(SubmissionSummary::submittedAt).reversed())
         .toList();
+  }
+
+  @Override
+  public SubmissionFileDescriptor getSubmissionFile(Long submissionId) {
+    var submission = submissions.get(submissionId);
+    var objectKey = objectKeys.get(submissionId);
+    if (submission == null || objectKey == null) {
+      throw new IllegalArgumentException("Submission file not found: " + submissionId);
+    }
+    return new SubmissionFileDescriptor(submissionId, submission.fileName(), objectKey);
   }
 
   private void validateUpload(CompleteUploadRequest request, PendingUpload upload) {

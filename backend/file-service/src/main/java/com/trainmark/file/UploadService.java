@@ -77,6 +77,15 @@ public class UploadService {
     return store.listSubmissions(assignmentId, studentId);
   }
 
+  public DownloadedUpload downloadSubmissionFile(Long submissionId) {
+    var file = store.getSubmissionFile(submissionId);
+    try {
+      return new DownloadedUpload(file.fileName(), contentType(file.fileName()), objectStore.get(file.objectKey()));
+    } catch (IOException error) {
+      throw new UncheckedIOException("Failed to read upload object", error);
+    }
+  }
+
   public UploadObjectSummary storeContent(String uploadId, String objectKey, String contentType, long size, java.io.InputStream content) {
     validateObjectContent(objectKey, contentType, size);
     try {
@@ -118,5 +127,27 @@ public class UploadService {
       throw new IllegalArgumentException("Unsupported file extension: " + objectKey);
     }
   }
+
+  private String contentType(String fileName) {
+    var normalized = fileName.toLowerCase();
+    if (normalized.endsWith(".pdf")) {
+      return "application/pdf";
+    }
+    if (normalized.endsWith(".doc")) {
+      return "application/msword";
+    }
+    if (normalized.endsWith(".docx")) {
+      return "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+    }
+    if (normalized.endsWith(".png")) {
+      return "image/png";
+    }
+    if (normalized.endsWith(".jpg") || normalized.endsWith(".jpeg")) {
+      return "image/jpeg";
+    }
+    return "application/octet-stream";
+  }
+
+  public record DownloadedUpload(String fileName, String contentType, byte[] content) {}
 
 }

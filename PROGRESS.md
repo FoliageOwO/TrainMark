@@ -1736,6 +1736,31 @@
 - `docs/API.md`
 - `PROGRESS.md`
 
+### 61.2 学生提交原文件下载入口
+
+- 已新增 `GET /api/submissions/{submissionId}/file`，可按提交 ID 从本地对象目录读回原始报告文件。
+- 已让内存和 JDBC 上传存储都能返回提交文件名与 objectKey，保持默认演示和数据库模式一致。
+- 已让学生端 HTTP 上传成功回执显示“查看原文件”链接，方便确认刚提交的报告内容可取回。
+- 已将原文件下载纳入写接口 smoke 清单，真实写入 smoke 会在上传完成后下载同一提交文件。
+- 已更新 API 文档和 README 中的原文件下载说明。
+- 本模块已通过前端 lint、前端构建、后端打包、smoke dry-run、MVP 验证脚本和 file-service 真实上传下载验证。
+
+主要代码：
+
+- `backend/file-service/src/main/java/com/trainmark/file/SubmissionFileDescriptor.java`
+- `backend/file-service/src/main/java/com/trainmark/file/UploadStore.java`
+- `backend/file-service/src/main/java/com/trainmark/file/InMemoryUploadStore.java`
+- `backend/file-service/src/main/java/com/trainmark/file/JdbcUploadStore.java`
+- `backend/file-service/src/main/java/com/trainmark/file/UploadObjectStore.java`
+- `backend/file-service/src/main/java/com/trainmark/file/LocalUploadObjectStore.java`
+- `backend/file-service/src/main/java/com/trainmark/file/SubmissionController.java`
+- `backend/file-service/src/main/java/com/trainmark/file/UploadService.java`
+- `apps/web/src/components/StudentDashboard.tsx`
+- `scripts/smoke-api.sh`
+- `README.md`
+- `docs/API.md`
+- `PROGRESS.md`
+
 ### 62. 数据库迁移版本修复
 
 - 已修复 demo 数据和上传会话迁移文件与既有迁移版本号重复的问题。
@@ -2696,6 +2721,22 @@ curl --noproxy '*' -H 'Content-Type: application/json' -d '{...}' http://localho
 curl --noproxy '*' -X PUT -F 'uploadId=...' -F 'objectKey=...' -F 'file=@...;type=application/pdf' http://localhost:8084/api/submissions/upload/content
 curl --noproxy '*' -H 'Content-Type: application/json' -d '{...}' http://localhost:8084/api/submissions/upload/complete
 curl --noproxy '*' 'http://localhost:8084/api/submissions?assignmentId=1&studentId=2'
+```
+
+学生提交原文件下载入口已通过前端静态检查、构建、后端打包、smoke dry-run、MVP 主验证和 file-service 真实上传下载验证：
+
+```bash
+pnpm --filter trainmark-ai-web lint
+pnpm --filter trainmark-ai-web build
+mvn -f backend/pom.xml package -DskipTests
+SMOKE_DRY_RUN=1 SMOKE_INCLUDE_WRITES=1 pnpm smoke:api
+pnpm verify:mvp
+UPLOAD_OBJECT_ROOT=.data/test-uploads pnpm dev:backend:file
+curl --noproxy '*' -H 'Content-Type: application/json' -d '{...}' http://localhost:8084/api/submissions/upload/init
+curl --noproxy '*' -X PUT -F 'uploadId=...' -F 'objectKey=...' -F 'file=@...;type=application/pdf' http://localhost:8084/api/submissions/upload/content
+curl --noproxy '*' -H 'Content-Type: application/json' -d '{...}' http://localhost:8084/api/submissions/upload/complete
+curl --noproxy '*' http://localhost:8084/api/submissions/{submissionId}/file -o downloaded.pdf
+cmp -s uploaded.pdf downloaded.pdf
 ```
 
 覆盖内容：

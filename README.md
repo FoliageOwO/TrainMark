@@ -186,7 +186,7 @@ TRAINMARK_FILE_JDBC_PASSWORD=trainmark_dev \
 pnpm dev:backend:file
 ```
 
-HTTP 模式下学生端会先初始化上传会话，再将报告文件以 multipart 写入本地对象目录，最后完成提交。默认对象目录为 `.data/uploads`，可通过 `UPLOAD_OBJECT_ROOT` 调整；如需强制完成提交前必须存在对象内容，可设置 `UPLOAD_REQUIRE_OBJECT_CONTENT=true`。
+HTTP 模式下学生端会先初始化上传会话，再将报告文件以 multipart 写入本地对象目录，最后完成提交。提交成功后可通过 `/api/submissions/{submissionId}/file` 取回原文件。默认对象目录为 `.data/uploads`，可通过 `UPLOAD_OBJECT_ROOT` 调整；如需强制完成提交前必须存在对象内容，可设置 `UPLOAD_REQUIRE_OBJECT_CONTENT=true`。
 
 OCR 服务默认使用内存任务结果。需要让 OCR 任务和结构化块写入 PostgreSQL 时，设置：
 

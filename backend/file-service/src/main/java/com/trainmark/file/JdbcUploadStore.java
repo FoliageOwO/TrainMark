@@ -149,6 +149,31 @@ public class JdbcUploadStore implements UploadStore {
     }
   }
 
+  @Override
+  public SubmissionFileDescriptor getSubmissionFile(Long submissionId) {
+    var sql = """
+        SELECT id, COALESCE(file_name, '未命名报告') AS file_name, object_key
+        FROM submissions
+        WHERE id = ?
+        """;
+    try (var connection = connect();
+        var statement = connection.prepareStatement(sql)) {
+      statement.setLong(1, submissionId);
+      try (var results = statement.executeQuery()) {
+        if (results.next()) {
+          return new SubmissionFileDescriptor(
+              results.getLong("id"),
+              results.getString("file_name"),
+              results.getString("object_key")
+          );
+        }
+      }
+    } catch (SQLException error) {
+      throw new IllegalStateException("Failed to find submission file", error);
+    }
+    throw new IllegalArgumentException("Submission file not found: " + submissionId);
+  }
+
   private PendingUpload findUpload(Connection connection, String uploadId) throws SQLException {
     var sql = """
         SELECT upload_id, assignment_id, student_id, file_name, object_key, checksum, expires_at

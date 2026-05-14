@@ -91,6 +91,7 @@ inconsistent.
 | `PUT` | `/api/submissions/upload/content` | multipart `uploadId`, `objectKey`, `file` | `UploadObjectSummary` |
 | `POST` | `/api/submissions/upload/complete` | `CompleteUploadRequest` | `SubmissionReceipt` |
 | `GET` | `/api/submissions?assignmentId=1&studentId=2` | optional `assignmentId`, `studentId` query | `SubmissionSummary[]` |
+| `GET` | `/api/submissions/{submissionId}/file` | none | original submitted report bytes |
 
 ## Collection And Reminders
 

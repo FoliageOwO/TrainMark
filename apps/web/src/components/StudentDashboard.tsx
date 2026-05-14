@@ -8,7 +8,7 @@ import {
   GraduationCap,
   UploadCloud,
 } from 'lucide-react';
-import { createAppeal, createUploadReceipt, resolveApiAssetUrl } from '../api/httpApi';
+import { createAppeal, createUploadReceipt, resolveApiAssetUrl, shouldUseHttpApi } from '../api/httpApi';
 import type { AppealSummary, GradingResultSummary, SubmissionTask, UploadReceipt } from '../api/types';
 import { formatDate } from '../utils/formatDate';
 
@@ -255,6 +255,9 @@ export function StudentDashboard({ tasks, publishedResults, appeals, userId }: S
               <div>
                 <strong>提交成功</strong>
                 <span>回执 #{receipt.submissionId} · 版本 {receipt.version}</span>
+                {shouldUseHttpApi() && (
+                  <a href={resolveApiAssetUrl(`/api/submissions/${receipt.submissionId}/file`)} rel="noreferrer" target="_blank">查看原文件</a>
+                )}
               </div>
             </div>
           ) : (
