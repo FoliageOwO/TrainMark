@@ -2138,6 +2138,21 @@
 - `README.md`
 - `PROGRESS.md`
 
+### 73. JDBC 认证禁用未知账号 mock 回退
+
+- 已为 `AuthUserStore` 增加 mock 回退能力开关，内存模式继续保留任意演示账号登录，JDBC 模式关闭未知账号 mock 回退。
+- JDBC 模式下登录未知账号会返回统一 `ApiResponse` 错误 `Invalid username or password`，无效或缺失 token 访问 `/api/auth/me` 会返回 `Authentication is required`。
+- 已保留 JDBC 演示角色别名登录能力，`teacher`、`student`、`owner`、`supervisor` 和 `admin` 仍会映射到数据库中的真实演示用户。
+- 本模块已通过 auth-service 编译、API smoke dry-run，以及单独启动 JDBC auth-service 后的 owner 登录、未知账号登录失败和无 token `/api/auth/me` 失败 live 验证。
+
+主要代码：
+
+- `backend/auth-service/src/main/java/com/trainmark/auth/AuthUserStore.java`
+- `backend/auth-service/src/main/java/com/trainmark/auth/JdbcAuthUserStore.java`
+- `backend/auth-service/src/main/java/com/trainmark/auth/AuthService.java`
+- `README.md`
+- `PROGRESS.md`
+
 ## 已验证
 
 前端构建已通过：
@@ -3260,6 +3275,7 @@ pnpm verify:mvp
 - `fix: verify jdbc mvp launcher`
 - `feat: add strict http mode`
 - `feat: seed jdbc demo roles`
+- `fix: reject unknown jdbc auth`
 
 ## 接下来需要做
 

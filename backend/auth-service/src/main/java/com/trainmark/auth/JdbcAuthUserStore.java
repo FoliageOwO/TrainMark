@@ -36,6 +36,11 @@ public class JdbcAuthUserStore implements AuthUserStore {
     return findExactUser(login).or(() -> findDemoRoleUser(login));
   }
 
+  @Override
+  public boolean allowsMockFallback() {
+    return false;
+  }
+
   private Optional<AuthUser> findExactUser(String login) {
     var sql = """
         SELECT id, name, username

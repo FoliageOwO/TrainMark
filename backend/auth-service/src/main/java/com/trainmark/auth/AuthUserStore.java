@@ -7,6 +7,10 @@ import java.util.Optional;
 public interface AuthUserStore {
   Optional<AuthUser> findByLogin(String username);
 
+  default boolean allowsMockFallback() {
+    return true;
+  }
+
   record AuthUser(
       Long id,
       String name,
