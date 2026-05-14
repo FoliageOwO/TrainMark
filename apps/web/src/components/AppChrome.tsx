@@ -43,7 +43,7 @@ type AppChromeProps = {
   primaryRole: RoleCode;
   user: UserProfile;
   onNavChange: (label: string) => void;
-  onRoleChange: (role: RoleCode) => void;
+  onRoleChange: (role: RoleCode) => void | Promise<void>;
 };
 
 export function AppChrome({

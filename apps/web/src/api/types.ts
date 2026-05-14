@@ -7,6 +7,12 @@ export type UserProfile = {
   roles: RoleCode[];
 };
 
+export type LoginResponse = {
+  accessToken: string;
+  refreshToken: string;
+  user: UserProfile;
+};
+
 export type OrganizationType = 'COLLEGE' | 'MAJOR' | 'CLASS';
 
 export type UserStatus = 'ACTIVE' | 'DISABLED' | 'PENDING';

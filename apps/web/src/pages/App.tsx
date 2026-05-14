@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { mockApi } from '../api/mockApi';
 import {
+  loginAsRole,
   loadWorkspaceData,
   shouldUseHttpApi,
   type WorkspaceData,
@@ -86,17 +87,26 @@ export function App() {
   const metrics = deriveTeacherMetrics(assignments, gradingJobs, gradingResults, collectionOverview);
 
   useEffect(() => {
-    const syncRoleFromLocation = () => {
-      setUser(mockApi.login(getRoleFromLocation()));
+    let cancelled = false;
+    const syncRoleFromLocation = async () => {
+      const role = getRoleFromLocation();
+      const nextUser = await loginAsRole(role);
+      if (!cancelled) {
+        setUser(nextUser);
+      }
     };
 
+    void syncRoleFromLocation();
     window.addEventListener('popstate', syncRoleFromLocation);
-    return () => window.removeEventListener('popstate', syncRoleFromLocation);
+    return () => {
+      cancelled = true;
+      window.removeEventListener('popstate', syncRoleFromLocation);
+    };
   }, []);
 
-  const handleRoleChange = (role: RoleCode) => {
+  const handleRoleChange = async (role: RoleCode) => {
     writeRoleToLocation(role);
-    setUser(mockApi.login(role));
+    setUser(await loginAsRole(role));
   };
 
   useEffect(() => {

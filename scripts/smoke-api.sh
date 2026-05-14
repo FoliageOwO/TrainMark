@@ -168,6 +168,7 @@ check_url "notification-service health" "${NOTIFICATION_SERVICE_URL:-http://loca
 check_url "admin-service health" "${ADMIN_SERVICE_URL:-http://localhost:8090}/actuator/health"
 check_url "analytics-service health" "${ANALYTICS_SERVICE_URL:-http://localhost:8091}/actuator/health"
 
+post_json "gateway auth login" "$GATEWAY_URL/api/auth/login" '{"username":"admin","password":"trainmark"}'
 check_api "gateway auth profile" "$GATEWAY_URL/api/auth/me"
 check_api "gateway organizations" "$GATEWAY_URL/api/organizations"
 check_api "gateway users" "$GATEWAY_URL/api/users"

@@ -12,6 +12,7 @@ import type {
   GradingResultSummary,
   GradingJobSummary,
   LossPointSummary,
+  LoginResponse,
   OcrJobSummary,
   OrganizationType,
   OrganizationSummary,
@@ -28,6 +29,7 @@ import type {
   UnsubmittedStudent,
   UserSummary,
   RoleCode,
+  UserProfile,
 } from './types';
 
 type ApiResponse<T> = {
@@ -137,6 +139,30 @@ export function resolveApiAssetUrl(path: string) {
     return `${API_BASE_URL.replace(/\/$/, '')}${path}`;
   }
   return path;
+}
+
+const roleLoginUsernames: Record<RoleCode, string> = {
+  TEACHER: 'teacher',
+  STUDENT: 'student',
+  COURSE_OWNER: 'owner',
+  SUPERVISOR: 'supervisor',
+  ADMIN: 'admin',
+};
+
+export async function loginAsRole(role: RoleCode): Promise<UserProfile> {
+  if (!shouldUseHttpApi()) {
+    return mockApi.login(role);
+  }
+  try {
+    const response = await request<LoginResponse>('/api/auth/login', 'POST', {
+      username: roleLoginUsernames[role],
+      password: 'trainmark',
+    });
+    persistTokens(response);
+    return response.user;
+  } catch {
+    return mockApi.login(role);
+  }
 }
 
 export async function loadWorkspaceData(selectedCourseId: number, userId: number, role: RoleCode): Promise<WorkspaceData> {
@@ -571,6 +597,14 @@ async function request<T>(path: string, method: 'POST' | 'PATCH', body: unknown)
     throw new Error(payload.message || `API request failed for ${path}`);
   }
   return payload.data;
+}
+
+function persistTokens(response: LoginResponse) {
+  if (typeof window === 'undefined') {
+    return;
+  }
+  window.localStorage.setItem('trainmark.accessToken', response.accessToken);
+  window.localStorage.setItem('trainmark.refreshToken', response.refreshToken);
 }
 
 type BackendOcrJobSummary = Omit<OcrJobSummary, 'blocks'> & { blocks?: OcrJobSummary['blocks'] };

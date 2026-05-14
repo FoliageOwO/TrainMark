@@ -1928,6 +1928,27 @@
 - `README.md`
 - `PROGRESS.md`
 
+### 61.12 前端 HTTP 登录接入
+
+- 已将前端角色切换从纯 Mock 登录升级为 HTTP 模式下调用 `POST /api/auth/login`，并在登录成功后保存 access token 和 refresh token。
+- 已保留 Mock 模式回退，后端未启动或未启用 HTTP API 时仍可直接使用本地演示数据。
+- 已将 URL 初始角色解析和顶部角色切换统一走 `loginAsRole`，保证 HTTP 模式下切换老师、学生、管理员、课程负责人和督导时拿到对应登录身份。
+- 已扩展 auth-service 的演示登录身份映射，支持 `teacher`、`student`、`admin`、`owner`、`supervisor` 生成对应角色 profile。
+- 已将 `POST /api/auth/login` 纳入 API smoke 清单。
+- 已更新 README 当前进度。
+- 本模块已通过前端 lint、前端构建、auth-service 打包、写接口 smoke dry-run 和 MVP 主验证。
+
+主要代码：
+
+- `backend/auth-service/src/main/java/com/trainmark/auth/AuthService.java`
+- `apps/web/src/api/types.ts`
+- `apps/web/src/api/httpApi.ts`
+- `apps/web/src/pages/App.tsx`
+- `apps/web/src/components/AppChrome.tsx`
+- `scripts/smoke-api.sh`
+- `README.md`
+- `PROGRESS.md`
+
 ### 62. 数据库迁移版本修复
 
 - 已修复 demo 数据和上传会话迁移文件与既有迁移版本号重复的问题。
