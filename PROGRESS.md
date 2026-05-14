@@ -940,6 +940,18 @@
 - `scripts/smoke-api.sh`
 - `PROGRESS.md`
 
+### 58. Spring MVC 参数名保留
+
+- 已在后端父 POM 的 `maven-compiler-plugin` 中启用 `parameters=true`。
+- 修复真实后端联调时 `/api/organizations` 因 Java 参数名未保留，导致 Spring MVC 无法绑定未显式命名的 `@RequestParam` / `@PathVariable` 并返回 500 的问题。
+- 该配置作用于所有后端模块，避免同类接口在 live smoke 或前端 HTTP 模式下出现运行期参数绑定错误。
+
+主要代码：
+
+- `backend/pom.xml`
+- `README.md`
+- `PROGRESS.md`
+
 ## 已验证
 
 前端构建已通过：
@@ -1241,6 +1253,18 @@ timeout 25s bash scripts/dev-service.sh auth-service
 bash -n scripts/smoke-api.sh
 ```
 
+Spring MVC 参数名保留已通过后端全量编译：
+
+```bash
+mvn -f backend/pom.xml clean package -DskipTests
+```
+
+后端服务重启后，包含写接口的 live smoke 已通过：
+
+```bash
+SMOKE_INCLUDE_WRITES=1 SMOKE_RETRIES=90 SMOKE_RETRY_DELAY_SECONDS=2 pnpm smoke:api
+```
+
 全部后端模块已通过编译：
 
 ```bash
@@ -1309,6 +1333,7 @@ Docker Compose 已完成配置展开校验，暂未拉起 PostgreSQL、Redis、R
 - `chore: smoke write apis`
 - `fix: start backend services`
 - `fix: bypass proxy in smoke`
+- `fix: retain spring parameter names`
 
 ## 接下来需要做
 
