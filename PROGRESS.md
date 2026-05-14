@@ -530,6 +530,20 @@
 - `apps/web/src/pages/App.tsx`
 - `PROGRESS.md`
 
+### 22.1 学生端工作台组件拆分
+
+- 已从 `App.tsx` 拆出 `StudentDashboard`，学生端任务、成绩批注、申诉和上传回执状态独立维护。
+- 已新增共享 `formatDate` 工具，老师端和学生端复用同一日期格式化逻辑。
+- `App.tsx` 继续保留顶层角色、HTTP/mock 数据装配和老师/管理端工作台，减少本次拆分范围。
+- 拆分后前端 lint 和生产构建均已通过。
+
+主要代码：
+
+- `apps/web/src/components/StudentDashboard.tsx`
+- `apps/web/src/utils/formatDate.ts`
+- `apps/web/src/pages/App.tsx`
+- `PROGRESS.md`
+
 ### 23. 前端 HTTP 写操作联调
 
 - 已扩展前端 HTTP API 层，支持在 `VITE_API_MODE=http` 下调用后端写接口。
@@ -1388,6 +1402,14 @@ rg -n "@(GetMapping|PostMapping|PatchMapping|RequestMapping)" backend/*-service/
 ```bash
 pnpm lint:web
 pnpm build:web
+```
+
+学生端工作台组件拆分后已通过静态检查和构建：
+
+```bash
+pnpm --filter trainmark-ai-web lint
+pnpm --filter trainmark-ai-web build
+pnpm verify:mvp
 ```
 
 前端 HTTP 写操作联调已通过静态检查和构建：
