@@ -20,6 +20,9 @@ pnpm verify:ai
 echo "[verify] API smoke endpoint list"
 SMOKE_DRY_RUN=1 pnpm smoke:api
 
+echo "[verify] API write smoke endpoint list"
+SMOKE_DRY_RUN=1 SMOKE_INCLUDE_WRITES=1 pnpm smoke:api
+
 echo "[verify] API route surface"
 rg -n "@(GetMapping|PostMapping|PatchMapping|RequestMapping)" backend/*-service/src/main/java -g "*.java" >/dev/null
 

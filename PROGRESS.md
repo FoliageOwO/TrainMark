@@ -584,7 +584,7 @@
 ### 26. MVP 回归验证脚本
 
 - 已新增 `scripts/verify-mvp.sh`，串联当前 MVP 的基础回归验证。
-- 验证脚本覆盖前端 ESLint、前端构建、后端全模块打包和 API 路由注解核对。
+- 验证脚本覆盖前端 ESLint、前端构建、后端全模块打包、读写 smoke dry-run 和 API 路由注解核对。
 - 已新增根目录 `pnpm verify:mvp` 脚本，方便从仓库根目录执行。
 - 已在 README 补充 MVP 回归验证命令。
 
@@ -1567,6 +1567,12 @@ SMOKE_DRY_RUN=1 SMOKE_INCLUDE_WRITES=1 pnpm smoke:api
 pnpm verify:mvp
 SMOKE_RETRIES=60 SMOKE_RETRY_DELAY_SECONDS=2 pnpm smoke:api
 SMOKE_INCLUDE_WRITES=1 SMOKE_RETRIES=30 SMOKE_RETRY_DELAY_SECONDS=2 pnpm smoke:api
+```
+
+MVP 主验证已自动覆盖写接口 smoke dry-run：
+
+```bash
+pnpm verify:mvp
 ```
 
 用户与组织 PostgreSQL 存储已通过后端模块编译：

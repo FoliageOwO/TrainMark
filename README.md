@@ -321,7 +321,7 @@ SMOKE_INCLUDE_WRITES=1 SMOKE_RETRIES=30 SMOKE_RETRY_DELAY_SECONDS=2 pnpm smoke:a
 SMOKE_DRY_RUN=1 pnpm smoke:api
 ```
 
-`pnpm verify:mvp` 会执行 smoke dry-run，确保核心 gateway 端点清单能随 MVP 验证一起被检查。
+`pnpm verify:mvp` 会执行读写 smoke dry-run，确保核心 gateway 端点清单和可选写接口链路能随 MVP 验证一起被检查。
 
 生成本地发布包：
 
