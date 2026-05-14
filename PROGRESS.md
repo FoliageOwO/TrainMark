@@ -1847,6 +1847,18 @@
 - `README.md`
 - `PROGRESS.md`
 
+### 61.8 教师端批改队列刷新去重
+
+- 已修复教师端启动 AI 批改后，本地即时任务与 HTTP 刷新回来的同一批改任务可能重复展示的问题。
+- 批改队列展示会按任务 ID 过滤本地即时任务和上游任务列表，避免同一个 job 在刷新间隙出现两张卡片。
+- 当上游 `gradingJobs` 已包含本地即时启动的任务时，会自动清空 `startedJob`，让后续状态完全以工作区数据为准。
+- 本模块已通过前端 lint、前端构建和 MVP 主验证。
+
+主要代码：
+
+- `apps/web/src/components/TeacherDashboard.tsx`
+- `PROGRESS.md`
+
 ### 62. 数据库迁移版本修复
 
 - 已修复 demo 数据和上传会话迁移文件与既有迁移版本号重复的问题。
@@ -2860,6 +2872,14 @@ pnpm verify:mvp
 ```
 
 教师端写操作后工作区刷新已通过前端静态检查、构建和 MVP 主验证：
+
+```bash
+pnpm --filter trainmark-ai-web lint
+pnpm --filter trainmark-ai-web build
+pnpm verify:mvp
+```
+
+教师端批改队列刷新去重已通过前端静态检查、构建和 MVP 主验证：
 
 ```bash
 pnpm --filter trainmark-ai-web lint

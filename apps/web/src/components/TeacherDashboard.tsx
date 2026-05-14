@@ -102,7 +102,9 @@ export function TeacherDashboard({
     ?? assignmentRows[0]?.id
     ?? collectionOverview.assignmentId;
   const rubric = rubricRows.find((item) => item.assignmentId === selectedAssignmentId) ?? rubricRows[0] ?? null;
-  const visibleJobs = startedJob ? [startedJob, ...gradingJobs] : gradingJobs;
+  const visibleJobs = startedJob
+    ? [startedJob, ...gradingJobs.filter((job) => job.id !== startedJob.id)]
+    : gradingJobs;
   const selectedReview = reviewResults.find((item) => item.id === selectedReviewId) ?? reviewResults[0] ?? null;
   const ocrCandidate = submissions.find((submission) => (
     submission.assignmentId === selectedAssignmentId && Boolean(submission.objectKey)
@@ -115,6 +117,12 @@ export function TeacherDashboard({
   useEffect(() => {
     setRubricRows(rubrics);
   }, [rubrics]);
+
+  useEffect(() => {
+    setStartedJob((current) => (
+      current && gradingJobs.some((job) => job.id === current.id) ? null : current
+    ));
+  }, [gradingJobs]);
 
   useEffect(() => {
     if (gradingResults.length === 0) {
