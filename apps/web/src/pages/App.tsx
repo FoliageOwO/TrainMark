@@ -59,6 +59,7 @@ export function App() {
   const gradingJobs = workspaceData?.gradingJobs ?? mockApi.listGradingJobs();
   const ocrJobs = workspaceData?.ocrJobs ?? mockApi.listOcrJobs();
   const gradingResults = workspaceData?.gradingResults ?? mockApi.listGradingResults();
+  const publicationAudits = workspaceData?.publicationAudits ?? mockApi.listPublicationAudits();
   const publishedResults = workspaceData?.publishedResults ?? mockApi.listPublishedResults(user.id);
   const gradeExports = workspaceData?.gradeExports ?? mockApi.listGradeExports(1);
   const gradeStatistics = workspaceData?.gradeStatistics ?? mockApi.getGradeStatistics();
@@ -150,6 +151,7 @@ export function App() {
           submissions={workspaceData?.submissions ?? []}
           ocrJobs={ocrJobs}
           gradingResults={gradingResults}
+          publicationAudits={publicationAudits}
           operatorName={user.name}
           gradeExports={gradeExports}
           gradeStatistics={gradeStatistics}

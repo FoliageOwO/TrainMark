@@ -45,6 +45,7 @@ type TeacherDashboardProps = {
   submissions: SubmissionSummary[];
   ocrJobs: ReturnType<typeof mockApi.listOcrJobs>;
   gradingResults: ReturnType<typeof mockApi.listGradingResults>;
+  publicationAudits: ReturnType<typeof mockApi.listPublicationAudits>;
   operatorName: string;
   gradeExports: ReturnType<typeof mockApi.listGradeExports>;
   gradeStatistics: ReturnType<typeof mockApi.getGradeStatistics>;
@@ -72,6 +73,7 @@ export function TeacherDashboard({
   submissions,
   ocrJobs,
   gradingResults,
+  publicationAudits,
   operatorName,
   gradeExports,
   gradeStatistics,
@@ -84,7 +86,7 @@ export function TeacherDashboard({
   const [startedJob, setStartedJob] = useState<ReturnType<typeof mockApi.startGradingJob> | null>(null);
   const [reviewResults, setReviewResults] = useState(gradingResults);
   const [selectedReviewId, setSelectedReviewId] = useState(gradingResults[0]?.id ?? 0);
-  const [publicationAudits, setPublicationAudits] = useState(mockApi.listPublicationAudits());
+  const [publicationAuditRows, setPublicationAuditRows] = useState(publicationAudits);
   const [appealRows, setAppealRows] = useState(appeals);
   const [similarityRows, setSimilarityRows] = useState(similarityJobs);
   const [exportRows, setExportRows] = useState(gradeExports);
@@ -129,6 +131,10 @@ export function TeacherDashboard({
     setExportRows(gradeExports);
   }, [gradeExports]);
 
+  useEffect(() => {
+    setPublicationAuditRows(publicationAudits);
+  }, [publicationAudits]);
+
   const syncReviewResult = (updated: NonNullable<typeof selectedReview>) => {
     setReviewResults((current) => current.map((item) => (item.id === updated.id ? { ...updated } : item)));
     setSelectedReviewId(updated.id);
@@ -158,12 +164,12 @@ export function TeacherDashboard({
 
   const handlePublishResult = async () => {
     syncReviewResult(await publishGradingResult(selectedReview.id, operatorName));
-    setPublicationAudits(await loadPublicationAudits(selectedReview.id));
+    setPublicationAuditRows(await loadPublicationAudits(selectedReview.id));
   };
 
   const handleWithdrawResult = async () => {
     syncReviewResult(await withdrawGradingResult(selectedReview.id, operatorName));
-    setPublicationAudits(await loadPublicationAudits(selectedReview.id));
+    setPublicationAuditRows(await loadPublicationAudits(selectedReview.id));
   };
 
   const handleResolveAppeal = async (appealId: number, accepted: boolean) => {
@@ -240,7 +246,7 @@ export function TeacherDashboard({
       <TeacherReviewWorkspace
         reviewResults={reviewResults}
         selectedReview={selectedReview}
-        publicationAudits={publicationAudits}
+        publicationAudits={publicationAuditRows}
         onSelectReview={setSelectedReviewId}
         onReviewItemSubmit={handleReviewItemSubmit}
         onApproveResult={handleApproveResult}

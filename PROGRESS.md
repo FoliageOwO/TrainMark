@@ -829,6 +829,20 @@
 - `apps/web/src/components/TeacherDashboard.tsx`
 - `PROGRESS.md`
 
+### 23.11 教师端发布审计 HTTP 首屏同步
+
+- 已将发布审计记录纳入 HTTP 工作区数据模型，工作区加载复核结果后会按结果 ID 拉取发布/撤回审计记录。
+- 已让应用入口把发布审计传入教师端，教师端状态随上游工作区数据刷新，首屏不再只能显示空 mock 审计。
+- 已保留教师发布/撤回后的即时刷新逻辑，操作后继续只刷新当前结果的审计记录。
+- 本模块已通过前端 lint、生产构建和 MVP 验证脚本。
+
+主要代码：
+
+- `apps/web/src/api/httpApi.ts`
+- `apps/web/src/pages/App.tsx`
+- `apps/web/src/components/TeacherDashboard.tsx`
+- `PROGRESS.md`
+
 ### 24. Gateway 本地跨域联调
 
 - 已为 gateway 增加本地 Vite 开发端口 CORS 配置。
@@ -2449,6 +2463,14 @@ pnpm verify:mvp
 ```
 
 教师端作业维度 HTTP 数据同步后已通过静态检查、构建和 MVP 验证：
+
+```bash
+pnpm --filter trainmark-ai-web lint
+pnpm --filter trainmark-ai-web build
+pnpm verify:mvp
+```
+
+教师端发布审计 HTTP 首屏同步后已通过静态检查、构建和 MVP 验证：
 
 ```bash
 pnpm --filter trainmark-ai-web lint

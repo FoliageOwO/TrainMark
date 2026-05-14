@@ -7,6 +7,7 @@ import type {
   CourseOutcomeAchievement,
   CourseSummary,
   GradeExportSummary,
+  GradePublicationAuditEntry,
   GradeStatisticsSummary,
   GradingResultSummary,
   GradingJobSummary,
@@ -45,6 +46,7 @@ export type WorkspaceData = {
   ocrJobs: OcrJobSummary[];
   gradingResults: GradingResultSummary[];
   publishedResults: GradingResultSummary[];
+  publicationAudits: GradePublicationAuditEntry[];
   submissions: SubmissionSummary[];
   studentTasks: SubmissionTask[];
   gradeStatistics: GradeStatisticsSummary;
@@ -153,6 +155,7 @@ export async function loadWorkspaceData(selectedCourseId: number, userId: number
     getOr('/api/admin/settings', mockApi.listSystemSettings()),
   ]);
   const publishedResults = gradingResults.filter((item) => item.publicationStatus === 'PUBLISHED' && item.studentId === userId);
+  const publicationAudits = await loadPublicationAuditsForResults(gradingResults);
 
   return {
     courses,
@@ -167,6 +170,7 @@ export async function loadWorkspaceData(selectedCourseId: number, userId: number
     ocrJobs,
     gradingResults,
     publishedResults,
+    publicationAudits,
     submissions,
     studentTasks: deriveStudentTasks(assignments, courses, submissions, publishedResults, userId),
     gradeExports,
@@ -178,6 +182,15 @@ export async function loadWorkspaceData(selectedCourseId: number, userId: number
     auditLogs,
     systemSettings,
   };
+}
+
+async function loadPublicationAuditsForResults(gradingResults: GradingResultSummary[]) {
+  if (gradingResults.length === 0) {
+    return mockApi.listPublicationAudits();
+  }
+  const resultIds = [...new Set(gradingResults.map((result) => result.id))];
+  const auditGroups = await Promise.all(resultIds.map((resultId) => loadPublicationAudits(resultId)));
+  return auditGroups.flat();
 }
 
 function resolveWorkspaceAssignmentId(assignments: AssignmentSummary[], selectedCourseId: number) {
