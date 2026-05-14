@@ -18,6 +18,8 @@ import type {
   ReminderResult,
   RubricSummary,
   SimilarityJobSummary,
+  StudentImportResult,
+  StudentImportRow,
   SubmissionSummary,
   SubmissionTask,
   SystemSettingSummary,
@@ -110,6 +112,11 @@ export type CreateUserInput = {
 export type UpdateSystemSettingInput = {
   key: string;
   value: string;
+};
+
+export type ImportStudentsInput = {
+  classId: number;
+  rows: StudentImportRow[];
 };
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8080';
@@ -472,6 +479,15 @@ export async function updateSystemSetting(input: UpdateSystemSettingInput): Prom
     `/api/admin/settings/${encodeURIComponent(input.key)}`,
     { value: input.value },
     () => mockApi.updateSystemSetting(input.key, input.value),
+  );
+}
+
+export async function importStudents(input: ImportStudentsInput): Promise<StudentImportResult> {
+  return mutateOr(
+    'POST',
+    '/api/users/students/import',
+    input,
+    () => mockApi.importStudents(input.classId, input.rows),
   );
 }
 

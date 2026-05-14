@@ -5,6 +5,7 @@ import {
   approveGradingResult,
   createGradeExport,
   createGradingJob,
+  importStudents,
   createOcrJob,
   createRubric,
   loadPublicationAudits,
@@ -15,9 +16,10 @@ import {
   updateReviewItem,
   withdrawGradingResult,
   type CreateAssignmentInput,
+  type ImportStudentsInput,
   type CreateRubricInput,
 } from '../api/httpApi';
-import type { CourseSummary, GradingResultSummary, RubricSummary, SubmissionSummary } from '../api/types';
+import type { CourseSummary, GradingResultSummary, RubricSummary, StudentImportResult, SubmissionSummary } from '../api/types';
 import { TeacherAnalyticsPanel } from './TeacherAnalyticsPanel';
 import { TeacherAiPipeline } from './TeacherAiPipeline';
 import { TeacherAppealPanel } from './TeacherAppealPanel';
@@ -96,6 +98,8 @@ export function TeacherDashboard({
   const [ocrRows, setOcrRows] = useState(ocrJobs);
   const [assignmentRows, setAssignmentRows] = useState(assignments);
   const [rubricRows, setRubricRows] = useState<RubricSummary[]>(rubrics);
+  const [studentRows, setStudentRows] = useState(students);
+  const [studentImportResult, setStudentImportResult] = useState<StudentImportResult | null>(null);
   const [assignmentNotice, setAssignmentNotice] = useState('');
   const [rubricNotice, setRubricNotice] = useState('');
   const selectedAssignmentId = assignmentRows.find((assignment) => assignment.courseId === selectedCourseId)?.id
@@ -117,6 +121,10 @@ export function TeacherDashboard({
   useEffect(() => {
     setRubricRows(rubrics);
   }, [rubrics]);
+
+  useEffect(() => {
+    setStudentRows(students);
+  }, [students]);
 
   useEffect(() => {
     setStartedJob((current) => (
@@ -270,6 +278,13 @@ export function TeacherDashboard({
     await onWorkspaceRefresh();
   };
 
+  const handleImportStudents = async (input: ImportStudentsInput) => {
+    const result = await importStudents(input);
+    setStudentImportResult(result);
+    setStudentRows(mockApi.listUsers('STUDENT'));
+    await onWorkspaceRefresh();
+  };
+
   return (
     <>
       <TeacherCoursePanel
@@ -346,7 +361,14 @@ export function TeacherDashboard({
         onRemindUnsubmitted={handleRemindUnsubmitted}
       />
 
-      <TeacherRosterPanel importPreview={importPreview} organizations={organizations} students={students} />
+      <TeacherRosterPanel
+        classes={classes}
+        importPreview={importPreview}
+        importResult={studentImportResult}
+        organizations={organizations}
+        students={studentRows}
+        onImportStudents={handleImportStudents}
+      />
 
       <TeacherOperationsPanel />
     </>

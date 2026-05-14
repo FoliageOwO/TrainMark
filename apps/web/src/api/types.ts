@@ -38,6 +38,20 @@ export type StudentImportPreview = {
   invalid: number;
 };
 
+export type StudentImportRow = {
+  studentNo: string;
+  name: string;
+  email?: string;
+  phone?: string;
+};
+
+export type StudentImportResult = {
+  total: number;
+  created: number;
+  skipped: number;
+  warnings: string[];
+};
+
 export type CourseStatus = 'DRAFT' | 'ACTIVE' | 'ARCHIVED';
 
 export type AssignmentStatus = 'DRAFT' | 'PUBLISHED' | 'CLOSED' | 'ARCHIVED';

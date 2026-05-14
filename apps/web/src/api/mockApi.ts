@@ -21,6 +21,8 @@ import type {
   SimilarityJobSummary,
   SystemSettingSummary,
   StudentImportPreview,
+  StudentImportResult,
+  StudentImportRow,
   SubmissionTask,
   TeachingClassSummary,
   UploadReceipt,
@@ -345,6 +347,41 @@ export const mockApi = {
   },
   getStudentImportPreview(): StudentImportPreview {
     return importPreview;
+  },
+  importStudents(classId: number, rows: StudentImportRow[]): StudentImportResult {
+    const warnings: string[] = [];
+    let created = 0;
+    let skipped = 0;
+    rows.forEach((row) => {
+      if (!row.studentNo || !row.name) {
+        skipped += 1;
+        warnings.push('存在缺少学号或姓名的记录，已跳过');
+        return;
+      }
+      if (userDirectory.some((user) => user.studentNo === row.studentNo)) {
+        skipped += 1;
+        warnings.push(`学号 ${row.studentNo} 已存在，已跳过`);
+        return;
+      }
+      userDirectory.unshift({
+        id: Math.max(...userDirectory.map((item) => item.id)) + 1,
+        organizationId: classId,
+        username: row.studentNo,
+        name: row.name,
+        studentNo: row.studentNo,
+        ...(row.email ? { email: row.email } : {}),
+        ...(row.phone ? { phone: row.phone } : {}),
+        status: 'ACTIVE',
+        roles: ['STUDENT'],
+      });
+      created += 1;
+    });
+    return {
+      total: rows.length,
+      created,
+      skipped,
+      warnings,
+    };
   },
   listClasses(courseId: number): TeachingClassSummary[] {
     return classes.filter((item) => item.courseId === courseId);

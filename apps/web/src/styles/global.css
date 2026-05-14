@@ -644,6 +644,18 @@ button:focus-visible {
   background: #ccfbf1;
 }
 
+.inline-warning {
+  display: grid;
+  gap: 6px;
+  margin-top: 12px;
+  padding: 10px 12px;
+  color: #92400e;
+  font-size: 13px;
+  font-weight: 700;
+  border-radius: 14px;
+  background: #fef3c7;
+}
+
 .student-task-card {
   grid-template-columns: minmax(0, 1fr) auto auto;
   align-items: center;

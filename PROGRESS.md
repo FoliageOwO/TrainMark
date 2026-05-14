@@ -1907,6 +1907,27 @@
 - `README.md`
 - `PROGRESS.md`
 
+### 61.11 教师端学生名单导入写入
+
+- 已将教师端学生名单导入从静态展示升级为可写表单，支持粘贴 `学号,姓名,邮箱,手机号` 行并选择导入班级。
+- 已扩展前端 HTTP API 层，HTTP 模式下调用 `POST /api/users/students/import`，Mock 模式下写入本地学生目录并返回导入结果。
+- 导入完成后教师端会展示本次处理数量、创建数量、跳过数量和最多 3 条告警，并刷新学生列表。
+- 已将学生名单导入纳入 `SMOKE_INCLUDE_WRITES=1` 的 API smoke 清单。
+- 已更新 README 当前进度。
+- 本模块已通过前端 lint、前端构建、写接口 smoke dry-run 和 MVP 主验证。
+
+主要代码：
+
+- `apps/web/src/api/types.ts`
+- `apps/web/src/api/httpApi.ts`
+- `apps/web/src/api/mockApi.ts`
+- `apps/web/src/components/TeacherDashboard.tsx`
+- `apps/web/src/components/TeacherRosterPanel.tsx`
+- `apps/web/src/styles/global.css`
+- `scripts/smoke-api.sh`
+- `README.md`
+- `PROGRESS.md`
+
 ### 62. 数据库迁移版本修复
 
 - 已修复 demo 数据和上传会话迁移文件与既有迁移版本号重复的问题。
@@ -2950,6 +2971,15 @@ pnpm verify:mvp
 pnpm --filter trainmark-ai-web lint
 pnpm --filter trainmark-ai-web build
 mvn -f backend/pom.xml -pl admin-service -am package -DskipTests
+SMOKE_DRY_RUN=1 SMOKE_INCLUDE_WRITES=1 pnpm smoke:api
+pnpm verify:mvp
+```
+
+教师端学生名单导入写入已通过前端静态检查、构建、写接口 smoke dry-run 和 MVP 主验证：
+
+```bash
+pnpm --filter trainmark-ai-web lint
+pnpm --filter trainmark-ai-web build
 SMOKE_DRY_RUN=1 SMOKE_INCLUDE_WRITES=1 pnpm smoke:api
 pnpm verify:mvp
 ```

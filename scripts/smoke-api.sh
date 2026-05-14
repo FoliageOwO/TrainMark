@@ -191,12 +191,14 @@ if [[ "$SMOKE_INCLUDE_WRITES" == "1" ]]; then
   if [[ "$SMOKE_DRY_RUN" == "1" ]]; then
     post_json "organization" "$GATEWAY_URL/api/organizations" '{"parentId":2,"name":"Smoke 软件测试班","type":"CLASS"}'
     post_json "user" "$GATEWAY_URL/api/users" '{"organizationId":3,"username":"smoke-student","name":"Smoke 学生","studentNo":"SMOKE001","email":"smoke.student@trainmark.local","phone":"13800000000","roles":["STUDENT"]}'
+    post_json "student import" "$GATEWAY_URL/api/users/students/import" '{"classId":3,"rows":[{"studentNo":"SMOKE002","name":"Smoke 导入学生","email":"smoke.import@trainmark.local","phone":"13800000001"}]}'
     patch_json "admin setting" "$GATEWAY_URL/api/admin/settings/export.retention-days" '{"value":"45"}'
   else
     smoke_suffix="$(date +%s)"
     organization_response="$(post_json "organization" "$GATEWAY_URL/api/organizations" "{\"parentId\":2,\"name\":\"Smoke 软件测试班 $smoke_suffix\",\"type\":\"CLASS\"}")"
     organization_id="$(json_field id <<< "$organization_response")"
     post_json "user" "$GATEWAY_URL/api/users" "{\"organizationId\":$organization_id,\"username\":\"smoke-student-$smoke_suffix\",\"name\":\"Smoke 学生\",\"studentNo\":\"SMOKE$smoke_suffix\",\"email\":\"smoke.student.$smoke_suffix@trainmark.local\",\"phone\":\"13800000000\",\"roles\":[\"STUDENT\"]}"
+    post_json "student import" "$GATEWAY_URL/api/users/students/import" "{\"classId\":$organization_id,\"rows\":[{\"studentNo\":\"SMOKE-IMPORT-$smoke_suffix\",\"name\":\"Smoke 导入学生\",\"email\":\"smoke.import.$smoke_suffix@trainmark.local\",\"phone\":\"13800000001\"}]}"
     patch_json "admin setting" "$GATEWAY_URL/api/admin/settings/export.retention-days" '{"value":"45"}'
   fi
   if [[ "$SMOKE_DRY_RUN" == "1" ]]; then
