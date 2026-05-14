@@ -64,7 +64,8 @@ export function App() {
   const gradeStatistics = workspaceData?.gradeStatistics ?? mockApi.getGradeStatistics();
   const lossPoints = workspaceData?.lossPoints ?? mockApi.listLossPoints();
   const courseOutcomes = workspaceData?.courseOutcomes ?? mockApi.listCourseOutcomes();
-  const appeals = workspaceData?.appeals.filter((item) => item.studentId === user.id) ?? mockApi.listAppeals(undefined, user.id);
+  const allAppeals = workspaceData?.appeals ?? mockApi.listAppeals();
+  const studentAppeals = allAppeals.filter((item) => item.studentId === user.id);
   const similarityJobs = workspaceData?.similarityJobs ?? mockApi.listSimilarityJobs();
   const auditLogs = workspaceData?.auditLogs ?? mockApi.listAuditLogs();
   const systemSettings = workspaceData?.systemSettings ?? mockApi.listSystemSettings();
@@ -119,7 +120,7 @@ export function App() {
       onRoleChange={handleRoleChange}
     >
       {primaryRole === 'STUDENT' ? (
-        <StudentDashboard tasks={studentTasks} publishedResults={publishedResults} appeals={appeals} userId={user.id} />
+        <StudentDashboard tasks={studentTasks} publishedResults={publishedResults} appeals={studentAppeals} userId={user.id} />
       ) : primaryRole === 'ADMIN' ? (
         <AdminDashboard
           organizations={organizations}
@@ -150,7 +151,7 @@ export function App() {
           gradeStatistics={gradeStatistics}
           lossPoints={lossPoints}
           courseOutcomes={courseOutcomes}
-          appeals={mockApi.listAppeals()}
+          appeals={allAppeals}
           similarityJobs={similarityJobs}
         />
       )}

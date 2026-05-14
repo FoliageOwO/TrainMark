@@ -689,6 +689,17 @@
 - `apps/web/src/pages/App.tsx`
 - `PROGRESS.md`
 
+### 23.1 前端申诉数据源联调修正
+
+- 已让老师端申诉面板优先使用 HTTP 工作区返回的 `workspaceData.appeals`，HTTP 模式下不再固定读取本地 `mockApi.listAppeals()`。
+- 已保留学生端按当前用户过滤申诉的行为，并让学生端和老师端复用同一份申诉数据源。
+- Mock 模式仍回退本地申诉列表，保持单前端演示行为不变。
+
+主要代码：
+
+- `apps/web/src/pages/App.tsx`
+- `PROGRESS.md`
+
 ### 24. Gateway 本地跨域联调
 
 - 已为 gateway 增加本地 Vite 开发端口 CORS 配置。
@@ -1637,6 +1648,14 @@ pnpm verify:mvp
 ```bash
 pnpm lint:web
 pnpm build:web
+```
+
+前端申诉数据源联调修正后已通过静态检查和构建：
+
+```bash
+pnpm --filter trainmark-ai-web lint
+pnpm --filter trainmark-ai-web build
+pnpm verify:mvp
 ```
 
 Gateway 本地跨域配置加入后模块打包通过：
