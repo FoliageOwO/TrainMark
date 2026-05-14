@@ -2240,6 +2240,22 @@
 - `README.md`
 - `PROGRESS.md`
 
+### 80. Strict HTTP/JDBC Smoke-Only 入口
+
+- 已为 `scripts/dev-mvp.sh` 增加 `TRAINMARK_MVP_SMOKE_ONLY=1`，允许后端服务通过 API smoke 后直接退出，不再继续占用前端 dev server 端口。
+- 已增加 `TRAINMARK_STRICT_AUTH_SMOKE=1` 开关，让同一条后端启动链在服务就绪后继续执行严格认证 token 正负路径 smoke。
+- 已新增 `pnpm smoke:mvp:jdbc`，复用 `dev:mvp:jdbc` 的基础设施启动、迁移检查和 JDBC 环境变量，作为 strict HTTP/JDBC live smoke 的可重复入口。
+- 已修正 API smoke 对 refresh 响应的角色断言，兼容 profile 响应的 `data.roles` 与 refresh/login 响应的 `data.user.roles`。
+- 本模块已通过脚本语法检查、API smoke dry-run、`TRAINMARK_SKIP_INFRA=1 SMOKE_RETRIES=90 SMOKE_RETRY_DELAY_SECONDS=2 timeout 480s pnpm smoke:mvp:jdbc` live 验证，以及 MVP 主验证。
+
+主要代码：
+
+- `scripts/dev-mvp.sh`
+- `scripts/smoke-api.sh`
+- `package.json`
+- `README.md`
+- `PROGRESS.md`
+
 ## 已验证
 
 前端构建已通过：
@@ -3380,8 +3396,8 @@ pnpm verify:mvp
 
 ### 2. Strict HTTP/JDBC Live Smoke
 
-- 在现有 `dev:mvp:jdbc` 基础上增加可重复运行的 live smoke，覆盖老师端、学生端和管理端核心写操作。
-- 将严格认证、上传、批改、发布、导出、申诉和管理配置写入纳入 live 验证。
+- 已新增可重复运行的 `pnpm smoke:mvp:jdbc` 入口，覆盖 strict HTTP/JDBC API smoke 与严格认证 token 正负路径。
+- 继续将上传、批改、发布、导出、申诉、催交、查重和管理配置写入纳入 live 验证，并根据需要使用 `SMOKE_INCLUDE_WRITES=1 pnpm smoke:mvp:jdbc`。
 
 ### 3. 工程质量
 

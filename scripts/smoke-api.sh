@@ -213,7 +213,7 @@ json_field() {
 
 assert_profile_role() {
   local expected_role="$1"
-  python3 -c 'import json, sys; expected = sys.argv[1]; payload = json.load(sys.stdin); roles = payload.get("data", {}).get("roles", []); raise SystemExit(0 if expected in roles else 1)' "$expected_role"
+  python3 -c 'import json, sys; expected = sys.argv[1]; payload = json.load(sys.stdin); data = payload.get("data", {}); roles = data.get("user", data).get("roles", []); raise SystemExit(0 if expected in roles else 1)' "$expected_role"
 }
 
 check_login_role() {

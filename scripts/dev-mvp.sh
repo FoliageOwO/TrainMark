@@ -33,7 +33,18 @@ SMOKE_RETRIES="${SMOKE_RETRIES:-60}" \
 SMOKE_RETRY_DELAY_SECONDS="${SMOKE_RETRY_DELAY_SECONDS:-2}" \
 pnpm smoke:api
 
+if [[ "${TRAINMARK_STRICT_AUTH_SMOKE:-0}" == "1" ]]; then
+  echo "[dev:mvp] Running strict auth smoke checks"
+  pnpm smoke:auth:strict
+fi
+
 echo "[dev:mvp] API is ready"
+
+if [[ "${TRAINMARK_MVP_SMOKE_ONLY:-0}" == "1" ]]; then
+  echo "[dev:mvp] Smoke-only mode completed"
+  exit 0
+fi
+
 echo "[dev:mvp] Starting web app in HTTP mode"
 
 VITE_API_MODE="${VITE_API_MODE:-http}" \

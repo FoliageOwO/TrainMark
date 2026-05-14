@@ -323,6 +323,14 @@ pnpm dev:mvp:jdbc
 
 该脚本会使用 `.env` / 环境变量中的 PostgreSQL 默认值，先执行 `docker compose -f infra/docker-compose.yml up -d`，再复用 `pnpm dev:mvp` 启动后端和 HTTP 前端。已经手动启动基础设施时，可设置 `TRAINMARK_SKIP_INFRA=1 pnpm dev:mvp:jdbc`。
 
+需要只运行严格 HTTP/JDBC live smoke，并在校验完成后自动停止后端服务时：
+
+```bash
+pnpm smoke:mvp:jdbc
+```
+
+该入口复用 `dev:mvp:jdbc` 的基础设施、迁移和 JDBC 环境变量，默认运行 API smoke 与严格认证 token 正负路径；需要同时覆盖提交、OCR、批改、发布、导出、申诉、催交和查重写接口时，可设置 `SMOKE_INCLUDE_WRITES=1 pnpm smoke:mvp:jdbc`。
+
 示例接口：
 
 | 接口 | 说明 |
@@ -361,6 +369,12 @@ SMOKE_INCLUDE_WRITES=1 SMOKE_RETRIES=30 SMOKE_RETRY_DELAY_SECONDS=2 pnpm smoke:a
 
 ```bash
 pnpm smoke:auth:strict
+```
+
+需要一键启动 PostgreSQL/JDBC 后端、运行 API smoke 与严格认证 smoke，并在完成后自动退出时：
+
+```bash
+pnpm smoke:mvp:jdbc
 ```
 
 OCR 服务默认使用本地文档预处理实现。需要把 Word/PDF/图片预处理切换到外部命令时，可设置：

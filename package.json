@@ -12,6 +12,7 @@
     "restore": "bash scripts/restore.sh",
     "smoke:api": "bash scripts/smoke-api.sh",
     "smoke:auth:strict": "bash scripts/smoke-auth-strict.sh",
+    "smoke:mvp:jdbc": "TRAINMARK_MVP_SMOKE_ONLY=1 TRAINMARK_STRICT_AUTH_SMOKE=1 bash scripts/dev-mvp-jdbc.sh",
     "dev:infra": "docker compose -f infra/docker-compose.yml up -d",
     "stop:infra": "docker compose -f infra/docker-compose.yml down",
     "db:migrate:local": "bash scripts/apply-db-migrations.sh",
