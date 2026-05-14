@@ -23,9 +23,10 @@ type StudentDashboardProps = {
   publishedResults: GradingResultSummary[];
   appeals: AppealSummary[];
   userId: number;
+  onWorkspaceRefresh: () => Promise<void>;
 };
 
-export function StudentDashboard({ tasks, publishedResults, appeals, userId }: StudentDashboardProps) {
+export function StudentDashboard({ tasks, publishedResults, appeals, userId, onWorkspaceRefresh }: StudentDashboardProps) {
   const [selectedFileName, setSelectedFileName] = useState('JavaWeb综合实训报告-张三-2024010101.pdf');
   const [uploadProgress, setUploadProgress] = useState(72);
   const [receipt, setReceipt] = useState<UploadReceipt | null>(null);
@@ -73,6 +74,7 @@ export function StudentDashboard({ tasks, publishedResults, appeals, userId }: S
     setTaskRows((current) => current.map((task) => (
       task.id === selectedTask.id ? { ...task, status: '已提交', score: undefined } : task
     )));
+    await onWorkspaceRefresh();
   };
 
   const submitAppeal = async (resultId: number, rubricItemId: number | null) => {
@@ -84,6 +86,7 @@ export function StudentDashboard({ tasks, publishedResults, appeals, userId }: S
       '请重新查看报告中的相关章节和截图证据。'
     );
     setAppealRows((current) => [appeal, ...current.filter((item) => item.id !== appeal.id)]);
+    await onWorkspaceRefresh();
   };
 
   return (

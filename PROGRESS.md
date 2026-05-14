@@ -1815,6 +1815,22 @@
 - `README.md`
 - `PROGRESS.md`
 
+### 61.6 学生端写操作后工作区刷新
+
+- 已为学生端工作台增加写操作后的工作区刷新回调。
+- 学生上传报告成功后，会保留本地即时回执和任务状态，并在 HTTP 模式下重新读取工作区数据。
+- 学生提交申诉成功后，会先把新申诉加入当前列表，再触发工作区刷新，避免真实接口数据长期停留在写入前状态。
+- Mock 模式下刷新回调为 no-op，继续保持单前端演示行为。
+- 已更新 README 当前进度。
+- 本模块已通过前端 lint、前端构建和 MVP 主验证。
+
+主要代码：
+
+- `apps/web/src/pages/App.tsx`
+- `apps/web/src/components/StudentDashboard.tsx`
+- `README.md`
+- `PROGRESS.md`
+
 ### 62. 数据库迁移版本修复
 
 - 已修复 demo 数据和上传会话迁移文件与既有迁移版本号重复的问题。
@@ -2812,6 +2828,14 @@ pnpm verify:mvp
 ```
 
 教师端真实工作区指标已通过前端静态检查、构建和 MVP 主验证：
+
+```bash
+pnpm --filter trainmark-ai-web lint
+pnpm --filter trainmark-ai-web build
+pnpm verify:mvp
+```
+
+学生端写操作后工作区刷新已通过前端静态检查、构建和 MVP 主验证：
 
 ```bash
 pnpm --filter trainmark-ai-web lint

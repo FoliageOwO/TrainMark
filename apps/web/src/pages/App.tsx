@@ -117,6 +117,15 @@ export function App() {
     };
   }, [primaryRole, selectedCourseId, user.id]);
 
+  const refreshWorkspaceData = async () => {
+    if (!shouldUseHttpApi()) {
+      return;
+    }
+    const data = await loadWorkspaceData(selectedCourseId, user.id, primaryRole);
+    setWorkspaceData(data);
+    setApiModeLabel('HTTP API / Mock 兜底');
+  };
+
   const teacherStats = [
     { label: '进行中任务', value: String(metrics.activeAssignments), trend: '当前课程', tone: 'blue' },
     { label: '待 AI 批改', value: String(metrics.pendingGrading), trend: '来自批改队列', tone: 'violet' },
@@ -134,7 +143,13 @@ export function App() {
       onRoleChange={handleRoleChange}
     >
       {primaryRole === 'STUDENT' ? (
-        <StudentDashboard tasks={studentTasks} publishedResults={publishedResults} appeals={studentAppeals} userId={user.id} />
+        <StudentDashboard
+          tasks={studentTasks}
+          publishedResults={publishedResults}
+          appeals={studentAppeals}
+          userId={user.id}
+          onWorkspaceRefresh={refreshWorkspaceData}
+        />
       ) : primaryRole === 'ADMIN' ? (
         <AdminDashboard
           organizations={organizations}
