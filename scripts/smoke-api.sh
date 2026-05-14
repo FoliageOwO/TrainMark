@@ -1,0 +1,40 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+GATEWAY_URL="${GATEWAY_URL:-http://localhost:8080}"
+SMOKE_DRY_RUN="${SMOKE_DRY_RUN:-0}"
+
+check_url() {
+  local label="$1"
+  local url="$2"
+
+  if [[ "$SMOKE_DRY_RUN" == "1" ]]; then
+    echo "[smoke:dry-run] $label -> $url"
+    return
+  fi
+
+  echo "[smoke] $label"
+  curl --fail --silent --show-error --max-time 5 "$url" >/dev/null
+}
+
+check_url "gateway health" "$GATEWAY_URL/actuator/health"
+
+check_url "auth-service health" "${AUTH_SERVICE_URL:-http://localhost:8081}/actuator/health"
+check_url "user-service health" "${USER_SERVICE_URL:-http://localhost:8082}/actuator/health"
+check_url "course-service health" "${COURSE_SERVICE_URL:-http://localhost:8083}/actuator/health"
+check_url "file-service health" "${FILE_SERVICE_URL:-http://localhost:8084}/actuator/health"
+check_url "grading-service health" "${GRADING_SERVICE_URL:-http://localhost:8085}/actuator/health"
+check_url "ocr-service health" "${OCR_SERVICE_URL:-http://localhost:8086}/actuator/health"
+check_url "similarity-service health" "${SIMILARITY_SERVICE_URL:-http://localhost:8087}/actuator/health"
+check_url "notification-service health" "${NOTIFICATION_SERVICE_URL:-http://localhost:8089}/actuator/health"
+check_url "admin-service health" "${ADMIN_SERVICE_URL:-http://localhost:8090}/actuator/health"
+check_url "analytics-service health" "${ANALYTICS_SERVICE_URL:-http://localhost:8091}/actuator/health"
+
+check_url "gateway auth profile" "$GATEWAY_URL/api/auth/me"
+check_url "gateway courses" "$GATEWAY_URL/api/courses"
+check_url "gateway grading results" "$GATEWAY_URL/api/grading/results"
+check_url "gateway OCR jobs" "$GATEWAY_URL/api/ocr/jobs"
+check_url "gateway analytics" "$GATEWAY_URL/api/analytics/grade-statistics?assignmentId=1"
+check_url "gateway admin settings" "$GATEWAY_URL/api/admin/settings"
+
+echo "[smoke] API smoke checks completed"

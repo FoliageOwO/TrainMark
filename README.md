@@ -163,6 +163,18 @@ pnpm build:web
 mvn -f backend/pom.xml package -DskipTests
 ```
 
+后端服务启动后可运行 API 冒烟检查：
+
+```bash
+pnpm smoke:api
+```
+
+仅查看将要检查的端点：
+
+```bash
+SMOKE_DRY_RUN=1 pnpm smoke:api
+```
+
 ## 本地备份
 
 备份脚本会读取 `.env`，默认输出到 `backups/<时间戳>/`，其中 PostgreSQL 使用 custom dump 格式，MinIO / S3 兼容对象存储会优先使用 `mc mirror`，没有 `mc` 时尝试 `aws s3 sync`。

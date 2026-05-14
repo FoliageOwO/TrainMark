@@ -568,6 +568,21 @@
 - `README.md`
 - `PROGRESS.md`
 
+### 35. API 冒烟检查脚本
+
+- 已新增 `pnpm smoke:api` 脚本入口。
+- 已新增 `scripts/smoke-api.sh`，用于在后端服务启动后检查 gateway health、各服务 actuator health 和核心 gateway API。
+- 已支持按环境变量覆盖 gateway 和各服务 URL，便于本地、联调环境和测试环境复用。
+- 已支持 `SMOKE_DRY_RUN=1`，可在服务未启动时验证脚本端点清单。
+- 已在 README 补充 API 冒烟检查命令。
+
+主要代码：
+
+- `scripts/smoke-api.sh`
+- `package.json`
+- `README.md`
+- `PROGRESS.md`
+
 ## 已验证
 
 前端构建已通过：
@@ -713,6 +728,13 @@ docker compose -f infra/docker-compose.yml config
 bash -n scripts/restore.sh
 ```
 
+API 冒烟检查脚本已通过脚本语法检查和 dry-run 端点清单验证：
+
+```bash
+bash -n scripts/smoke-api.sh
+SMOKE_DRY_RUN=1 pnpm smoke:api
+```
+
 全部后端模块已通过编译：
 
 ```bash
@@ -758,6 +780,7 @@ Docker Compose 暂未本地验证，因为当前机器没有 Docker。
 - `feat: add role deep links`
 - `chore: add backup script`
 - `chore: add restore script`
+- `chore: add api smoke script`
 
 ## 接下来需要做
 
