@@ -952,6 +952,28 @@
 - `README.md`
 - `PROGRESS.md`
 
+### 59. 用户与组织 PostgreSQL 存储
+
+- 已将用户目录服务拆成 `UserDirectoryStore` 存储接口，默认仍使用内存实现，保证无数据库环境下的开发和冒烟不受影响。
+- 已新增 `JdbcUserDirectoryStore`，设置 `TRAINMARK_USER_STORE=jdbc` 后可将组织、用户、角色和学生名单导入写入 PostgreSQL。
+- 已为 `user-service` 增加 PostgreSQL JDBC runtime 驱动，并通过环境变量配置 JDBC URL、用户名和密码。
+- 已补充 demo 用户组织种子迁移 `V3__seed_demo_directory.sql`，并让 Docker PostgreSQL 首次初始化时挂载并执行 `backend/db/migration/`。
+- 已在 README、infra README 和 `.env.example` 中补充 JDBC 模式说明。
+
+主要代码：
+
+- `backend/user-service/src/main/java/com/trainmark/user/UserDirectoryStore.java`
+- `backend/user-service/src/main/java/com/trainmark/user/InMemoryUserDirectoryStore.java`
+- `backend/user-service/src/main/java/com/trainmark/user/JdbcUserDirectoryStore.java`
+- `backend/user-service/src/main/java/com/trainmark/user/UserDirectoryService.java`
+- `backend/db/migration/V3__seed_demo_directory.sql`
+- `infra/postgres/init.sql`
+- `infra/docker-compose.yml`
+- `.env.example`
+- `README.md`
+- `infra/README.md`
+- `PROGRESS.md`
+
 ## 已验证
 
 前端构建已通过：
@@ -1265,6 +1287,26 @@ mvn -f backend/pom.xml clean package -DskipTests
 SMOKE_INCLUDE_WRITES=1 SMOKE_RETRIES=90 SMOKE_RETRY_DELAY_SECONDS=2 pnpm smoke:api
 ```
 
+用户与组织 PostgreSQL 存储已通过后端模块编译：
+
+```bash
+mvn -f backend/pom.xml -pl user-service -am package -DskipTests
+```
+
+用户服务默认内存模式已通过单服务启动和目录接口验证：
+
+```bash
+timeout 45s bash scripts/dev-service.sh user-service
+curl --noproxy '*' http://localhost:8082/api/organizations
+curl --noproxy '*' http://localhost:8082/api/users
+```
+
+PostgreSQL 迁移挂载已通过 Docker Compose 配置展开：
+
+```bash
+docker compose -f infra/docker-compose.yml config
+```
+
 全部后端模块已通过编译：
 
 ```bash
@@ -1334,6 +1376,7 @@ Docker Compose 已完成配置展开校验，暂未拉起 PostgreSQL、Redis、R
 - `fix: start backend services`
 - `fix: bypass proxy in smoke`
 - `fix: retain spring parameter names`
+- `feat: add user jdbc store`
 
 ## 接下来需要做
 
@@ -1348,7 +1391,7 @@ Docker Compose 已完成配置展开校验，暂未拉起 PostgreSQL、Redis、R
 ### 2. 持久化与真实联调
 
 - 基于现有 Flyway 迁移补服务层数据库实现。
-- 将当前内存服务替换为数据库实现。
+- 继续将课程、文件、批改、OCR、查重、通知、统计和管理端内存服务替换为数据库实现。
 - 安装 Docker 后验证 `infra/docker-compose.yml`。
 
 ### 3. 工程质量

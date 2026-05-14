@@ -33,6 +33,7 @@ TrainMark AI，中文名“智训批”，是面向高校实训教学场景的�
 | 微服务接口骨架 | 已创建 |
 | Gateway 基础路由 | 已创建 |
 | 后端运行参数绑定 | 已修复 |
+| 用户与组织 PostgreSQL 存储 | 已支持 |
 | 管理端审计日志 | 已实现 |
 | 管理端系统配置 | 已实现 |
 | PWA 安装、离线外壳与角色快捷入口 | 已实现 |
@@ -140,6 +141,18 @@ pnpm dev:backend
 ```
 
 这会一键启动所有后端服务，日志写入 `.logs/backend/*.log`，按 `Ctrl+C` 会停止全部后端服务。
+
+用户与组织服务默认使用内存数据，方便不启动数据库也能联调。需要切换到 PostgreSQL 时，先启动基础设施并设置：
+
+```bash
+TRAINMARK_USER_STORE=jdbc \
+TRAINMARK_USER_JDBC_URL=jdbc:postgresql://localhost:5432/trainmark_ai \
+TRAINMARK_USER_JDBC_USERNAME=trainmark \
+TRAINMARK_USER_JDBC_PASSWORD=trainmark_dev \
+pnpm dev:backend:user
+```
+
+Docker 初始化会执行 `backend/db/migration/` 下的核心表、角色权限和 demo 用户组织种子 SQL。
 
 也可以只启动单个服务：
 

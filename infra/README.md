@@ -2,6 +2,8 @@
 
 本目录提供本地开发依赖组件：PostgreSQL、Redis、RabbitMQ、MinIO 和 Nginx。
 
+PostgreSQL 首次初始化会执行 `backend/db/migration/` 下的核心 schema、角色权限和 demo 用户组织种子数据。默认 demo 账号包括 `teacher`、`2024010101` 和 `admin`，用于本地 API 冒烟和前端 HTTP 模式联调。
+
 启动：
 
 ```bash
