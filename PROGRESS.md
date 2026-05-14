@@ -1859,6 +1859,26 @@
 - `apps/web/src/components/TeacherDashboard.tsx`
 - `PROGRESS.md`
 
+### 61.9 管理端组织与账号创建
+
+- 已在管理端目录面板新增“新增组织”和“新增账号”表单，支持学院/专业/班级节点与学生、教师、课程负责人、督导、管理员账号。
+- 已扩展前端 HTTP API 层，HTTP 模式下分别调用 `POST /api/organizations` 和 `POST /api/users`，Mock 模式下写入本地目录数据。
+- 已让 HTTP 工作区额外读取 `/api/users` 全量目录，管理端展示全角色账号；教师端名单仍使用 `/api/users?role=STUDENT`。
+- 新增组织/账号成功后会保留本地即时反馈，并触发工作区刷新同步后端真实目录。
+- 已将组织和用户创建纳入 `SMOKE_INCLUDE_WRITES=1` 的 API smoke 清单。
+- 已更新 README 当前进度。
+- 本模块已通过前端 lint、前端构建、写接口 smoke dry-run 和 MVP 主验证。
+
+主要代码：
+
+- `apps/web/src/api/httpApi.ts`
+- `apps/web/src/api/mockApi.ts`
+- `apps/web/src/components/AdminDashboard.tsx`
+- `apps/web/src/pages/App.tsx`
+- `scripts/smoke-api.sh`
+- `README.md`
+- `PROGRESS.md`
+
 ### 62. 数据库迁移版本修复
 
 - 已修复 demo 数据和上传会话迁移文件与既有迁移版本号重复的问题。
@@ -2884,6 +2904,15 @@ pnpm verify:mvp
 ```bash
 pnpm --filter trainmark-ai-web lint
 pnpm --filter trainmark-ai-web build
+pnpm verify:mvp
+```
+
+管理端组织与账号创建已通过前端静态检查、构建、写接口 smoke dry-run 和 MVP 主验证：
+
+```bash
+pnpm --filter trainmark-ai-web lint
+pnpm --filter trainmark-ai-web build
+SMOKE_DRY_RUN=1 SMOKE_INCLUDE_WRITES=1 pnpm smoke:api
 pnpm verify:mvp
 ```
 

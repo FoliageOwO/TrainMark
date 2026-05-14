@@ -15,6 +15,7 @@ import type {
   OrganizationSummary,
   ReminderResult,
   RoleCode,
+  OrganizationType,
   RubricSummary,
   LossPointSummary,
   SimilarityJobSummary,
@@ -304,8 +305,43 @@ export const mockApi = {
   listOrganizations(): OrganizationSummary[] {
     return organizations;
   },
+  createOrganization(input: { parentId: number | null; name: string; type: OrganizationType }): OrganizationSummary {
+    const organization: OrganizationSummary = {
+      id: Math.max(...organizations.map((item) => item.id)) + 1,
+      parentId: input.parentId,
+      name: input.name,
+      type: input.type,
+    };
+    organizations.unshift(organization);
+    return organization;
+  },
   listUsers(role?: RoleCode): UserSummary[] {
     return userDirectory.filter((item) => role === undefined || item.roles.includes(role));
+  },
+  createUser(input: {
+    organizationId: number;
+    username: string;
+    name: string;
+    studentNo?: string;
+    teacherNo?: string;
+    email?: string;
+    phone?: string;
+    roles: RoleCode[];
+  }): UserSummary {
+    const user: UserSummary = {
+      id: Math.max(...userDirectory.map((item) => item.id)) + 1,
+      organizationId: input.organizationId,
+      username: input.username,
+      name: input.name,
+      ...(input.studentNo ? { studentNo: input.studentNo } : {}),
+      ...(input.teacherNo ? { teacherNo: input.teacherNo } : {}),
+      ...(input.email ? { email: input.email } : {}),
+      ...(input.phone ? { phone: input.phone } : {}),
+      status: 'ACTIVE',
+      roles: input.roles,
+    };
+    userDirectory.unshift(user);
+    return user;
   },
   getStudentImportPreview(): StudentImportPreview {
     return importPreview;

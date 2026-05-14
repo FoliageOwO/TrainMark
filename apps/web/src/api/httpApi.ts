@@ -13,6 +13,7 @@ import type {
   GradingJobSummary,
   LossPointSummary,
   OcrJobSummary,
+  OrganizationType,
   OrganizationSummary,
   ReminderResult,
   RubricSummary,
@@ -38,6 +39,7 @@ export type WorkspaceData = {
   classes: TeachingClassSummary[];
   assignments: AssignmentSummary[];
   organizations: OrganizationSummary[];
+  users: UserSummary[];
   students: UserSummary[];
   collectionOverview: CollectionOverview;
   unsubmittedStudents: UnsubmittedStudent[];
@@ -88,6 +90,23 @@ export type CreateRubricInput = {
   }>;
 };
 
+export type CreateOrganizationInput = {
+  parentId: number | null;
+  name: string;
+  type: OrganizationType;
+};
+
+export type CreateUserInput = {
+  organizationId: number;
+  username: string;
+  name: string;
+  studentNo?: string;
+  teacherNo?: string;
+  email?: string;
+  phone?: string;
+  roles: RoleCode[];
+};
+
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8080';
 const API_MODE = import.meta.env.VITE_API_MODE ?? 'mock';
 
@@ -121,6 +140,7 @@ export async function loadWorkspaceData(selectedCourseId: number, userId: number
     courses,
     classes,
     organizations,
+    users,
     students,
     collectionOverview,
     unsubmittedStudents,
@@ -141,6 +161,7 @@ export async function loadWorkspaceData(selectedCourseId: number, userId: number
     getOr('/api/courses', mockApi.listCourses()),
     getOr(`/api/courses/${selectedCourseId}/classes`, mockApi.listClasses(selectedCourseId)),
     getOr('/api/organizations', mockApi.listOrganizations()),
+    getOr('/api/users', mockApi.listUsers()),
     getOr('/api/users?role=STUDENT', mockApi.listUsers('STUDENT')),
     getOr(`/api/notifications/assignments/${selectedAssignmentId}/collection`, mockApi.getCollectionOverview(selectedAssignmentId)),
     getOr(`/api/notifications/assignments/${selectedAssignmentId}/unsubmitted`, mockApi.listUnsubmittedStudents(selectedAssignmentId)),
@@ -166,6 +187,7 @@ export async function loadWorkspaceData(selectedCourseId: number, userId: number
     classes,
     assignments,
     organizations,
+    users,
     students,
     collectionOverview,
     unsubmittedStudents,
@@ -418,6 +440,24 @@ export async function createRubric(input: CreateRubricInput): Promise<RubricSumm
     '/api/rubrics',
     input,
     () => mockApi.createRubric(input),
+  );
+}
+
+export async function createOrganization(input: CreateOrganizationInput): Promise<OrganizationSummary> {
+  return mutateOr(
+    'POST',
+    '/api/organizations',
+    input,
+    () => mockApi.createOrganization(input),
+  );
+}
+
+export async function createUser(input: CreateUserInput): Promise<UserSummary> {
+  return mutateOr(
+    'POST',
+    '/api/users',
+    input,
+    () => mockApi.createUser(input),
   );
 }
 

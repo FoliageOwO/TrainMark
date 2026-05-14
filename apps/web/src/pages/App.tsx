@@ -60,6 +60,7 @@ export function App() {
   const selectedAssignmentId = assignments.find((assignment) => assignment.courseId === selectedWorkspaceCourseId)?.id ?? assignments[0]?.id ?? 1;
   const studentTasks = workspaceData?.studentTasks ?? mockApi.listStudentTasks();
   const organizations = workspaceData?.organizations ?? mockApi.listOrganizations();
+  const directoryUsers = workspaceData?.users ?? mockApi.listUsers();
   const students = workspaceData?.students ?? mockApi.listUsers('STUDENT');
   const importPreview = mockApi.getStudentImportPreview();
   const collectionOverview = workspaceData?.collectionOverview ?? mockApi.getCollectionOverview(selectedAssignmentId);
@@ -153,9 +154,10 @@ export function App() {
       ) : primaryRole === 'ADMIN' ? (
         <AdminDashboard
           organizations={organizations}
-          students={students}
+          users={directoryUsers}
           auditLogs={auditLogs}
           systemSettings={systemSettings}
+          onWorkspaceRefresh={refreshWorkspaceData}
         />
       ) : !selectedCourse ? (
         <section className="empty-result">

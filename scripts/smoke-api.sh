@@ -189,6 +189,15 @@ check_api "gateway admin settings" "$GATEWAY_URL/api/admin/settings"
 
 if [[ "$SMOKE_INCLUDE_WRITES" == "1" ]]; then
   if [[ "$SMOKE_DRY_RUN" == "1" ]]; then
+    post_json "organization" "$GATEWAY_URL/api/organizations" '{"parentId":2,"name":"Smoke 软件测试班","type":"CLASS"}'
+    post_json "user" "$GATEWAY_URL/api/users" '{"organizationId":3,"username":"smoke-student","name":"Smoke 学生","studentNo":"SMOKE001","email":"smoke.student@trainmark.local","phone":"13800000000","roles":["STUDENT"]}'
+  else
+    smoke_suffix="$(date +%s)"
+    organization_response="$(post_json "organization" "$GATEWAY_URL/api/organizations" "{\"parentId\":2,\"name\":\"Smoke 软件测试班 $smoke_suffix\",\"type\":\"CLASS\"}")"
+    organization_id="$(json_field id <<< "$organization_response")"
+    post_json "user" "$GATEWAY_URL/api/users" "{\"organizationId\":$organization_id,\"username\":\"smoke-student-$smoke_suffix\",\"name\":\"Smoke 学生\",\"studentNo\":\"SMOKE$smoke_suffix\",\"email\":\"smoke.student.$smoke_suffix@trainmark.local\",\"phone\":\"13800000000\",\"roles\":[\"STUDENT\"]}"
+  fi
+  if [[ "$SMOKE_DRY_RUN" == "1" ]]; then
     post_json "upload init" "$GATEWAY_URL/api/submissions/upload/init" '{"assignmentId":1,"studentId":2,"fileName":"smoke-report.pdf","contentType":"application/pdf","fileSize":1048576,"checksum":null}'
     put_upload_content "upload content" "$GATEWAY_URL/api/submissions/upload/content" "<from upload init>" "<from upload init>" "smoke-report.pdf"
     post_json "upload complete" "$GATEWAY_URL/api/submissions/upload/complete" '{"uploadId":"<from upload init>","objectKey":"<from upload init>","checksum":null}'
