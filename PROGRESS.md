@@ -758,6 +758,18 @@
 - `apps/web/src/components/StudentDashboard.tsx`
 - `PROGRESS.md`
 
+### 23.6 前端学生提交即时状态反馈
+
+- 已让学生端任务列表在接收工作区任务数据的同时保留本地即时提交反馈。
+- 学生上传成功拿到回执后，当前任务会立即从“未提交”更新为“已提交”，避免成功回执和任务状态互相矛盾。
+- 后续 HTTP 工作区刷新若返回批改中或已发布成绩，仍会覆盖本地即时状态，保持后端数据优先。
+- 本模块已通过前端 lint、生产构建和 MVP 验证脚本。
+
+主要代码：
+
+- `apps/web/src/components/StudentDashboard.tsx`
+- `PROGRESS.md`
+
 ### 24. Gateway 本地跨域联调
 
 - 已为 gateway 增加本地 Vite 开发端口 CORS 配置。
@@ -1741,6 +1753,14 @@ pnpm verify:mvp
 ```
 
 前端学生申诉状态同步后已通过静态检查、构建和 MVP 验证：
+
+```bash
+pnpm --filter trainmark-ai-web lint
+pnpm --filter trainmark-ai-web build
+pnpm verify:mvp
+```
+
+前端学生提交即时状态反馈后已通过静态检查、构建和 MVP 验证：
 
 ```bash
 pnpm --filter trainmark-ai-web lint

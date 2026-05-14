@@ -30,15 +30,20 @@ export function StudentDashboard({ tasks, publishedResults, appeals, userId }: S
   const [uploadProgress, setUploadProgress] = useState(72);
   const [receipt, setReceipt] = useState<UploadReceipt | null>(null);
   const [appealRows, setAppealRows] = useState(appeals);
+  const [taskRows, setTaskRows] = useState(tasks);
   const [selectedTaskId, setSelectedTaskId] = useState(() => tasks[0]?.id ?? 0);
 
-  const selectedTask = tasks.find((task) => task.id === selectedTaskId) ?? tasks[0];
+  const selectedTask = taskRows.find((task) => task.id === selectedTaskId) ?? taskRows[0];
 
   useEffect(() => {
-    if (tasks.length > 0 && !tasks.some((task) => task.id === selectedTaskId)) {
-      setSelectedTaskId(tasks[0].id);
+    setTaskRows((current) => reconcileTaskRows(tasks, current));
+  }, [tasks]);
+
+  useEffect(() => {
+    if (taskRows.length > 0 && !taskRows.some((task) => task.id === selectedTaskId)) {
+      setSelectedTaskId(taskRows[0].id);
     }
-  }, [selectedTaskId, tasks]);
+  }, [selectedTaskId, taskRows]);
 
   useEffect(() => {
     setAppealRows((current) => {
@@ -53,7 +58,11 @@ export function StudentDashboard({ tasks, publishedResults, appeals, userId }: S
       return;
     }
     setUploadProgress(100);
-    setReceipt(await createUploadReceipt(selectedFileName, selectedTask.id, userId));
+    const nextReceipt = await createUploadReceipt(selectedFileName, selectedTask.id, userId);
+    setReceipt(nextReceipt);
+    setTaskRows((current) => current.map((task) => (
+      task.id === selectedTask.id ? { ...task, status: '已提交', score: undefined } : task
+    )));
   };
 
   const submitAppeal = async (resultId: number, rubricItemId: number | null) => {
@@ -78,7 +87,7 @@ export function StudentDashboard({ tasks, publishedResults, appeals, userId }: S
           <GraduationCap size={22} />
         </div>
         <div className="student-task-list">
-          {tasks.map((task) => (
+          {taskRows.map((task) => (
             <div className="student-task-card" key={task.id}>
               <div>
                 <strong>{task.title}</strong>
@@ -190,7 +199,7 @@ export function StudentDashboard({ tasks, publishedResults, appeals, userId }: S
                 setUploadProgress(36);
               }}
             >
-              {tasks.map((task) => (
+              {taskRows.map((task) => (
                 <option key={task.id} value={task.id}>
                   {task.title}
                 </option>
@@ -237,4 +246,21 @@ export function StudentDashboard({ tasks, publishedResults, appeals, userId }: S
       </article>
     </section>
   );
+}
+
+function reconcileTaskRows(incomingRows: SubmissionTask[], currentRows: SubmissionTask[]) {
+  return incomingRows.map((incoming) => {
+    const current = currentRows.find((task) => task.id === incoming.id);
+    if (!current) {
+      return incoming;
+    }
+    if (incoming.status === '未提交' && current.status !== '未提交') {
+      return {
+        ...incoming,
+        status: current.status,
+        score: current.score,
+      };
+    }
+    return incoming;
+  });
 }
