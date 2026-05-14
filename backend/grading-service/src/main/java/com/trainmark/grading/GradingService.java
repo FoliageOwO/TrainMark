@@ -35,25 +35,26 @@ import org.springframework.stereotype.Service;
 public class GradingService {
   private final RubricStore rubricStore;
   private final GradeExportStore gradeExportStore;
+  private final GradePublicationAuditStore publicationAuditStore;
   private final ScoringProvider scoringProvider;
   private final AnnotationProvider annotationProvider;
   private final AtomicLong jobIds = new AtomicLong(2);
   private final AtomicLong resultIds = new AtomicLong(2);
-  private final AtomicLong auditIds = new AtomicLong(1);
   private final AtomicLong appealIds = new AtomicLong(2);
   private final Map<Long, GradingJobSummary> jobs = new LinkedHashMap<>();
   private final Map<Long, GradingResultSummary> results = new LinkedHashMap<>();
-  private final Map<Long, List<GradePublicationAuditEntry>> publicationAudits = new LinkedHashMap<>();
   private final Map<Long, AppealSummary> appeals = new LinkedHashMap<>();
 
   public GradingService(
       RubricStore rubricStore,
       GradeExportStore gradeExportStore,
+      GradePublicationAuditStore publicationAuditStore,
       ScoringProvider scoringProvider,
       AnnotationProvider annotationProvider
   ) {
     this.rubricStore = rubricStore;
     this.gradeExportStore = gradeExportStore;
+    this.publicationAuditStore = publicationAuditStore;
     this.scoringProvider = scoringProvider;
     this.annotationProvider = annotationProvider;
     jobs.put(1L, new GradingJobSummary(1L, 1L, 1L, 65, 47, GradingJobStatus.SCORING, 86, OffsetDateTime.now().minusMinutes(18)));
@@ -239,7 +240,7 @@ public class GradingService {
 
   public Collection<GradePublicationAuditEntry> listPublicationAudits(Long resultId) {
     getResult(resultId);
-    return publicationAudits.getOrDefault(resultId, List.of());
+    return publicationAuditStore.listPublicationAudits(resultId);
   }
 
   public Collection<AppealSummary> listAppeals(Long resultId, Long studentId, AppealStatus status) {
@@ -389,19 +390,7 @@ public class GradingService {
   }
 
   private void appendPublicationAudit(Long resultId, String action, String operatorName, String reason) {
-    var entry = new GradePublicationAuditEntry(
-        auditIds.getAndIncrement(),
-        resultId,
-        action,
-        operatorName,
-        reason,
-        OffsetDateTime.now()
-    );
-    publicationAudits.merge(resultId, List.of(entry), (current, appended) -> {
-      var entries = new java.util.ArrayList<>(current);
-      entries.addAll(appended);
-      return List.copyOf(entries);
-    });
+    publicationAuditStore.appendPublicationAudit(resultId, action, operatorName, reason);
   }
 
   private void ensureScoredResult(Long assignmentId, Long submissionId) {
