@@ -25,8 +25,10 @@ public class AuthController {
   }
 
   @PostMapping("/refresh")
-  public ApiResponse<LoginResponse> refresh() {
-    return ApiResponse.ok(authService.mockUser("teacher"));
+  public ApiResponse<LoginResponse> refresh(
+      @RequestHeader(value = "Authorization", required = false) String authorizationHeader
+  ) {
+    return ApiResponse.ok(authService.refresh(authorizationHeader));
   }
 
   @PostMapping("/logout")

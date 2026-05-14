@@ -49,7 +49,7 @@ Most services still use in-memory data for local MVP demonstration. The gateway 
 | Method | Path | Request | Response data |
 |---|---|---|---|
 | `POST` | `/api/auth/login` | `LoginRequest` | `LoginResponse` |
-| `POST` | `/api/auth/refresh` | none | `LoginResponse` |
+| `POST` | `/api/auth/refresh` | bearer access token | `LoginResponse` |
 | `POST` | `/api/auth/logout` | none | empty object |
 | `GET` | `/api/auth/me` | optional bearer access token | `UserProfile` |
 

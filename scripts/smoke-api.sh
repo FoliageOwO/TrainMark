@@ -140,6 +140,35 @@ patch_json() {
   done
 }
 
+post_auth() {
+  local label="$1"
+  local url="$2"
+  local token="$3"
+  local attempt=1
+  local response
+
+  if [[ "$SMOKE_DRY_RUN" == "1" ]]; then
+    echo "[smoke:dry-run] POST $label -> $url :: Authorization=Bearer $token"
+    return
+  fi
+
+  while true; do
+    echo "[smoke] POST $label (attempt $attempt/$SMOKE_RETRIES)" >&2
+    if response="$(curl --noproxy '*' --fail --silent --show-error --max-time 5 \
+      -X POST \
+      -H "Authorization: Bearer $token" \
+      "$url")" && api_success "$response"; then
+      printf '%s' "$response"
+      return
+    fi
+    if ((attempt >= SMOKE_RETRIES)); then
+      return 1
+    fi
+    attempt=$((attempt + 1))
+    sleep "$SMOKE_RETRY_DELAY_SECONDS"
+  done
+}
+
 put_upload_content() {
   local label="$1"
   local url="$2"
@@ -195,6 +224,7 @@ check_login_role() {
   if [[ "$SMOKE_DRY_RUN" == "1" ]]; then
     post_json "$label login" "$GATEWAY_URL/api/auth/login" "{\"username\":\"$username\",\"password\":\"trainmark\"}"
     check_api_auth "$label profile" "$GATEWAY_URL/api/auth/me" "<from $label login>"
+    post_auth "$label refresh" "$GATEWAY_URL/api/auth/refresh" "<from $label login>"
     return
   fi
 
@@ -208,6 +238,8 @@ check_login_role() {
     "$GATEWAY_URL/api/auth/me")"
   api_success "$profile_response"
   assert_profile_role "$expected_role" <<< "$profile_response"
+  refresh_response="$(post_auth "$label refresh" "$GATEWAY_URL/api/auth/refresh" "$access_token")"
+  assert_profile_role "$expected_role" <<< "$refresh_response"
 }
 
 check_url "gateway health" "$GATEWAY_URL/actuator/health"

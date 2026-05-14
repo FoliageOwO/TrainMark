@@ -25,16 +25,27 @@ public class AuthService {
   }
 
   public LoginResponse.UserProfile currentUser(String authorizationHeader) {
+    return currentAuthUser(authorizationHeader)
+        .map(this::profile)
+        .orElseGet(() -> mockUser("teacher").user());
+  }
+
+  public LoginResponse refresh(String authorizationHeader) {
+    return currentAuthUser(authorizationHeader)
+        .map(this::loginUser)
+        .orElseGet(() -> mockUser("teacher"));
+  }
+
+  private Optional<AuthUserStore.AuthUser> currentAuthUser(String authorizationHeader) {
     var username = usernameFromBearer(authorizationHeader);
     if (username.isEmpty()) {
       if (authUserStore.allowsMockFallback()) {
-        return mockUser("teacher").user();
+        return Optional.empty();
       }
       throw new IllegalArgumentException("Authentication is required");
     }
     return authUserStore.findByLogin(username.get())
-        .map(this::profile)
-        .orElseGet(() -> fallbackProfile(username.get()));
+        .or(() -> fallbackAuthUser(username.get()));
   }
 
   public LoginResponse mockUser(String username) {
@@ -58,9 +69,10 @@ public class AuthService {
     throw new IllegalArgumentException("Invalid username or password");
   }
 
-  private LoginResponse.UserProfile fallbackProfile(String username) {
+  private Optional<AuthUserStore.AuthUser> fallbackAuthUser(String username) {
     if (authUserStore.allowsMockFallback()) {
-      return mockUser(username).user();
+      var user = mockUser(username).user();
+      return Optional.of(new AuthUserStore.AuthUser(user.id(), user.name(), user.username(), user.roles()));
     }
     throw new IllegalArgumentException("Invalid access token");
   }

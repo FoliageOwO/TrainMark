@@ -2153,6 +2153,23 @@
 - `README.md`
 - `PROGRESS.md`
 
+### 74. Auth Refresh 保持当前身份
+
+- 已将 `/api/auth/refresh` 从固定返回 teacher mock 改为读取 `Authorization` bearer token，并基于当前用户重新签发 access/refresh token。
+- 已复用 JDBC 认证的严格行为：JDBC 模式下缺失、无效或不存在的 token 不再回退 teacher；内存模式仍保留无后端数据库时的演示兜底。
+- 已扩展 API smoke 脚本，teacher、student、course owner、supervisor 和 admin 五类登录后都会继续调用 refresh，并校验刷新后的用户角色不漂移。
+- 已同步 `docs/API.md`，将 refresh 请求说明从 `none` 改为 bearer access token。
+- 本模块已通过 auth-service 编译、smoke dry-run，以及单独启动 JDBC auth-service 后的 owner 登录加 refresh live 验证。
+
+主要代码：
+
+- `backend/auth-service/src/main/java/com/trainmark/auth/AuthController.java`
+- `backend/auth-service/src/main/java/com/trainmark/auth/AuthService.java`
+- `scripts/smoke-api.sh`
+- `docs/API.md`
+- `README.md`
+- `PROGRESS.md`
+
 ## 已验证
 
 前端构建已通过：
@@ -3276,6 +3293,7 @@ pnpm verify:mvp
 - `feat: add strict http mode`
 - `feat: seed jdbc demo roles`
 - `fix: reject unknown jdbc auth`
+- `fix: refresh current auth user`
 
 ## 接下来需要做
 
