@@ -6,6 +6,7 @@ import type {
   CourseOutcomeAchievement,
   DashboardMetrics,
   GradePublicationAuditEntry,
+  GradeExportSummary,
   GradeStatisticsSummary,
   GradingResultSummary,
   GradingJobSummary,
@@ -193,6 +194,19 @@ const gradingResults: GradingResultSummary[] = [
 
 const publicationAudits: GradePublicationAuditEntry[] = [];
 
+const gradeExports: GradeExportSummary[] = [
+  {
+    id: 1,
+    assignmentId: 1,
+    fileName: 'Java Web 综合实训-成绩单.csv',
+    format: 'CSV',
+    rowCount: 48,
+    downloadUrl: '/exports/assignments/1/grades.csv',
+    status: 'READY',
+    createdAt: '2026-05-14T11:20:00+08:00',
+  },
+];
+
 const appeals: AppealSummary[] = [
   {
     id: 1,
@@ -378,6 +392,23 @@ export const mockApi = {
   },
   listPublicationAudits(resultId?: number): GradePublicationAuditEntry[] {
     return publicationAudits.filter((item) => resultId === undefined || item.resultId === resultId);
+  },
+  listGradeExports(assignmentId?: number): GradeExportSummary[] {
+    return gradeExports.filter((item) => assignmentId === undefined || item.assignmentId === assignmentId);
+  },
+  createGradeExport(assignmentId: number, format: GradeExportSummary['format'] = 'CSV'): GradeExportSummary {
+    const exportJob: GradeExportSummary = {
+      id: gradeExports.length + 1,
+      assignmentId,
+      fileName: `assignment-${assignmentId}-grades.${format.toLowerCase()}`,
+      format,
+      rowCount: gradingResults.filter((item) => item.assignmentId === assignmentId && item.publicationStatus === 'PUBLISHED').length,
+      downloadUrl: `/exports/assignments/${assignmentId}/grades-${gradeExports.length + 1}.${format.toLowerCase()}`,
+      status: 'READY',
+      createdAt: new Date().toISOString(),
+    };
+    gradeExports.unshift(exportJob);
+    return exportJob;
   },
   listPublishedResults(studentId?: number): GradingResultSummary[] {
     return gradingResults.filter((item) => (

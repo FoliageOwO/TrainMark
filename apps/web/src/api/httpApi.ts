@@ -5,6 +5,7 @@ import type {
   CollectionOverview,
   CourseOutcomeAchievement,
   CourseSummary,
+  GradeExportSummary,
   GradeStatisticsSummary,
   GradingResultSummary,
   GradingJobSummary,
@@ -40,6 +41,7 @@ export type WorkspaceData = {
   gradingResults: GradingResultSummary[];
   publishedResults: GradingResultSummary[];
   gradeStatistics: GradeStatisticsSummary;
+  gradeExports: GradeExportSummary[];
   lossPoints: LossPointSummary[];
   courseOutcomes: CourseOutcomeAchievement[];
   appeals: AppealSummary[];
@@ -67,6 +69,7 @@ export async function loadWorkspaceData(selectedCourseId: number, studentId: num
     gradingJobs,
     ocrJobs,
     gradingResults,
+    gradeExports,
     gradeStatistics,
     lossPoints,
     courseOutcomes,
@@ -84,6 +87,7 @@ export async function loadWorkspaceData(selectedCourseId: number, studentId: num
     getOr('/api/grading/jobs', mockApi.listGradingJobs()),
     getOr('/api/ocr/jobs', mockApi.listOcrJobs(), normalizeOcrJobs),
     getOr('/api/grading/results', fallbackGradingResults),
+    getOr('/api/grading/exports?assignmentId=1', mockApi.listGradeExports(1)),
     getOr('/api/analytics/grade-statistics?assignmentId=1', mockApi.getGradeStatistics()),
     getOr('/api/analytics/loss-points?assignmentId=1', mockApi.listLossPoints()),
     getOr('/api/analytics/course-outcomes?assignmentId=1', mockApi.listCourseOutcomes()),
@@ -104,6 +108,7 @@ export async function loadWorkspaceData(selectedCourseId: number, studentId: num
     ocrJobs,
     gradingResults,
     publishedResults: gradingResults.filter((item) => item.publicationStatus === 'PUBLISHED' && item.studentId === studentId),
+    gradeExports,
     gradeStatistics,
     lossPoints,
     courseOutcomes,
@@ -184,6 +189,15 @@ export async function withdrawGradingResult(resultId: number, operatorName: stri
 
 export async function loadPublicationAudits(resultId: number) {
   return getOr(`/api/grading/results/${resultId}/publication-audits`, mockApi.listPublicationAudits(resultId));
+}
+
+export async function createGradeExport(assignmentId: number, operatorName: string, format: GradeExportSummary['format'] = 'CSV') {
+  return mutateOr(
+    'POST',
+    '/api/grading/exports',
+    { assignmentId, format, operatorName },
+    () => mockApi.createGradeExport(assignmentId, format),
+  );
 }
 
 export async function createAppeal(

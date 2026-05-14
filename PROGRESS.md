@@ -386,6 +386,31 @@
 - `README.md`
 - `PROGRESS.md`
 
+### 25. 成绩导出 MVP
+
+- 已新增成绩导出请求和导出摘要 DTO。
+- 已新增成绩导出接口，支持按任务查看导出记录和创建导出任务。
+- 已在评分服务中提供 CSV/PDF/ZIP 导出任务模拟实现，并按已发布成绩计算导出行数。
+- 已新增 `grade_exports` Flyway 迁移表，保留导出文件、格式、行数、下载地址、操作者和创建时间。
+- 已在老师端成绩统计面板加入“导出成绩”入口和导出记录展示。
+- 已扩展 HTTP/mock 兜底数据层，前端 HTTP 模式可调用后端导出接口。
+- 已更新 README 状态表和 API 文档。
+
+主要代码：
+
+- `backend/shared/src/main/java/com/trainmark/shared/dto/CreateGradeExportRequest.java`
+- `backend/shared/src/main/java/com/trainmark/shared/dto/GradeExportSummary.java`
+- `backend/grading-service/src/main/java/com/trainmark/grading/GradeExportController.java`
+- `backend/grading-service/src/main/java/com/trainmark/grading/GradingService.java`
+- `backend/db/migration/V4__add_grade_exports.sql`
+- `apps/web/src/api/types.ts`
+- `apps/web/src/api/mockApi.ts`
+- `apps/web/src/api/httpApi.ts`
+- `apps/web/src/pages/App.tsx`
+- `docs/API.md`
+- `README.md`
+- `PROGRESS.md`
+
 ## 已验证
 
 前端构建已通过：
@@ -456,6 +481,14 @@ Gateway 本地跨域配置加入后模块打包通过：
 mvn -f backend/pom.xml -pl gateway-service -am package -DskipTests
 ```
 
+成绩导出 MVP 已通过后端模块编译、前端静态检查和构建：
+
+```bash
+mvn -f backend/pom.xml -pl grading-service -am package -DskipTests
+pnpm lint:web
+pnpm build:web
+```
+
 全部后端模块已通过编译：
 
 ```bash
@@ -491,6 +524,7 @@ Docker Compose 暂未本地验证，因为当前机器没有 Docker。
 - `refactor: split app chrome`
 - `feat: connect frontend actions`
 - `feat: add gateway cors`
+- `feat: add grade exports`
 
 ## 接下来需要做
 

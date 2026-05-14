@@ -111,6 +111,8 @@ Most services still use in-memory data for local MVP demonstration. The gateway 
 | `POST` | `/api/grading/results/{resultId}/publish` | `PublishGradeRequest` | `GradingResultSummary` |
 | `POST` | `/api/grading/results/{resultId}/withdraw` | `WithdrawGradeRequest` | `GradingResultSummary` |
 | `GET` | `/api/grading/results/{resultId}/publication-audits` | none | `GradePublicationAuditEntry[]` |
+| `GET` | `/api/grading/exports?assignmentId=1` | optional `assignmentId` query | `GradeExportSummary[]` |
+| `POST` | `/api/grading/exports` | `CreateGradeExportRequest` | `GradeExportSummary` |
 
 ## Appeals
 

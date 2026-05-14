@@ -235,6 +235,17 @@ export type GradePublicationAuditEntry = {
   createdAt: string;
 };
 
+export type GradeExportSummary = {
+  id: number;
+  assignmentId: number;
+  fileName: string;
+  format: 'CSV' | 'PDF' | 'ZIP';
+  rowCount: number;
+  downloadUrl: string;
+  status: 'READY' | 'RUNNING' | 'FAILED';
+  createdAt: string;
+};
+
 export type ScoreBucket = {
   label: string;
   minScore: number;

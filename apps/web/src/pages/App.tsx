@@ -18,6 +18,7 @@ import { mockApi } from '../api/mockApi';
 import {
   approveGradingResult,
   createAppeal,
+  createGradeExport,
   createGradingJob,
   createUploadReceipt,
   loadPublicationAudits,
@@ -107,6 +108,7 @@ export function App() {
   const ocrJobs = workspaceData?.ocrJobs ?? mockApi.listOcrJobs();
   const gradingResults = workspaceData?.gradingResults ?? mockApi.listGradingResults();
   const publishedResults = workspaceData?.publishedResults ?? mockApi.listPublishedResults(user.id);
+  const gradeExports = workspaceData?.gradeExports ?? mockApi.listGradeExports(1);
   const gradeStatistics = workspaceData?.gradeStatistics ?? mockApi.getGradeStatistics();
   const lossPoints = workspaceData?.lossPoints ?? mockApi.listLossPoints();
   const courseOutcomes = workspaceData?.courseOutcomes ?? mockApi.listCourseOutcomes();
@@ -169,6 +171,7 @@ export function App() {
           ocrJobs={ocrJobs}
           gradingResults={gradingResults}
           operatorName={user.name}
+          gradeExports={gradeExports}
           gradeStatistics={gradeStatistics}
           lossPoints={lossPoints}
           courseOutcomes={courseOutcomes}
@@ -198,6 +201,7 @@ function TeacherDashboard({
   ocrJobs,
   gradingResults,
   operatorName,
+  gradeExports,
   gradeStatistics,
   lossPoints,
   courseOutcomes,
@@ -221,6 +225,7 @@ function TeacherDashboard({
   ocrJobs: ReturnType<typeof mockApi.listOcrJobs>;
   gradingResults: ReturnType<typeof mockApi.listGradingResults>;
   operatorName: string;
+  gradeExports: ReturnType<typeof mockApi.listGradeExports>;
   gradeStatistics: ReturnType<typeof mockApi.getGradeStatistics>;
   lossPoints: ReturnType<typeof mockApi.listLossPoints>;
   courseOutcomes: ReturnType<typeof mockApi.listCourseOutcomes>;
@@ -234,6 +239,7 @@ function TeacherDashboard({
   const [publicationAudits, setPublicationAudits] = useState(mockApi.listPublicationAudits());
   const [appealRows, setAppealRows] = useState(appeals);
   const [similarityRows, setSimilarityRows] = useState(similarityJobs);
+  const [exportRows, setExportRows] = useState(gradeExports);
   const submittedRate = Math.round((collectionOverview.submitted / collectionOverview.totalStudents) * 100);
   const rubric = rubrics[0];
   const visibleJobs = startedJob ? [startedJob, ...gradingJobs] : gradingJobs;
@@ -293,6 +299,11 @@ function TeacherDashboard({
       unsubmittedStudents.map((student) => student.studentId),
     );
     setReminderResult(result);
+  };
+
+  const handleCreateGradeExport = async () => {
+    const exportJob = await createGradeExport(gradeStatistics.assignmentId, operatorName, 'CSV');
+    setExportRows((current) => [exportJob, ...current.filter((item) => item.id !== exportJob.id)]);
   };
 
   return (
@@ -670,8 +681,11 @@ function TeacherDashboard({
               <p className="eyebrow">Grade Analytics</p>
               <h3>成绩统计</h3>
             </div>
-            <span className="status-pill">{gradeStatistics.publishedCount} 份已发布</span>
+            <button className="ghost-button" type="button" onClick={handleCreateGradeExport}>
+              <FileText size={15} /> 导出成绩
+            </button>
           </div>
+          <span className="status-pill">{gradeStatistics.publishedCount} 份已发布</span>
           <div className="analytics-metrics">
             <span><strong>{gradeStatistics.averageScore}</strong>均分</span>
             <span><strong>{gradeStatistics.standardDeviation}</strong>标准差</span>
@@ -693,6 +707,15 @@ function TeacherDashboard({
           <div className="index-row">
             <span>难度系数 {gradeStatistics.difficultyIndex}</span>
             <span>区分度 {gradeStatistics.discriminationIndex}</span>
+          </div>
+          <div className="audit-list">
+            <strong>导出记录</strong>
+            {exportRows.map((item) => (
+              <div className="audit-row" key={item.id}>
+                <span>{item.fileName} · {item.rowCount} 行</span>
+                <small>{item.status} · {formatDate(item.createdAt)} · {item.downloadUrl}</small>
+              </div>
+            ))}
           </div>
         </article>
 

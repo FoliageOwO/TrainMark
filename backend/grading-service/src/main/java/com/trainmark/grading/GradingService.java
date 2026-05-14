@@ -6,8 +6,10 @@ import com.trainmark.shared.PublicationStatus;
 import com.trainmark.shared.ReviewStatus;
 import com.trainmark.shared.dto.AppealSummary;
 import com.trainmark.shared.dto.CreateAppealRequest;
+import com.trainmark.shared.dto.CreateGradeExportRequest;
 import com.trainmark.shared.dto.CreateGradingJobRequest;
 import com.trainmark.shared.dto.CreateRubricRequest;
+import com.trainmark.shared.dto.GradeExportSummary;
 import com.trainmark.shared.dto.GradePublicationAuditEntry;
 import com.trainmark.shared.dto.GradePublicationSummary;
 import com.trainmark.shared.dto.GradingAnnotationSummary;
@@ -38,11 +40,13 @@ public class GradingService {
   private final AtomicLong jobIds = new AtomicLong(2);
   private final AtomicLong auditIds = new AtomicLong(1);
   private final AtomicLong appealIds = new AtomicLong(2);
+  private final AtomicLong exportIds = new AtomicLong(2);
   private final Map<Long, RubricSummary> rubrics = new LinkedHashMap<>();
   private final Map<Long, GradingJobSummary> jobs = new LinkedHashMap<>();
   private final Map<Long, GradingResultSummary> results = new LinkedHashMap<>();
   private final Map<Long, List<GradePublicationAuditEntry>> publicationAudits = new LinkedHashMap<>();
   private final Map<Long, AppealSummary> appeals = new LinkedHashMap<>();
+  private final Map<Long, GradeExportSummary> exports = new LinkedHashMap<>();
 
   public GradingService() {
     var points = List.of(
@@ -128,6 +132,16 @@ public class GradingService {
         null,
         OffsetDateTime.now().minusHours(2),
         null
+    ));
+    exports.put(1L, new GradeExportSummary(
+        1L,
+        1L,
+        "Java Web 综合实训-成绩单.csv",
+        "CSV",
+        48,
+        "/exports/assignments/1/grades.csv",
+        "READY",
+        OffsetDateTime.now().minusMinutes(25)
     ));
   }
 
@@ -317,6 +331,38 @@ public class GradingService {
     );
     appeals.put(appealId, resolved);
     return resolved;
+  }
+
+  public Collection<GradeExportSummary> listGradeExports(Long assignmentId) {
+    return exports.values().stream()
+        .filter(item -> assignmentId == null || assignmentId.equals(item.assignmentId()))
+        .toList();
+  }
+
+  public GradeExportSummary createGradeExport(CreateGradeExportRequest request) {
+    var id = exportIds.getAndIncrement();
+    var rowCount = (int) results.values().stream()
+        .filter(item -> request.assignmentId().equals(item.assignmentId()))
+        .filter(item -> item.publicationStatus() == PublicationStatus.PUBLISHED)
+        .count();
+    var format = request.format().toUpperCase();
+    var suffix = switch (format) {
+      case "PDF" -> "pdf";
+      case "ZIP" -> "zip";
+      default -> "csv";
+    };
+    var export = new GradeExportSummary(
+        id,
+        request.assignmentId(),
+        "assignment-%d-grades.%s".formatted(request.assignmentId(), suffix),
+        format,
+        rowCount,
+        "/exports/assignments/%d/grades-%d.%s".formatted(request.assignmentId(), id, suffix),
+        "READY",
+        OffsetDateTime.now()
+    );
+    exports.put(id, export);
+    return export;
   }
 
   private GradingResultSummary saveReviewedResult(
