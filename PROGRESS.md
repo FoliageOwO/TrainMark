@@ -929,6 +929,17 @@
 - `package.json`
 - `PROGRESS.md`
 
+### 57. 本地冒烟代理旁路
+
+- 已让 `scripts/smoke-api.sh` 的 curl 请求显式使用 `--noproxy '*'`。
+- 修复了 shell 设置 `http_proxy` / `https_proxy` 且未设置 `NO_PROXY` 时，本地 `localhost` 冒烟请求被代理转发并返回 502 的问题。
+- 该修复来自真实 `pnpm dev:backend` 启动后执行 live smoke 时的环境问题。
+
+主要代码：
+
+- `scripts/smoke-api.sh`
+- `PROGRESS.md`
+
 ## 已验证
 
 前端构建已通过：
@@ -1224,6 +1235,12 @@ bash -n scripts/dev-service.sh
 timeout 25s bash scripts/dev-service.sh auth-service
 ```
 
+本地冒烟代理旁路已通过脚本语法检查：
+
+```bash
+bash -n scripts/smoke-api.sh
+```
+
 全部后端模块已通过编译：
 
 ```bash
@@ -1291,6 +1308,7 @@ Docker Compose 已完成配置展开校验，暂未拉起 PostgreSQL、Redis、R
 - `chore: add mvp dev launcher`
 - `chore: smoke write apis`
 - `fix: start backend services`
+- `fix: bypass proxy in smoke`
 
 ## 接下来需要做
 

@@ -19,7 +19,7 @@ check_url() {
 
   while true; do
     echo "[smoke] $label (attempt $attempt/$SMOKE_RETRIES)"
-    if curl --fail --silent --show-error --max-time 5 "$url" >/dev/null; then
+    if curl --noproxy '*' --fail --silent --show-error --max-time 5 "$url" >/dev/null; then
       return
     fi
     if ((attempt >= SMOKE_RETRIES)); then
@@ -44,7 +44,7 @@ post_json() {
 
   while true; do
     echo "[smoke] POST $label (attempt $attempt/$SMOKE_RETRIES)" >&2
-    if response="$(curl --fail --silent --show-error --max-time 5 \
+    if response="$(curl --noproxy '*' --fail --silent --show-error --max-time 5 \
       -H 'Content-Type: application/json' \
       -d "$body" \
       "$url")" && api_success "$response"; then
