@@ -1,12 +1,16 @@
 package com.trainmark.grading;
 
 import com.trainmark.shared.ApiResponse;
+import com.trainmark.shared.AppealStatus;
 import com.trainmark.shared.PublicationStatus;
 import com.trainmark.shared.ReviewStatus;
+import com.trainmark.shared.dto.AppealSummary;
+import com.trainmark.shared.dto.CreateAppealRequest;
 import com.trainmark.shared.dto.GradePublicationAuditEntry;
 import com.trainmark.shared.dto.GradePublicationSummary;
 import com.trainmark.shared.dto.GradingResultSummary;
 import com.trainmark.shared.dto.PublishGradeRequest;
+import com.trainmark.shared.dto.ResolveAppealRequest;
 import com.trainmark.shared.dto.ReviewDecisionRequest;
 import com.trainmark.shared.dto.UpdateReviewItemRequest;
 import com.trainmark.shared.dto.WithdrawGradeRequest;
@@ -86,5 +90,27 @@ public class GradingReviewController {
   @GetMapping("/{resultId}/publication-audits")
   public ApiResponse<Collection<GradePublicationAuditEntry>> listPublicationAudits(@PathVariable Long resultId) {
     return ApiResponse.ok(gradingService.listPublicationAudits(resultId));
+  }
+
+  @GetMapping("/appeals")
+  public ApiResponse<Collection<AppealSummary>> listAppeals(
+      @RequestParam(required = false) Long resultId,
+      @RequestParam(required = false) Long studentId,
+      @RequestParam(required = false) AppealStatus status
+  ) {
+    return ApiResponse.ok(gradingService.listAppeals(resultId, studentId, status));
+  }
+
+  @PostMapping("/appeals")
+  public ApiResponse<AppealSummary> createAppeal(@Valid @RequestBody CreateAppealRequest request) {
+    return ApiResponse.ok(gradingService.createAppeal(request));
+  }
+
+  @PostMapping("/appeals/{appealId}/resolve")
+  public ApiResponse<AppealSummary> resolveAppeal(
+      @PathVariable Long appealId,
+      @Valid @RequestBody ResolveAppealRequest request
+  ) {
+    return ApiResponse.ok(gradingService.resolveAppeal(appealId, request));
   }
 }

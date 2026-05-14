@@ -233,6 +233,28 @@
 - `apps/web/src/api/mockApi.ts`
 - `apps/web/src/styles/global.css`
 
+### 15. 学生申诉
+
+- 已实现申诉状态枚举。
+- 已实现申诉摘要、申诉提交请求、申诉处理请求 DTO。
+- 已实现申诉列表、学生提交申诉、教师处理申诉接口骨架。
+- 已在学生端成绩与批注面板加入提交申诉操作和“我的申诉”状态反馈。
+- 已在老师端加入学生申诉处理面板，支持采纳、驳回和教师处理回复。
+- 当前申诉数据仍为内存模拟数据，后续需要接入真实成绩变更、二次发布、审计日志和消息通知。
+
+主要代码：
+
+- `backend/grading-service/src/main/java/com/trainmark/grading/GradingReviewController.java`
+- `backend/grading-service/src/main/java/com/trainmark/grading/GradingService.java`
+- `backend/shared/src/main/java/com/trainmark/shared/AppealStatus.java`
+- `backend/shared/src/main/java/com/trainmark/shared/dto/AppealSummary.java`
+- `backend/shared/src/main/java/com/trainmark/shared/dto/CreateAppealRequest.java`
+- `backend/shared/src/main/java/com/trainmark/shared/dto/ResolveAppealRequest.java`
+- `apps/web/src/pages/App.tsx`
+- `apps/web/src/api/types.ts`
+- `apps/web/src/api/mockApi.ts`
+- `apps/web/src/styles/global.css`
+
 ## 已验证
 
 前端构建已通过：
@@ -241,7 +263,7 @@
 pnpm build:web
 ```
 
-人工复核、成绩发布相关后端模块已通过编译：
+人工复核、成绩发布、学生申诉相关后端模块已通过编译：
 
 ```bash
 mvn -f backend/pom.xml -pl grading-service -am package -DskipTests
@@ -272,16 +294,11 @@ Docker Compose 暂未本地验证，因为当前机器没有 Docker。
 - `feat: add manual review`
 - `feat: add grade publishing`
 - `feat: add analytics`
+- `feat: add appeals`
 
 ## 接下来需要做
 
-### 1. 学生申诉
-
-- 实现学生申诉提交接口。
-- 实现教师处理申诉接口。
-- 补充申诉处理留痕和学生端状态反馈。
-
-### 2. 真实 AI / OCR 接入
+### 1. 真实 AI / OCR 接入
 
 - 接入 PaddleOCR。
 - 增加 PDF / Word / 图片转换流程。
@@ -289,13 +306,13 @@ Docker Compose 暂未本地验证，因为当前机器没有 Docker。
 - 实现规则评分、关键词匹配和语义相似度评分。
 - 实现批注 PDF 生成。
 
-### 3. 持久化与真实联调
+### 2. 持久化与真实联调
 
 - 接入 PostgreSQL / Flyway。
 - 将当前内存服务替换为数据库实现。
 - 安装 Docker 后验证 `infra/docker-compose.yml`。
 
-### 4. 工程质量
+### 3. 工程质量
 
 - 拆分前端页面组件。
 - 增加 ESLint 配置。

@@ -271,3 +271,19 @@ export type CourseOutcomeAchievement = {
   achievedValue: number;
   status: '达成' | '临界' | '未达成';
 };
+
+export type AppealStatus = 'SUBMITTED' | 'ACCEPTED' | 'REJECTED';
+
+export type AppealSummary = {
+  id: number;
+  resultId: number;
+  rubricItemId: number | null;
+  studentId: number;
+  studentName: string;
+  reason: string;
+  requestedChange: string;
+  status: AppealStatus;
+  teacherReply: string | null;
+  createdAt: string;
+  resolvedAt: string | null;
+};

@@ -79,6 +79,12 @@ const publicationStatusText = {
   WITHDRAWN: '已撤回',
 };
 
+const appealStatusText = {
+  SUBMITTED: '待处理',
+  ACCEPTED: '已采纳',
+  REJECTED: '已驳回',
+};
+
 export function App() {
   const [user, setUser] = useState<UserProfile>(() => mockApi.login('TEACHER'));
   const [activeNav, setActiveNav] = useState('工作台');
@@ -104,6 +110,7 @@ export function App() {
   const gradeStatistics = mockApi.getGradeStatistics();
   const lossPoints = mockApi.listLossPoints();
   const courseOutcomes = mockApi.listCourseOutcomes();
+  const appeals = mockApi.listAppeals(undefined, user.id);
 
   const teacherStats = [
     { label: '进行中任务', value: String(metrics.activeAssignments), trend: '+2 本周', tone: 'blue' },
@@ -185,7 +192,7 @@ export function App() {
         </section>
 
         {primaryRole === 'STUDENT' ? (
-          <StudentDashboard tasks={studentTasks} publishedResults={publishedResults} />
+          <StudentDashboard tasks={studentTasks} publishedResults={publishedResults} appeals={appeals} userId={user.id} />
         ) : (
           <TeacherDashboard
             assignments={assignments}
@@ -207,6 +214,7 @@ export function App() {
             gradeStatistics={gradeStatistics}
             lossPoints={lossPoints}
             courseOutcomes={courseOutcomes}
+            appeals={mockApi.listAppeals()}
           />
         )}
       </section>
@@ -234,6 +242,7 @@ function TeacherDashboard({
   gradeStatistics,
   lossPoints,
   courseOutcomes,
+  appeals,
 }: {
   assignments: ReturnType<typeof mockApi.listAssignments>;
   classes: ReturnType<typeof mockApi.listClasses>;
@@ -254,12 +263,14 @@ function TeacherDashboard({
   gradeStatistics: ReturnType<typeof mockApi.getGradeStatistics>;
   lossPoints: ReturnType<typeof mockApi.listLossPoints>;
   courseOutcomes: ReturnType<typeof mockApi.listCourseOutcomes>;
+  appeals: ReturnType<typeof mockApi.listAppeals>;
 }) {
   const [reminderResult, setReminderResult] = useState<ReturnType<typeof mockApi.remindUnsubmitted> | null>(null);
   const [startedJob, setStartedJob] = useState<ReturnType<typeof mockApi.startGradingJob> | null>(null);
   const [reviewResults, setReviewResults] = useState(gradingResults);
   const [selectedReviewId, setSelectedReviewId] = useState(gradingResults[0]?.id ?? 0);
   const [publicationAudits, setPublicationAudits] = useState(mockApi.listPublicationAudits());
+  const [appealRows, setAppealRows] = useState(appeals);
   const submittedRate = Math.round((collectionOverview.submitted / collectionOverview.totalStudents) * 100);
   const rubric = rubrics[0];
   const visibleJobs = startedJob ? [startedJob, ...gradingJobs] : gradingJobs;
@@ -286,6 +297,14 @@ function TeacherDashboard({
   const handleWithdrawResult = () => {
     syncReviewResult(mockApi.withdrawGradingResult(selectedReview.id));
     setPublicationAudits(mockApi.listPublicationAudits());
+  };
+
+  const handleResolveAppeal = (appealId: number, accepted: boolean) => {
+    const reply = accepted
+      ? '已采纳申诉，教师将复核对应评分项并重新发布结果。'
+      : '已复核原始报告和评分依据，维持当前评分。';
+    mockApi.resolveAppeal(appealId, accepted, reply);
+    setAppealRows(mockApi.listAppeals());
   };
 
   return (
@@ -704,6 +723,40 @@ function TeacherDashboard({
       </section>
 
       <section className="management-grid">
+        <article className="panel appeal-panel">
+          <div className="panel-heading">
+            <div>
+              <p className="eyebrow">Appeals</p>
+              <h3>学生申诉处理</h3>
+            </div>
+            <span className="status-pill">{appealRows.filter((item) => item.status === 'SUBMITTED').length} 条待处理</span>
+          </div>
+          <div className="appeal-list">
+            {appealRows.map((appeal) => (
+              <div className="appeal-card" key={appeal.id}>
+                <div className="appeal-heading">
+                  <div>
+                    <strong>{appeal.studentName}</strong>
+                    <span>结果 #{appeal.resultId} · 评分项 {appeal.rubricItemId ?? '总评'}</span>
+                  </div>
+                  <b>{appealStatusText[appeal.status]}</b>
+                </div>
+                <p>{appeal.reason}</p>
+                <div className="appeal-request">{appeal.requestedChange}</div>
+                {appeal.teacherReply && <div className="appeal-reply">{appeal.teacherReply}</div>}
+                {appeal.status === 'SUBMITTED' && (
+                  <div className="publication-buttons">
+                    <button className="primary-button" type="button" onClick={() => handleResolveAppeal(appeal.id, true)}>采纳申诉</button>
+                    <button className="ghost-button" type="button" onClick={() => handleResolveAppeal(appeal.id, false)}>驳回申诉</button>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        </article>
+      </section>
+
+      <section className="management-grid">
         <article className="panel collection-panel">
           <div className="panel-heading">
             <div>
@@ -846,17 +899,33 @@ function TeacherDashboard({
 function StudentDashboard({
   tasks,
   publishedResults,
+  appeals,
+  userId,
 }: {
   tasks: ReturnType<typeof mockApi.listStudentTasks>;
   publishedResults: ReturnType<typeof mockApi.listPublishedResults>;
+  appeals: ReturnType<typeof mockApi.listAppeals>;
+  userId: number;
 }) {
   const [selectedFileName, setSelectedFileName] = useState('JavaWeb综合实训报告-张三-2024010101.pdf');
   const [uploadProgress, setUploadProgress] = useState(72);
   const [receipt, setReceipt] = useState<ReturnType<typeof mockApi.createUploadReceipt> | null>(null);
+  const [appealRows, setAppealRows] = useState(appeals);
 
   const confirmUpload = () => {
     setUploadProgress(100);
     setReceipt(mockApi.createUploadReceipt(selectedFileName));
+  };
+
+  const submitAppeal = (resultId: number, rubricItemId: number | null) => {
+    mockApi.createAppeal(
+      resultId,
+      rubricItemId,
+      userId,
+      '我认为该评分项有可补充说明，申请教师复核。',
+      '请重新查看报告中的相关章节和截图证据。'
+    );
+    setAppealRows(mockApi.listAppeals(undefined, userId));
   };
 
   return (
@@ -925,13 +994,27 @@ function StudentDashboard({
                   </div>
                   <div className="student-result-actions">
                     <button className="primary-button" type="button">查看批注 PDF</button>
-                    <button className="ghost-button" type="button">提交申诉</button>
+                    <button className="ghost-button" type="button" onClick={() => submitAppeal(result.id, null)}>提交申诉</button>
                   </div>
                 </div>
               </div>
             ))}
           </div>
         )}
+        <div className="appeal-status-list">
+          <strong>我的申诉</strong>
+          {appealRows.length === 0 ? (
+            <span>暂无申诉记录</span>
+          ) : (
+            appealRows.map((appeal) => (
+              <div className="student-appeal-row" key={appeal.id}>
+                <span>{appealStatusText[appeal.status]} · 结果 #{appeal.resultId}</span>
+                <small>{appeal.requestedChange}</small>
+                {appeal.teacherReply && <small>{appeal.teacherReply}</small>}
+              </div>
+            ))
+          )}
+        </div>
       </article>
 
       <article className="panel">

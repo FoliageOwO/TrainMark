@@ -1,4 +1,5 @@
 import type {
+  AppealSummary,
   AssignmentSummary,
   CourseSummary,
   CollectionOverview,
@@ -69,7 +70,7 @@ const assignments: AssignmentSummary[] = [
 ];
 
 const studentTasks: SubmissionTask[] = [
-  { id: 1, title: 'Java Web 综合实训报告', courseName: 'Java Web 综合实训', status: '未提交', deadline: '2026-05-10T23:59:00+08:00' },
+  { id: 1, title: 'Java Web 综合实训报告', courseName: 'Java Web 综合实训', status: '已发布成绩', deadline: '2026-05-10T23:59:00+08:00', score: 84 },
   { id: 2, title: '数据库设计报告', courseName: '数据库设计实训', status: '已发布成绩', deadline: '2026-04-20T23:59:00+08:00', score: 88 },
 ];
 
@@ -142,10 +143,10 @@ const gradingResults: GradingResultSummary[] = [
     teacherScore: 84,
     confidence: 88,
     reviewStatus: 'APPROVED',
-    publicationStatus: 'NOT_PUBLISHED',
+    publicationStatus: 'PUBLISHED',
     overallComment: '报告结构完整，核心功能说明较清楚；数据库约束和异常处理说明还需要补强。',
     reviewedAt: '2026-05-13T16:30:00+08:00',
-    publishedAt: null,
+    publishedAt: '2026-05-13T18:00:00+08:00',
     items: [
       {
         rubricItemId: 1,
@@ -190,6 +191,22 @@ const gradingResults: GradingResultSummary[] = [
 ];
 
 const publicationAudits: GradePublicationAuditEntry[] = [];
+
+const appeals: AppealSummary[] = [
+  {
+    id: 1,
+    resultId: 1,
+    rubricItemId: 2,
+    studentId: 2,
+    studentName: '张三',
+    reason: '系统实现部分包含失败重试说明，可能未被识别。',
+    requestedChange: '申请将系统实现分项由 43 分调整为 45 分。',
+    status: 'SUBMITTED',
+    teacherReply: null,
+    createdAt: '2026-05-14T09:20:00+08:00',
+    resolvedAt: null,
+  },
+];
 
 const gradeStatistics: GradeStatisticsSummary = {
   assignmentId: 1,
@@ -358,6 +375,43 @@ export const mockApi = {
   },
   listCourseOutcomes(): CourseOutcomeAchievement[] {
     return courseOutcomes;
+  },
+  listAppeals(resultId?: number, studentId?: number): AppealSummary[] {
+    return appeals.filter((item) => (
+      (resultId === undefined || item.resultId === resultId) &&
+      (studentId === undefined || item.studentId === studentId)
+    ));
+  },
+  createAppeal(resultId: number, rubricItemId: number | null, studentId: number, reason: string, requestedChange: string): AppealSummary {
+    const result = gradingResults.find((item) => item.id === resultId);
+    if (!result) {
+      throw new Error(`Grading result not found: ${resultId}`);
+    }
+    const appeal: AppealSummary = {
+      id: appeals.length + 1,
+      resultId,
+      rubricItemId,
+      studentId,
+      studentName: result.studentName,
+      reason,
+      requestedChange,
+      status: 'SUBMITTED',
+      teacherReply: null,
+      createdAt: new Date().toISOString(),
+      resolvedAt: null,
+    };
+    appeals.push(appeal);
+    return appeal;
+  },
+  resolveAppeal(appealId: number, accepted: boolean, teacherReply: string): AppealSummary {
+    const appeal = appeals.find((item) => item.id === appealId);
+    if (!appeal) {
+      throw new Error(`Appeal not found: ${appealId}`);
+    }
+    appeal.status = accepted ? 'ACCEPTED' : 'REJECTED';
+    appeal.teacherReply = teacherReply;
+    appeal.resolvedAt = new Date().toISOString();
+    return appeal;
   },
   startGradingJob(): GradingJobSummary {
     return { id: 2, assignmentId: 1, rubricId: 1, totalSubmissions: 18, completedSubmissions: 0, status: 'PENDING', confidence: 0, createdAt: new Date().toISOString() };

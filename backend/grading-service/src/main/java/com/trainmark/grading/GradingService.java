@@ -1,8 +1,11 @@
 package com.trainmark.grading;
 
 import com.trainmark.shared.GradingJobStatus;
+import com.trainmark.shared.AppealStatus;
 import com.trainmark.shared.PublicationStatus;
 import com.trainmark.shared.ReviewStatus;
+import com.trainmark.shared.dto.AppealSummary;
+import com.trainmark.shared.dto.CreateAppealRequest;
 import com.trainmark.shared.dto.CreateGradingJobRequest;
 import com.trainmark.shared.dto.CreateRubricRequest;
 import com.trainmark.shared.dto.GradePublicationAuditEntry;
@@ -12,6 +15,7 @@ import com.trainmark.shared.dto.GradingItemReview;
 import com.trainmark.shared.dto.GradingJobSummary;
 import com.trainmark.shared.dto.GradingResultSummary;
 import com.trainmark.shared.dto.PublishGradeRequest;
+import com.trainmark.shared.dto.ResolveAppealRequest;
 import com.trainmark.shared.dto.ReviewDecisionRequest;
 import com.trainmark.shared.dto.RubricItemSummary;
 import com.trainmark.shared.dto.RubricPointSummary;
@@ -33,10 +37,12 @@ public class GradingService {
   private final AtomicLong pointIds = new AtomicLong(100);
   private final AtomicLong jobIds = new AtomicLong(2);
   private final AtomicLong auditIds = new AtomicLong(1);
+  private final AtomicLong appealIds = new AtomicLong(2);
   private final Map<Long, RubricSummary> rubrics = new LinkedHashMap<>();
   private final Map<Long, GradingJobSummary> jobs = new LinkedHashMap<>();
   private final Map<Long, GradingResultSummary> results = new LinkedHashMap<>();
   private final Map<Long, List<GradePublicationAuditEntry>> publicationAudits = new LinkedHashMap<>();
+  private final Map<Long, AppealSummary> appeals = new LinkedHashMap<>();
 
   public GradingService() {
     var points = List.of(
@@ -65,10 +71,10 @@ public class GradingService {
         84,
         88,
         ReviewStatus.NEEDS_REVIEW,
-        PublicationStatus.NOT_PUBLISHED,
+        PublicationStatus.PUBLISHED,
         "报告结构完整，核心功能说明较清楚；数据库约束和异常处理说明还需要补强。",
         null,
-        null,
+        OffsetDateTime.now().minusHours(3),
         List.of(
             new GradingItemReview(
                 1L,
@@ -109,6 +115,19 @@ public class GradingService {
             new GradingAnnotationSummary(2L, 12, "系统运行截图", "建议补充失败场景截图", "info"),
             new GradingAnnotationSummary(3L, 17, "实训总结", "总结需要对应评分标准展开", "warning")
         )
+    ));
+    appeals.put(1L, new AppealSummary(
+        1L,
+        1L,
+        2L,
+        2L,
+        "张三",
+        "系统实现部分包含失败重试说明，可能未被识别。",
+        "申请将系统实现分项由 43 分调整为 45 分。",
+        AppealStatus.SUBMITTED,
+        null,
+        OffsetDateTime.now().minusHours(2),
+        null
     ));
   }
 
@@ -242,6 +261,62 @@ public class GradingService {
   public Collection<GradePublicationAuditEntry> listPublicationAudits(Long resultId) {
     getResult(resultId);
     return publicationAudits.getOrDefault(resultId, List.of());
+  }
+
+  public Collection<AppealSummary> listAppeals(Long resultId, Long studentId, AppealStatus status) {
+    return appeals.values().stream()
+        .filter(item -> resultId == null || resultId.equals(item.resultId()))
+        .filter(item -> studentId == null || studentId.equals(item.studentId()))
+        .filter(item -> status == null || status == item.status())
+        .toList();
+  }
+
+  public AppealSummary createAppeal(CreateAppealRequest request) {
+    var result = getResult(request.resultId());
+    if (result.publicationStatus() != PublicationStatus.PUBLISHED) {
+      throw new IllegalStateException("Only published grading results can be appealed: " + request.resultId());
+    }
+    var id = appealIds.getAndIncrement();
+    var appeal = new AppealSummary(
+        id,
+        request.resultId(),
+        request.rubricItemId(),
+        request.studentId(),
+        result.studentName(),
+        request.reason(),
+        request.requestedChange(),
+        AppealStatus.SUBMITTED,
+        null,
+        OffsetDateTime.now(),
+        null
+    );
+    appeals.put(id, appeal);
+    return appeal;
+  }
+
+  public AppealSummary resolveAppeal(Long appealId, ResolveAppealRequest request) {
+    if (request.status() == AppealStatus.SUBMITTED) {
+      throw new IllegalArgumentException("Resolved appeal status must be ACCEPTED or REJECTED");
+    }
+    var appeal = appeals.get(appealId);
+    if (appeal == null) {
+      throw new IllegalArgumentException("Appeal not found: " + appealId);
+    }
+    var resolved = new AppealSummary(
+        appeal.id(),
+        appeal.resultId(),
+        appeal.rubricItemId(),
+        appeal.studentId(),
+        appeal.studentName(),
+        appeal.reason(),
+        appeal.requestedChange(),
+        request.status(),
+        request.teacherReply(),
+        appeal.createdAt(),
+        OffsetDateTime.now()
+    );
+    appeals.put(appealId, resolved);
+    return resolved;
   }
 
   private GradingResultSummary saveReviewedResult(

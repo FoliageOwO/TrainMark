@@ -1278,6 +1278,38 @@ button:focus-visible {
   color: #64748b;
 }
 
+.appeal-status-list {
+  display: grid;
+  gap: 10px;
+  margin-top: 16px;
+  padding: 14px;
+  border-radius: 16px;
+  background: #f8fafc;
+}
+
+.appeal-status-list > span {
+  color: #64748b;
+}
+
+.student-appeal-row {
+  display: grid;
+  gap: 4px;
+  padding: 10px;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  background: #fff;
+}
+
+.student-appeal-row span {
+  color: #1d4ed8;
+  font-weight: 800;
+}
+
+.student-appeal-row small {
+  color: #64748b;
+  line-height: 1.5;
+}
+
 .analytics-metrics {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -1375,6 +1407,61 @@ button:focus-visible {
 .loss-row b {
   color: #f97316;
   font-size: 22px;
+}
+
+.appeal-list {
+  display: grid;
+  gap: 12px;
+  margin-top: 18px;
+}
+
+.appeal-card {
+  display: grid;
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid #e2e8f0;
+  border-radius: 18px;
+  background: linear-gradient(180deg, #ffffff, #f8fafc);
+}
+
+.appeal-heading {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.appeal-heading span {
+  display: block;
+  margin-top: 4px;
+  color: #64748b;
+  font-size: 13px;
+}
+
+.appeal-heading b {
+  align-self: flex-start;
+  padding: 6px 10px;
+  color: #1d4ed8;
+  border-radius: 999px;
+  background: #dbeafe;
+}
+
+.appeal-card p {
+  margin: 0;
+  color: #334155;
+  line-height: 1.6;
+}
+
+.appeal-request,
+.appeal-reply {
+  padding: 12px;
+  color: #475569;
+  border-radius: 14px;
+  background: #eff6ff;
+}
+
+.appeal-reply {
+  color: #0f766e;
+  background: #ccfbf1;
 }
 
 .outcome-row {
