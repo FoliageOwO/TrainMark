@@ -7,6 +7,7 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 \i /docker-entrypoint-initdb.d/migration/V8__upload_sessions.sql
 \i /docker-entrypoint-initdb.d/migration/V9__notification_events.sql
 \i /docker-entrypoint-initdb.d/migration/V10__system_settings.sql
+\i /docker-entrypoint-initdb.d/migration/V11__rubric_point_titles.sql
 
 CREATE TABLE IF NOT EXISTS audit_bootstrap (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),

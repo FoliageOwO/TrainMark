@@ -144,6 +144,26 @@
 - `backend/shared/src/main/java/com/trainmark/shared/dto/GradingJobSummary.java`
 - `apps/web/src/pages/App.tsx`
 
+### 10.1 评分标准 PostgreSQL 存储
+
+- 已为评分标准抽象 `RubricStore`，默认保留内存实现，继续支持无数据库演示。
+- 已新增 JDBC 实现，可将评分标准、评分项和得分点写入 `rubrics`、`rubric_items`、`rubric_points`。
+- 已新增得分点标题字段迁移，补齐 `RubricPointSummary.title` 的数据库承载。
+- 已保持批改任务、复核、发布、申诉和导出流程继续使用现有内存实现，降低本次改动范围。
+- 已补充 PostgreSQL 切换环境变量和 README 启动说明。
+
+主要代码：
+
+- `backend/grading-service/src/main/java/com/trainmark/grading/RubricStore.java`
+- `backend/grading-service/src/main/java/com/trainmark/grading/InMemoryRubricStore.java`
+- `backend/grading-service/src/main/java/com/trainmark/grading/JdbcRubricStore.java`
+- `backend/grading-service/src/main/java/com/trainmark/grading/GradingService.java`
+- `backend/db/migration/V11__rubric_point_titles.sql`
+- `backend/grading-service/src/main/resources/application.yml`
+- `.env.example`
+- `README.md`
+- `PROGRESS.md`
+
 ### 11. OCR 与文档结构化基础
 
 - 已实现 OCR 任务状态枚举。
@@ -1583,6 +1603,21 @@ curl --noproxy '*' -H 'Content-Type: application/json' -d '{...}' http://localho
 curl --noproxy '*' http://localhost:8086/api/ocr/jobs/2/result
 ```
 
+评分标准 PostgreSQL 存储已通过后端模块编译：
+
+```bash
+mvn -f backend/pom.xml -pl grading-service -am package -DskipTests
+```
+
+评分服务默认内存模式已通过单服务启动、评分标准读写和批改结果读取验证：
+
+```bash
+timeout 90s bash scripts/dev-service.sh grading-service
+curl --noproxy '*' 'http://localhost:8085/api/rubrics?assignmentId=1'
+curl --noproxy '*' -H 'Content-Type: application/json' -d '{...}' http://localhost:8085/api/rubrics
+curl --noproxy '*' 'http://localhost:8085/api/grading/results/1'
+```
+
 ## 已提交记录
 
 主要提交：
@@ -1653,6 +1688,7 @@ curl --noproxy '*' http://localhost:8086/api/ocr/jobs/2/result
 - `feat: add analytics jdbc store`
 - `feat: add admin jdbc store`
 - `feat: add ocr jdbc store`
+- `feat: add rubric jdbc store`
 
 ## 接下来需要做
 

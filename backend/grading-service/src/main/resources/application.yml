@@ -10,6 +10,12 @@ management:
         include: health,info
 
 trainmark:
+  grading:
+    rubric-store: ${TRAINMARK_GRADING_RUBRIC_STORE:memory}
+    jdbc:
+      url: ${TRAINMARK_GRADING_JDBC_URL:}
+      username: ${TRAINMARK_GRADING_JDBC_USERNAME:}
+      password: ${TRAINMARK_GRADING_JDBC_PASSWORD:}
   scoring:
     provider: ${SCORING_PROVIDER:local}
     command: ${SCORING_COMMAND:}
