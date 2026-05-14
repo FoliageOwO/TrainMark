@@ -175,6 +175,14 @@ pnpm smoke:api
 SMOKE_DRY_RUN=1 pnpm smoke:api
 ```
 
+生成本地发布包：
+
+```bash
+pnpm deploy:local
+```
+
+发布包默认输出到 `deployments/<时间戳>/`，包含前端静态产物、后端服务 JAR、infra 配置和关键文档。
+
 ## 本地备份
 
 备份脚本会读取 `.env`，默认输出到 `backups/<时间戳>/`，其中 PostgreSQL 使用 custom dump 格式，MinIO / S3 兼容对象存储会优先使用 `mc mirror`，没有 `mc` 时尝试 `aws s3 sync`。

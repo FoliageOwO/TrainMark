@@ -583,6 +583,23 @@
 - `README.md`
 - `PROGRESS.md`
 
+### 36. 本地发布包脚本
+
+- 已将 `scripts/deploy.sh` 从占位提示升级为本地发布包生成脚本。
+- 已新增 `pnpm deploy:local` 脚本入口。
+- 发布脚本会构建前端和后端，并将前端 dist、后端服务 JAR、infra 配置和关键文档复制到 `deployments/<时间戳>/`。
+- 已生成发布包 manifest，便于确认发布包内容。
+- 已将 `deployments/` 加入 Git 忽略，防止本地发布产物误提交。
+- 已在 README 补充本地发布包命令。
+
+主要代码：
+
+- `.gitignore`
+- `package.json`
+- `scripts/deploy.sh`
+- `README.md`
+- `PROGRESS.md`
+
 ## 已验证
 
 前端构建已通过：
@@ -735,6 +752,13 @@ bash -n scripts/smoke-api.sh
 SMOKE_DRY_RUN=1 pnpm smoke:api
 ```
 
+本地发布包脚本已通过脚本语法检查；构建链路由 `pnpm verify:mvp` 覆盖：
+
+```bash
+bash -n scripts/deploy.sh
+pnpm verify:mvp
+```
+
 全部后端模块已通过编译：
 
 ```bash
@@ -781,6 +805,7 @@ Docker Compose 暂未本地验证，因为当前机器没有 Docker。
 - `chore: add backup script`
 - `chore: add restore script`
 - `chore: add api smoke script`
+- `chore: add local deploy bundle`
 
 ## 接下来需要做
 

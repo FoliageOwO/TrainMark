@@ -24,7 +24,8 @@
     "dev:backend:analytics": "mvn -f backend/pom.xml -pl analytics-service -am -Pdev spring-boot:run",
     "dev:backend:notification": "mvn -f backend/pom.xml -pl notification-service -am -Pdev spring-boot:run",
     "dev:backend:admin": "mvn -f backend/pom.xml -pl admin-service -am -Pdev spring-boot:run",
-    "build:backend": "mvn -f backend/pom.xml package -DskipTests"
+    "build:backend": "mvn -f backend/pom.xml package -DskipTests",
+    "deploy:local": "bash scripts/deploy.sh"
   },
   "packageManager": "pnpm@10.17.1"
 }
