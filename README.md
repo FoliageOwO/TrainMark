@@ -71,6 +71,12 @@ pnpm dev:web
 
 访问：`http://localhost:5173`
 
+前端静态检查：
+
+```bash
+pnpm lint:web
+```
+
 ### 4. 启动本地基础设施
 
 ```bash

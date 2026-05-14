@@ -321,6 +321,20 @@
 - `backend/db/migration/V3__extend_assessment_schema.sql`
 - `PROGRESS.md`
 
+### 20. 前端 ESLint 验证入口
+
+- 已补充 Vite/React 前端的 ESLint flat config。
+- 已启用 TypeScript recommended、React Hooks 和 React Refresh 规则。
+- 已在根目录新增 `pnpm lint:web` 脚本，方便从仓库根目录执行前端静态检查。
+- 已在 README 补充前端静态检查命令。
+
+主要代码：
+
+- `apps/web/eslint.config.js`
+- `package.json`
+- `README.md`
+- `PROGRESS.md`
+
 ## 已验证
 
 前端构建已通过：
@@ -359,6 +373,12 @@ pnpm build:web
 mvn -f backend/pom.xml package -DskipTests
 ```
 
+前端 ESLint 静态检查已通过：
+
+```bash
+pnpm --filter trainmark-ai-web lint
+```
+
 全部后端模块已通过编译：
 
 ```bash
@@ -389,6 +409,7 @@ Docker Compose 暂未本地验证，因为当前机器没有 Docker。
 - `feat: add similarity checks`
 - `feat: add frontend http api`
 - `feat: extend assessment schema`
+- `chore: add frontend lint config`
 
 ## 接下来需要做
 
@@ -409,6 +430,5 @@ Docker Compose 暂未本地验证，因为当前机器没有 Docker。
 ### 3. 工程质量
 
 - 拆分前端页面组件。
-- 增加 ESLint 配置。
 - 增加基础测试。
 - 补接口文档。
