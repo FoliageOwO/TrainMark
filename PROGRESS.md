@@ -291,6 +291,24 @@
 - `apps/web/src/api/mockApi.ts`
 - `apps/web/src/styles/global.css`
 
+### 17.1 查重任务 PostgreSQL 存储
+
+- 已为查重服务抽象 `SimilarityStore`，默认保留内存实现，避免无数据库环境影响 MVP 演示。
+- 已新增 JDBC 实现，可将查重任务写入 `similarity_jobs`，并将相似片段写入 `similarity_matches`。
+- 已支持按任务读取相似片段，并从提交与用户表补全学生姓名。
+- 已补充 PostgreSQL 切换环境变量和 README 启动说明。
+
+主要代码：
+
+- `backend/similarity-service/src/main/java/com/trainmark/similarity/SimilarityStore.java`
+- `backend/similarity-service/src/main/java/com/trainmark/similarity/InMemorySimilarityStore.java`
+- `backend/similarity-service/src/main/java/com/trainmark/similarity/JdbcSimilarityStore.java`
+- `backend/similarity-service/src/main/java/com/trainmark/similarity/SimilarityService.java`
+- `backend/similarity-service/src/main/resources/application.yml`
+- `.env.example`
+- `README.md`
+- `PROGRESS.md`
+
 ### 18. 前端 HTTP API 数据层
 
 - 已补充前端 HTTP API 数据层，支持通过 `VITE_API_MODE=http` 从 gateway 拉取数据。
@@ -1447,6 +1465,21 @@ mvn -f backend/pom.xml package -DskipTests
 
 Docker Compose 已完成配置展开校验，暂未拉起 PostgreSQL、Redis、RabbitMQ、MinIO 和 Nginx 容器做完整本地联调。
 
+查重任务 PostgreSQL 存储已通过后端模块编译：
+
+```bash
+mvn -f backend/pom.xml -pl similarity-service -am package -DskipTests
+```
+
+查重服务默认内存模式已通过单服务启动和列表/创建/详情接口验证：
+
+```bash
+timeout 75s bash scripts/dev-service.sh similarity-service
+curl --noproxy '*' http://localhost:8087/api/similarity/jobs
+curl --noproxy '*' -H 'Content-Type: application/json' -d '{...}' http://localhost:8087/api/similarity/jobs
+curl --noproxy '*' http://localhost:8087/api/similarity/jobs/2
+```
+
 ## 已提交记录
 
 主要提交：
@@ -1513,6 +1546,7 @@ Docker Compose 已完成配置展开校验，暂未拉起 PostgreSQL、Redis、R
 - `feat: add file jdbc store`
 - `fix: renumber db migrations`
 - `feat: add notification jdbc store`
+- `feat: add similarity jdbc store`
 
 ## 接下来需要做
 

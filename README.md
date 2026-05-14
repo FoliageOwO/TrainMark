@@ -37,6 +37,7 @@ TrainMark AI，中文名“智训批”，是面向高校实训教学场景的�
 | 课程与任务 PostgreSQL 存储 | 已支持 |
 | 上传与提交 PostgreSQL 存储 | 已支持 |
 | 催交通知 PostgreSQL 存储 | 已支持 |
+| 查重任务 PostgreSQL 存储 | 已支持 |
 | 管理端审计日志 | 已实现 |
 | 管理端系统配置 | 已实现 |
 | PWA 安装、离线外壳与角色快捷入口 | 已实现 |
@@ -185,6 +186,16 @@ TRAINMARK_NOTIFICATION_JDBC_URL=jdbc:postgresql://localhost:5432/trainmark_ai \
 TRAINMARK_NOTIFICATION_JDBC_USERNAME=trainmark \
 TRAINMARK_NOTIFICATION_JDBC_PASSWORD=trainmark_dev \
 pnpm dev:backend:notification
+```
+
+查重服务默认使用内存数据。需要让查重任务和相似片段写入 PostgreSQL 时，设置：
+
+```bash
+TRAINMARK_SIMILARITY_STORE=jdbc \
+TRAINMARK_SIMILARITY_JDBC_URL=jdbc:postgresql://localhost:5432/trainmark_ai \
+TRAINMARK_SIMILARITY_JDBC_USERNAME=trainmark \
+TRAINMARK_SIMILARITY_JDBC_PASSWORD=trainmark_dev \
+pnpm dev:backend:similarity
 ```
 
 也可以只启动单个服务：

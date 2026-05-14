@@ -8,3 +8,10 @@ management:
     web:
       exposure:
         include: health,info
+trainmark:
+  similarity:
+    store: ${TRAINMARK_SIMILARITY_STORE:memory}
+    jdbc:
+      url: ${TRAINMARK_SIMILARITY_JDBC_URL:}
+      username: ${TRAINMARK_SIMILARITY_JDBC_USERNAME:}
+      password: ${TRAINMARK_SIMILARITY_JDBC_PASSWORD:}
