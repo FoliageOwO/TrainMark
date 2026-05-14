@@ -11,7 +11,6 @@ import com.trainmark.shared.dto.CreateRubricRequest;
 import com.trainmark.shared.dto.GradeExportSummary;
 import com.trainmark.shared.dto.GradePublicationAuditEntry;
 import com.trainmark.shared.dto.GradePublicationSummary;
-import com.trainmark.shared.dto.GradingAnnotationSummary;
 import com.trainmark.shared.dto.GradingItemReview;
 import com.trainmark.shared.dto.GradingJobSummary;
 import com.trainmark.shared.dto.GradingResultSummary;
@@ -24,10 +23,7 @@ import com.trainmark.shared.dto.UpdateReviewItemRequest;
 import com.trainmark.shared.dto.WithdrawGradeRequest;
 import java.time.OffsetDateTime;
 import java.util.Collection;
-import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Map;
-import java.util.concurrent.atomic.AtomicLong;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -37,10 +33,9 @@ public class GradingService {
   private final GradePublicationAuditStore publicationAuditStore;
   private final AppealStore appealStore;
   private final GradingJobStore gradingJobStore;
+  private final GradingResultStore gradingResultStore;
   private final ScoringProvider scoringProvider;
   private final AnnotationProvider annotationProvider;
-  private final AtomicLong resultIds = new AtomicLong(2);
-  private final Map<Long, GradingResultSummary> results = new LinkedHashMap<>();
 
   public GradingService(
       RubricStore rubricStore,
@@ -48,6 +43,7 @@ public class GradingService {
       GradePublicationAuditStore publicationAuditStore,
       AppealStore appealStore,
       GradingJobStore gradingJobStore,
+      GradingResultStore gradingResultStore,
       ScoringProvider scoringProvider,
       AnnotationProvider annotationProvider
   ) {
@@ -56,68 +52,9 @@ public class GradingService {
     this.publicationAuditStore = publicationAuditStore;
     this.appealStore = appealStore;
     this.gradingJobStore = gradingJobStore;
+    this.gradingResultStore = gradingResultStore;
     this.scoringProvider = scoringProvider;
     this.annotationProvider = annotationProvider;
-    results.put(1L, new GradingResultSummary(
-        1L,
-        1L,
-        1L,
-        2L,
-        "张三",
-        "2024010101",
-        "JavaWeb综合实训报告-张三-2024010101.pdf",
-        "/previews/submissions/1/report.pdf",
-        "/annotations/submissions/1/annotated.pdf",
-        100,
-        84,
-        84,
-        88,
-        ReviewStatus.NEEDS_REVIEW,
-        PublicationStatus.PUBLISHED,
-        "报告结构完整，核心功能说明较清楚；数据库约束和异常处理说明还需要补强。",
-        null,
-        OffsetDateTime.now().minusHours(3),
-        List.of(
-            new GradingItemReview(
-                1L,
-                "需求与设计",
-                20,
-                16,
-                16,
-                "用例描述完整，但数据库约束和边界条件说明不足。",
-                "建议补充关键表约束和异常流程说明。",
-                86,
-                List.of("第 2 页需求分析", "第 7 页数据库表结构")
-            ),
-            new GradingItemReview(
-                2L,
-                "系统实现",
-                50,
-                43,
-                43,
-                "核心流程可运行，缺少批量异常处理和权限边界说明。",
-                "上传、批改、发布主流程描述清晰，需补充失败重试策略。",
-                91,
-                List.of("第 11 页核心流程", "第 12 页运行截图")
-            ),
-            new GradingItemReview(
-                3L,
-                "报告规范",
-                30,
-                25,
-                25,
-                "章节完整，截图标注不够统一，结论部分偏简略。",
-                "统一图表编号并补充实训反思。",
-                87,
-                List.of("第 1 页目录", "第 17 页总结")
-            )
-        ),
-        List.of(
-            new GradingAnnotationSummary(1L, 7, "数据库表结构", "外键约束说明不完整", "warning"),
-            new GradingAnnotationSummary(2L, 12, "系统运行截图", "建议补充失败场景截图", "info"),
-            new GradingAnnotationSummary(3L, 17, "实训总结", "总结需要对应评分标准展开", "warning")
-        )
-    ));
   }
 
   public Collection<RubricSummary> listRubrics(Long assignmentId) {
@@ -138,18 +75,12 @@ public class GradingService {
   }
 
   public Collection<GradingResultSummary> listResults(Long assignmentId, ReviewStatus reviewStatus) {
-    return results.values().stream()
-        .filter(item -> assignmentId == null || assignmentId.equals(item.assignmentId()))
-        .filter(item -> reviewStatus == null || reviewStatus == item.reviewStatus())
-        .toList();
+    return gradingResultStore.listResults(assignmentId, reviewStatus);
   }
 
   public GradingResultSummary getResult(Long resultId) {
-    var result = results.get(resultId);
-    if (result == null) {
-      throw new IllegalArgumentException("Grading result not found: " + resultId);
-    }
-    return result;
+    return gradingResultStore.findResult(resultId)
+        .orElseThrow(() -> new IllegalArgumentException("Grading result not found: " + resultId));
   }
 
   public GradingResultSummary updateReviewItem(Long resultId, UpdateReviewItemRequest request) {
@@ -181,7 +112,7 @@ public class GradingService {
   }
 
   public Collection<GradePublicationSummary> listPublications(Long assignmentId, PublicationStatus publicationStatus) {
-    return results.values().stream()
+    return gradingResultStore.listResults(assignmentId, null).stream()
         .filter(item -> assignmentId == null || assignmentId.equals(item.assignmentId()))
         .filter(item -> publicationStatus == null || publicationStatus == item.publicationStatus())
         .map(this::toPublicationSummary)
@@ -240,7 +171,7 @@ public class GradingService {
   }
 
   public GradeExportSummary createGradeExport(CreateGradeExportRequest request) {
-    var rowCount = (int) results.values().stream()
+    var rowCount = (int) gradingResultStore.listResults(request.assignmentId(), null).stream()
         .filter(item -> request.assignmentId().equals(item.assignmentId()))
         .filter(item -> item.publicationStatus() == PublicationStatus.PUBLISHED)
         .count();
@@ -277,8 +208,7 @@ public class GradingService {
         items,
         result.annotations()
     );
-    results.put(result.id(), updated);
-    return updated;
+    return gradingResultStore.saveReviewedResult(updated);
   }
 
   private GradingResultSummary saveResultWithPublication(
@@ -286,30 +216,7 @@ public class GradingService {
       PublicationStatus publicationStatus,
       OffsetDateTime publishedAt
   ) {
-    var updated = new GradingResultSummary(
-        result.id(),
-        result.assignmentId(),
-        result.submissionId(),
-        result.studentId(),
-        result.studentName(),
-        result.studentNo(),
-        result.fileName(),
-        result.previewUrl(),
-        result.annotationPdfUrl(),
-        result.totalScore(),
-        result.aiScore(),
-        result.teacherScore(),
-        result.confidence(),
-        result.reviewStatus(),
-        publicationStatus,
-        result.overallComment(),
-        result.reviewedAt(),
-        publishedAt,
-        result.items(),
-        result.annotations()
-    );
-    results.put(result.id(), updated);
-    return updated;
+    return gradingResultStore.savePublicationStatus(result, publicationStatus, publishedAt);
   }
 
   private GradePublicationSummary toPublicationSummary(GradingResultSummary result) {
@@ -330,14 +237,13 @@ public class GradingService {
   }
 
   private void ensureScoredResult(Long assignmentId, Long submissionId) {
-    var exists = results.values().stream().anyMatch(item -> submissionId.equals(item.submissionId()));
-    if (exists) {
+    if (gradingResultStore.hasSubmissionResult(submissionId)) {
       return;
     }
 
     var rubric = rubricStore.findFirstForAssignment(assignmentId)
         .orElse(new RubricSummary(1L, assignmentId, "默认评分标准", 100, List.<RubricItemSummary>of()));
-    var resultId = resultIds.getAndIncrement();
+    var resultId = gradingResultStore.nextResultId();
     var scored = scoringProvider.score(new ScoringRequest(
         resultId,
         assignmentId,
@@ -348,6 +254,6 @@ public class GradingService {
         "自动批改报告-" + submissionId + ".pdf",
         rubric
     ));
-    results.put(resultId, annotationProvider.annotate(scored));
+    gradingResultStore.saveScoredResult(annotationProvider.annotate(scored));
   }
 }

@@ -237,6 +237,26 @@
 - `README.md`
 - `PROGRESS.md`
 
+### 10.6 批改结果 PostgreSQL 存储
+
+- 已为批改结果抽象 `GradingResultStore`，默认保留内存实现和演示种子结果。
+- 已新增 JDBC 实现，可读写 `grading_results`、`grading_result_items` 和 `grading_annotations`。
+- 已支持按作业和复核状态筛选批改结果，并重建评分分项、证据和批注列表。
+- 已让分项复核、批准、发布/撤回、成绩导出行数和批改任务自动生成结果统一通过结果 store。
+- 已复用 grading-service 的 PostgreSQL 连接配置，并补充独立 `TRAINMARK_GRADING_RESULT_STORE` 切换项。
+
+主要代码：
+
+- `backend/grading-service/src/main/java/com/trainmark/grading/GradingResultStore.java`
+- `backend/grading-service/src/main/java/com/trainmark/grading/InMemoryGradingResultStore.java`
+- `backend/grading-service/src/main/java/com/trainmark/grading/JdbcGradingResultStore.java`
+- `backend/grading-service/src/main/java/com/trainmark/grading/GradingResultStoreSupport.java`
+- `backend/grading-service/src/main/java/com/trainmark/grading/GradingService.java`
+- `backend/grading-service/src/main/resources/application.yml`
+- `.env.example`
+- `README.md`
+- `PROGRESS.md`
+
 ### 11. OCR 与文档结构化基础
 
 - 已实现 OCR 任务状态枚举。
@@ -1754,6 +1774,25 @@ curl --noproxy '*' -H 'Content-Type: application/json' -d '{...}' http://localho
 curl --noproxy '*' 'http://localhost:8085/api/grading/results?assignmentId=1'
 ```
 
+批改结果 PostgreSQL 存储已通过后端模块编译：
+
+```bash
+mvn -f backend/pom.xml -pl grading-service -am package -DskipTests
+```
+
+评分服务默认内存模式已通过单服务启动、批改结果列表/详情、分项复核、批准、发布、成绩导出行数和批改任务生成新结果验证：
+
+```bash
+timeout 90s bash scripts/dev-service.sh grading-service
+curl --noproxy '*' 'http://localhost:8085/api/grading/results?assignmentId=1'
+curl --noproxy '*' 'http://localhost:8085/api/grading/results/1'
+curl --noproxy '*' -X PATCH -H 'Content-Type: application/json' -d '{...}' http://localhost:8085/api/grading/results/1/items
+curl --noproxy '*' -H 'Content-Type: application/json' -d '{...}' http://localhost:8085/api/grading/results/1/approve
+curl --noproxy '*' -H 'Content-Type: application/json' -d '{...}' http://localhost:8085/api/grading/results/1/publish
+curl --noproxy '*' -H 'Content-Type: application/json' -d '{...}' http://localhost:8085/api/grading/exports
+curl --noproxy '*' -H 'Content-Type: application/json' -d '{...}' http://localhost:8085/api/grading/jobs
+```
+
 ## 已提交记录
 
 主要提交：
@@ -1829,6 +1868,7 @@ curl --noproxy '*' 'http://localhost:8085/api/grading/results?assignmentId=1'
 - `feat: add publication audit jdbc store`
 - `feat: add appeal jdbc store`
 - `feat: add grading job jdbc store`
+- `feat: add grading result jdbc store`
 
 ## 接下来需要做
 
