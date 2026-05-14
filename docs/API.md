@@ -138,6 +138,12 @@ Most services still use in-memory data for local MVP demonstration. The gateway 
 | `GET` | `/api/analytics/loss-points?assignmentId=1` | required `assignmentId` query | `LossPointSummary[]` |
 | `GET` | `/api/analytics/course-outcomes?assignmentId=1` | required `assignmentId` query | `CourseOutcomeAchievementSummary[]` |
 
+## Admin
+
+| Method | Path | Request | Response data |
+|---|---|---|---|
+| `GET` | `/api/admin/audit-logs?action=GRADE_EXPORT&resourceType=GRADE_EXPORT` | optional `action`, `resourceType` query | `AuditLogSummary[]` |
+
 ## Frontend HTTP Mode
 
 The frontend uses mock data by default. To read through the gateway:

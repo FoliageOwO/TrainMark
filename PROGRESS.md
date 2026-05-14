@@ -453,6 +453,30 @@
 - `apps/web/src/api/mockApi.ts`
 - `PROGRESS.md`
 
+### 29. 管理端审计日志
+
+- 已新增审计日志摘要 DTO。
+- 已为 admin-service 增加审计日志服务和查询接口，支持按动作和资源类型筛选。
+- 已补充 gateway 到 admin-service 的 `/api/admin/**` 路由。
+- 已在前端 mock 和 HTTP 数据层加入审计日志读取。
+- 已新增管理端审计看板，管理员角色可查看组织账号状态、关键操作审计、发布和导出等高风险操作统计。
+- 已更新 API 文档和 README 状态表。
+
+主要代码：
+
+- `backend/shared/src/main/java/com/trainmark/shared/dto/AuditLogSummary.java`
+- `backend/admin-service/src/main/java/com/trainmark/admin/AuditLogService.java`
+- `backend/admin-service/src/main/java/com/trainmark/admin/AuditLogController.java`
+- `backend/admin-service/pom.xml`
+- `backend/gateway-service/src/main/resources/application.yml`
+- `apps/web/src/api/types.ts`
+- `apps/web/src/api/mockApi.ts`
+- `apps/web/src/api/httpApi.ts`
+- `apps/web/src/pages/App.tsx`
+- `docs/API.md`
+- `README.md`
+- `PROGRESS.md`
+
 ## 已验证
 
 前端构建已通过：
@@ -553,6 +577,14 @@ pnpm lint:web
 pnpm build:web
 ```
 
+管理端审计日志已通过后端模块编译、前端静态检查和构建：
+
+```bash
+mvn -f backend/pom.xml -pl admin-service,gateway-service -am package -DskipTests
+pnpm lint:web
+pnpm build:web
+```
+
 全部后端模块已通过编译：
 
 ```bash
@@ -592,6 +624,7 @@ Docker Compose 暂未本地验证，因为当前机器没有 Docker。
 - `chore: add mvp verifier`
 - `feat: add local ocr provider`
 - `feat: add local scoring provider`
+- `feat: add admin audit logs`
 
 ## 接下来需要做
 

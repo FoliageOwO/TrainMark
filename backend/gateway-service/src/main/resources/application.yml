@@ -60,6 +60,10 @@ spring:
           uri: http://localhost:8091
           predicates:
             - Path=/api/analytics/**
+        - id: admin-service
+          uri: http://localhost:8090
+          predicates:
+            - Path=/api/admin/**
 
 management:
   endpoints:

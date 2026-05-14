@@ -321,3 +321,14 @@ export type SimilarityJobSummary = {
   createdAt: string;
   matches: SimilarityMatch[];
 };
+
+export type AuditLogSummary = {
+  id: number;
+  actorName: string;
+  action: string;
+  resourceType: string;
+  resourceId: string;
+  detail: string;
+  ipAddress: string;
+  createdAt: string;
+};

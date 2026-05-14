@@ -1,6 +1,7 @@
 import type {
   AppealSummary,
   AssignmentSummary,
+  AuditLogSummary,
   CourseSummary,
   CollectionOverview,
   CourseOutcomeAchievement,
@@ -270,6 +271,16 @@ const similarityJobs: SimilarityJobSummary[] = [
   },
 ];
 
+const auditLogs: AuditLogSummary[] = [
+  { id: 1, actorName: '王老师', action: 'UPLOAD_COMPLETE', resourceType: 'SUBMISSION', resourceId: '1', detail: '学生张三提交 Java Web 综合实训报告', ipAddress: '127.0.0.1', createdAt: '2026-05-14T08:00:00+08:00' },
+  { id: 2, actorName: '系统任务', action: 'OCR_COMPLETE', resourceType: 'OCR_JOB', resourceId: '1', detail: '完成 18 页文档 OCR 和结构化识别', ipAddress: '127.0.0.1', createdAt: '2026-05-14T09:00:00+08:00' },
+  { id: 3, actorName: '系统任务', action: 'GRADING_COMPLETE', resourceType: 'GRADING_JOB', resourceId: '1', detail: '本地规则评分完成 65 份报告', ipAddress: '127.0.0.1', createdAt: '2026-05-14T10:00:00+08:00' },
+  { id: 4, actorName: '王老师', action: 'REVIEW_UPDATE', resourceType: 'GRADING_RESULT', resourceId: '1', detail: '复核系统实现分项并保存教师评语', ipAddress: '127.0.0.1', createdAt: '2026-05-14T11:00:00+08:00' },
+  { id: 5, actorName: '王老师', action: 'GRADE_PUBLISH', resourceType: 'GRADING_RESULT', resourceId: '1', detail: '发布成绩与批注 PDF', ipAddress: '127.0.0.1', createdAt: '2026-05-14T12:00:00+08:00' },
+  { id: 6, actorName: '张三', action: 'APPEAL_SUBMIT', resourceType: 'APPEAL', resourceId: '1', detail: '学生针对系统实现分项提交申诉', ipAddress: '127.0.0.1', createdAt: '2026-05-14T13:00:00+08:00' },
+  { id: 7, actorName: '王老师', action: 'GRADE_EXPORT', resourceType: 'GRADE_EXPORT', resourceId: '1', detail: '导出 CSV 成绩单 48 行', ipAddress: '127.0.0.1', createdAt: '2026-05-14T14:00:00+08:00' },
+];
+
 export const mockApi = {
   login(role: RoleCode): UserProfile {
     return users[role];
@@ -442,6 +453,9 @@ export const mockApi = {
     };
     similarityJobs.unshift(job);
     return job;
+  },
+  listAuditLogs(): AuditLogSummary[] {
+    return auditLogs;
   },
   listAppeals(resultId?: number, studentId?: number): AppealSummary[] {
     return appeals.filter((item) => (
