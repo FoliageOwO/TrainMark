@@ -291,7 +291,8 @@ if [[ "$SMOKE_INCLUDE_WRITES" == "1" ]]; then
     smoke_suffix="$(date +%s)"
     organization_response="$(post_json "organization" "$GATEWAY_URL/api/organizations" "{\"parentId\":2,\"name\":\"Smoke 软件测试班 $smoke_suffix\",\"type\":\"CLASS\"}")"
     organization_id="$(json_field id <<< "$organization_response")"
-    post_json "user" "$GATEWAY_URL/api/users" "{\"organizationId\":$organization_id,\"username\":\"smoke-student-$smoke_suffix\",\"name\":\"Smoke 学生\",\"studentNo\":\"SMOKE$smoke_suffix\",\"email\":\"smoke.student.$smoke_suffix@trainmark.local\",\"phone\":\"13800000000\",\"roles\":[\"STUDENT\"]}"
+    user_response="$(post_json "user" "$GATEWAY_URL/api/users" "{\"organizationId\":$organization_id,\"username\":\"smoke-student-$smoke_suffix\",\"name\":\"Smoke 学生\",\"studentNo\":\"SMOKE$smoke_suffix\",\"email\":\"smoke.student.$smoke_suffix@trainmark.local\",\"phone\":\"13800000000\",\"roles\":[\"STUDENT\"]}")"
+    smoke_student_id="$(json_field id <<< "$user_response")"
     post_json "student import" "$GATEWAY_URL/api/users/students/import" "{\"classId\":$organization_id,\"rows\":[{\"studentNo\":\"SMOKE-IMPORT-$smoke_suffix\",\"name\":\"Smoke 导入学生\",\"email\":\"smoke.import.$smoke_suffix@trainmark.local\",\"phone\":\"13800000001\"}]}"
     patch_json "admin setting" "$GATEWAY_URL/api/admin/settings/export.retention-days" '{"value":"45"}'
   fi
@@ -311,6 +312,17 @@ if [[ "$SMOKE_INCLUDE_WRITES" == "1" ]]; then
     complete_response="$(post_json "upload complete" "$GATEWAY_URL/api/submissions/upload/complete" "{\"uploadId\":\"$upload_id\",\"objectKey\":\"$object_key\",\"checksum\":null}")"
     submission_id="$(json_field submissionId <<< "$complete_response")"
     check_url "uploaded report file" "$GATEWAY_URL/api/submissions/$submission_id/file"
+
+    peer_init_response="$(post_json "peer upload init" "$GATEWAY_URL/api/submissions/upload/init" "{\"assignmentId\":1,\"studentId\":$smoke_student_id,\"fileName\":\"smoke-peer-report.pdf\",\"contentType\":\"application/pdf\",\"fileSize\":1048576,\"checksum\":null}")"
+    peer_upload_id="$(json_field uploadId <<< "$peer_init_response")"
+    peer_object_key="$(json_field objectKey <<< "$peer_init_response")"
+    tmp_peer_upload="$(mktemp)"
+    printf 'TrainMark peer smoke upload\n' > "$tmp_peer_upload"
+    put_upload_content "peer upload content" "$GATEWAY_URL/api/submissions/upload/content" "$peer_upload_id" "$peer_object_key" "$tmp_peer_upload" >/dev/null
+    rm -f "$tmp_peer_upload"
+    peer_complete_response="$(post_json "peer upload complete" "$GATEWAY_URL/api/submissions/upload/complete" "{\"uploadId\":\"$peer_upload_id\",\"objectKey\":\"$peer_object_key\",\"checksum\":null}")"
+    peer_submission_id="$(json_field submissionId <<< "$peer_complete_response")"
+    check_url "peer uploaded report file" "$GATEWAY_URL/api/submissions/$peer_submission_id/file"
   fi
   post_json "assignment" "$GATEWAY_URL/api/assignments" '{"courseId":1,"title":"Smoke 实训任务","description":"Smoke assignment creation","deadline":"2030-05-20T23:59:00+08:00","totalScore":100,"classIds":[1,2],"similarityCheckEnabled":true,"aiGradingEnabled":true}'
   post_json "rubric" "$GATEWAY_URL/api/rubrics" '{"assignmentId":1,"name":"Smoke 评分标准","totalScore":100,"items":[{"title":"需求与设计","score":20,"courseOutcomeCode":"CO1","points":[{"title":"需求完整","description":"覆盖需求、设计和约束","score":20,"keywords":["需求","设计"],"synonyms":[]}]},{"title":"系统实现","score":50,"courseOutcomeCode":"CO2","points":[{"title":"实现完整","description":"覆盖核心功能和异常处理","score":50,"keywords":["功能","接口"],"synonyms":[]}]},{"title":"报告规范","score":30,"courseOutcomeCode":"CO3","points":[{"title":"报告规范","description":"覆盖截图、总结和格式","score":30,"keywords":["截图","总结"],"synonyms":[]}]}]}'
@@ -339,7 +351,11 @@ if [[ "$SMOKE_INCLUDE_WRITES" == "1" ]]; then
   check_api "gateway grade appeals" "$GATEWAY_URL/api/grading/results/appeals?resultId=1"
   post_json "grade export" "$GATEWAY_URL/api/grading/exports" '{"assignmentId":1,"format":"CSV","operatorName":"Smoke"}'
   post_json "remind unsubmitted" "$GATEWAY_URL/api/notifications/remind-unsubmitted" '{"assignmentId":1,"studentIds":[2],"channels":["IN_APP"],"message":"Smoke reminder"}'
-  post_json "similarity job" "$GATEWAY_URL/api/similarity/jobs" '{"assignmentId":1,"submissionIds":[1,2],"includeHistory":true}'
+  if [[ "$SMOKE_DRY_RUN" == "1" ]]; then
+    post_json "similarity job" "$GATEWAY_URL/api/similarity/jobs" '{"assignmentId":1,"submissionIds":[1,2],"includeHistory":true}'
+  else
+    post_json "similarity job" "$GATEWAY_URL/api/similarity/jobs" "{\"assignmentId\":1,\"submissionIds\":[$submission_id,$peer_submission_id],\"includeHistory\":true}"
+  fi
 fi
 
 echo "[smoke] API smoke checks completed"

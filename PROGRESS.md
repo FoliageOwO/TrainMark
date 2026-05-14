@@ -2256,6 +2256,17 @@
 - `README.md`
 - `PROGRESS.md`
 
+### 81. Strict HTTP/JDBC 写路径 Smoke 查重闭环
+
+- 已修正 `SMOKE_INCLUDE_WRITES=1` live smoke 的查重输入，不再固定使用可能不存在的提交 ID `[1,2]`。
+- 写路径 smoke 现在会捕获本轮创建的学生 ID，并额外完成第二份真实上传，随后用两个实际 `submissionId` 发起查重任务，避免 JDBC 外键约束导致 similarity 写接口 500。
+- 已实跑 `SMOKE_INCLUDE_WRITES=1 TRAINMARK_SKIP_INFRA=1 SMOKE_RETRIES=90 SMOKE_RETRY_DELAY_SECONDS=2 timeout 600s pnpm smoke:mvp:jdbc`，覆盖登录、上传、任务、rubric、批改、OCR、复核、发布、申诉、导出、催交、查重和 strict auth。
+
+主要代码：
+
+- `scripts/smoke-api.sh`
+- `PROGRESS.md`
+
 ## 已验证
 
 前端构建已通过：
@@ -3397,7 +3408,8 @@ pnpm verify:mvp
 ### 2. Strict HTTP/JDBC Live Smoke
 
 - 已新增可重复运行的 `pnpm smoke:mvp:jdbc` 入口，覆盖 strict HTTP/JDBC API smoke 与严格认证 token 正负路径。
-- 继续将上传、批改、发布、导出、申诉、催交、查重和管理配置写入纳入 live 验证，并根据需要使用 `SMOKE_INCLUDE_WRITES=1 pnpm smoke:mvp:jdbc`。
+- 已用 `SMOKE_INCLUDE_WRITES=1 pnpm smoke:mvp:jdbc` 跑通上传、批改、发布、导出、申诉、催交、查重和管理配置写入。
+- 后续继续把这条 live smoke 的断言从“接口成功”增强为关键字段校验和数据落库校验。
 
 ### 3. 工程质量
 
