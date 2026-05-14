@@ -20,6 +20,9 @@ python3 ai/scoring/local_provider.py \
 ```
 
 The command writes a `GradingResultSummary`-compatible JSON document to stdout.
+The local scorer now uses a deterministic keyword engine: each rubric point
+collects `keywords` and `synonyms`, matches them against evidence text, applies
+the point score budget, and emits both matched and missing evidence.
 
 ## Custom Rubric
 
@@ -40,11 +43,25 @@ The expected rubric format is:
       "title": "需求与设计",
       "score": 20,
       "points": [
-        { "title": "功能模块完整", "keywords": ["登录", "课程", "任务", "提交"] }
+        {
+          "title": "功能模块完整",
+          "score": 12,
+          "keywords": ["登录", "课程", "任务", "提交"],
+          "synonyms": ["报告提交"]
+        }
       ]
     }
   ]
 }
+```
+
+Optional evidence input can be provided directly or from a file:
+
+```bash
+python3 ai/scoring/local_provider.py \
+  --rubric-file ai/scoring/sample-rubric.json \
+  --evidence-text "登录 课程 任务 提交 ER图 表结构 运行截图" \
+  ...
 ```
 
 ## Semantic Scoring Migration Notes

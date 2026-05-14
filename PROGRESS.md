@@ -876,6 +876,26 @@
 - `README.md`
 - `PROGRESS.md`
 
+### 38.1 关键词规则评分引擎
+
+- 已将本地评分 provider 从固定扣分升级为关键词/同义词命中评分。
+- 评分会按 rubric 得分点拆分分值预算，统计命中和缺失关键词，并生成可复核 evidence。
+- 未配置得分点的评分项会按报告结构完整度保守扣分，避免无规则时给满分。
+- 已为 Python CLI 增加 `--evidence-text` 和 `--evidence-file`，便于后续接入 OCR 文本或语义评分结果。
+- 已同步升级 Java 后端 `LocalScoringProvider`，创建批改任务时也使用同类规则评分逻辑。
+- 已修正 `CommandScoringProvider` 的外部命令工作目录，支持从服务目录启动时调用仓库根目录下的 `ai/scoring` 脚本。
+- 已更新评分 README、sample rubric、AI 验证脚本和进度记录。
+
+主要代码：
+
+- `ai/scoring/local_provider.py`
+- `ai/scoring/sample-rubric.json`
+- `ai/scoring/README.md`
+- `backend/grading-service/src/main/java/com/trainmark/grading/LocalScoringProvider.java`
+- `backend/grading-service/src/main/java/com/trainmark/grading/CommandScoringProvider.java`
+- `scripts/verify-ai.sh`
+- `PROGRESS.md`
+
 ### 39. 批注 PDF Provider CLI 契约
 
 - 已补齐 `ai/annotation/` 目录，承接后续 PDF 批注生成能力。
@@ -1481,6 +1501,17 @@ AI Provider 验证脚本已通过：
 
 ```bash
 pnpm verify:ai
+```
+
+关键词规则评分引擎已通过 AI 契约验证、grading 模块编译和单服务接口验证：
+
+```bash
+pnpm verify:ai
+mvn -f backend/pom.xml -pl grading-service -am package -DskipTests
+bash scripts/dev-service.sh grading-service
+curl --noproxy '*' -fsS -X POST http://localhost:8085/api/grading/jobs -H 'Content-Type: application/json' -d '{"assignmentId":1,"rubricId":1,"submissionIds":[901]}'
+curl --noproxy '*' -fsS 'http://localhost:8085/api/grading/results?assignmentId=1'
+pnpm verify:mvp
 ```
 
 文档预处理 Provider 和 OCR 后端接入已通过 CLI、模块编译和单服务接口验证：

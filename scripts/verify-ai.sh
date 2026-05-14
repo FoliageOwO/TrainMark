@@ -44,8 +44,11 @@ python3 ai/scoring/local_provider.py \
   --student-id 2 \
   --student-name 张三 \
   --student-no 2024010101 \
+  --file-name database-report.pdf \
   --rubric-file ai/scoring/sample-rubric.json > "$TMP_DIR/grading-result.json"
 python3 -m json.tool "$TMP_DIR/grading-result.json" >/dev/null
+grep -q '关键词/同义词命中' "$TMP_DIR/grading-result.json"
+grep -q '数据库设计合理：命中' "$TMP_DIR/grading-result.json"
 
 echo "[verify:ai] Annotation provider"
 python3 ai/annotation/local_provider.py \

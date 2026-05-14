@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.trainmark.shared.dto.GradingResultSummary;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Path;
 import java.time.Duration;
 
 public class CommandScoringProvider implements ScoringProvider {
@@ -28,7 +29,9 @@ public class CommandScoringProvider implements ScoringProvider {
         .replace("{studentNo}", shellQuote(request.studentNo()))
         .replace("{fileName}", shellQuote(request.fileName()));
     try {
-      var process = new ProcessBuilder(shellCommand(command)).start();
+      var processBuilder = new ProcessBuilder(shellCommand(command));
+      processBuilder.directory(workspaceRoot().toFile());
+      var process = processBuilder.start();
       var completed = process.waitFor(timeout.toMillis(), java.util.concurrent.TimeUnit.MILLISECONDS);
       var stdout = new String(process.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
       var stderr = new String(process.getErrorStream().readAllBytes(), StandardCharsets.UTF_8);
@@ -60,5 +63,17 @@ public class CommandScoringProvider implements ScoringProvider {
       return "\"" + value.replace("\"", "\\\"") + "\"";
     }
     return "'" + value.replace("'", "'\"'\"'") + "'";
+  }
+
+  private Path workspaceRoot() {
+    var current = Path.of(System.getProperty("user.dir")).toAbsolutePath();
+    var cursor = current;
+    while (cursor != null) {
+      if (cursor.resolve("ai/scoring/local_provider.py").toFile().exists()) {
+        return cursor;
+      }
+      cursor = cursor.getParent();
+    }
+    return current;
   }
 }
