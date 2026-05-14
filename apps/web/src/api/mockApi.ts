@@ -481,7 +481,7 @@ export const mockApi = {
     return appeal;
   },
   startGradingJob(): GradingJobSummary {
-    return { id: 2, assignmentId: 1, rubricId: 1, totalSubmissions: 18, completedSubmissions: 0, status: 'PENDING', confidence: 0, createdAt: new Date().toISOString() };
+    return { id: 2, assignmentId: 1, rubricId: 1, totalSubmissions: 18, completedSubmissions: 18, status: 'COMPLETED', confidence: 86, createdAt: new Date().toISOString() };
   },
   createUploadReceipt(fileName: string): UploadReceipt {
     return {

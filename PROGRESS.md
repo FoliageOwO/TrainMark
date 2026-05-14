@@ -439,6 +439,20 @@
 - `apps/web/src/api/httpApi.ts`
 - `PROGRESS.md`
 
+### 28. 本地规则评分 Provider
+
+- 已扩展评分服务内存实现，创建批改任务时会立即执行本地规则评分。
+- 批改任务会返回 `COMPLETED` 状态，完成份数、总份数和置信度可直接用于前端进度展示。
+- 当提交尚无批改结果时，服务会根据评分标准、得分点、关键词和分项分值生成可复核的初评结果。
+- 生成的分项结果包含 AI 分、教师初始分、扣分说明、教师复核提示、置信度和证据标签。
+- 前端 mock 的启动批改行为已同步为完成态，保持 HTTP/mock 演示一致。
+
+主要代码：
+
+- `backend/grading-service/src/main/java/com/trainmark/grading/GradingService.java`
+- `apps/web/src/api/mockApi.ts`
+- `PROGRESS.md`
+
 ## 已验证
 
 前端构建已通过：
@@ -531,6 +545,14 @@ pnpm lint:web
 pnpm build:web
 ```
 
+本地规则评分 Provider 已通过后端模块编译、前端静态检查和构建：
+
+```bash
+mvn -f backend/pom.xml -pl grading-service -am package -DskipTests
+pnpm lint:web
+pnpm build:web
+```
+
 全部后端模块已通过编译：
 
 ```bash
@@ -569,6 +591,7 @@ Docker Compose 暂未本地验证，因为当前机器没有 Docker。
 - `feat: add grade exports`
 - `chore: add mvp verifier`
 - `feat: add local ocr provider`
+- `feat: add local scoring provider`
 
 ## 接下来需要做
 
@@ -577,7 +600,7 @@ Docker Compose 暂未本地验证，因为当前机器没有 Docker。
 - 接入 PaddleOCR。
 - 增加 PDF / Word / 图片转换流程。
 - 将本地 OCR provider 替换为 PaddleOCR provider，并持久化 OCR 结果。
-- 实现规则评分、关键词匹配和语义相似度评分。
+- 将本地规则评分 provider 替换为真实关键词、语义相似度和规则扣分引擎。
 - 实现批注 PDF 生成。
 
 ### 2. 持久化与真实联调

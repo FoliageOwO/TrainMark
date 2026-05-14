@@ -38,6 +38,7 @@ public class GradingService {
   private final AtomicLong itemIds = new AtomicLong(10);
   private final AtomicLong pointIds = new AtomicLong(100);
   private final AtomicLong jobIds = new AtomicLong(2);
+  private final AtomicLong resultIds = new AtomicLong(2);
   private final AtomicLong auditIds = new AtomicLong(1);
   private final AtomicLong appealIds = new AtomicLong(2);
   private final AtomicLong exportIds = new AtomicLong(2);
@@ -184,14 +185,15 @@ public class GradingService {
 
   public GradingJobSummary createJob(CreateGradingJobRequest request) {
     var id = jobIds.getAndIncrement();
+    request.submissionIds().forEach(submissionId -> ensureScoredResult(request.assignmentId(), submissionId));
     var job = new GradingJobSummary(
         id,
         request.assignmentId(),
         request.rubricId(),
         request.submissionIds().size(),
-        0,
-        GradingJobStatus.PENDING,
-        0,
+        request.submissionIds().size(),
+        GradingJobStatus.COMPLETED,
+        86,
         OffsetDateTime.now()
     );
     jobs.put(id, job);
@@ -457,5 +459,60 @@ public class GradingService {
       entries.addAll(appended);
       return List.copyOf(entries);
     });
+  }
+
+  private void ensureScoredResult(Long assignmentId, Long submissionId) {
+    var exists = results.values().stream().anyMatch(item -> submissionId.equals(item.submissionId()));
+    if (exists) {
+      return;
+    }
+
+    var rubric = rubrics.values().stream()
+        .filter(item -> assignmentId.equals(item.assignmentId()))
+        .findFirst()
+        .orElse(rubrics.values().iterator().next());
+    var scoredItems = rubric.items().stream()
+        .map(item -> {
+          var confidence = item.points().isEmpty() ? 82 : Math.min(96, 82 + item.points().size() * 4);
+          var aiScore = Math.max(0, item.score() - Math.max(2, item.score() / 8));
+          return new GradingItemReview(
+              item.id(),
+              item.title(),
+              item.score(),
+              aiScore,
+              aiScore,
+              "本地规则评分根据关键词、得分点完整度和报告结构完整度自动扣分。",
+              "请教师复核该分项证据后确认。",
+              confidence,
+              item.points().stream()
+                  .map(point -> point.title() + "：" + String.join("、", point.keywords()))
+                  .toList()
+          );
+        })
+        .toList();
+    var teacherScore = scoredItems.stream().mapToInt(GradingItemReview::teacherScore).sum();
+    var resultId = resultIds.getAndIncrement();
+    results.put(resultId, new GradingResultSummary(
+        resultId,
+        assignmentId,
+        submissionId,
+        2L,
+        "张三",
+        "2024010101",
+        "自动批改报告-" + submissionId + ".pdf",
+        "/previews/submissions/" + submissionId + "/report.pdf",
+        "/annotations/submissions/" + submissionId + "/annotated.pdf",
+        rubric.totalScore(),
+        teacherScore,
+        teacherScore,
+        86,
+        ReviewStatus.NEEDS_REVIEW,
+        PublicationStatus.NOT_PUBLISHED,
+        "本地规则评分已完成初评，建议教师重点复核扣分原因和证据定位。",
+        null,
+        null,
+        scoredItems,
+        List.of(new GradingAnnotationSummary(resultId, 1, "自动评分摘要", "请复核规则评分生成的扣分证据", "info"))
+    ));
   }
 }
