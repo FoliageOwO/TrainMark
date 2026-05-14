@@ -219,6 +219,24 @@
 - `README.md`
 - `PROGRESS.md`
 
+### 10.5 批改任务 PostgreSQL 存储
+
+- 已为批改任务抽象 `GradingJobStore`，默认保留内存实现和演示种子任务。
+- 已新增 JDBC 实现，可将批改任务写入 `grading_jobs`，并按作业读取任务列表。
+- 已保持创建任务时同步生成当前内存批改结果，避免本模块扩大到批改结果持久化。
+- 已复用 grading-service 的 PostgreSQL 连接配置，并补充独立 `TRAINMARK_GRADING_JOB_STORE` 切换项。
+
+主要代码：
+
+- `backend/grading-service/src/main/java/com/trainmark/grading/GradingJobStore.java`
+- `backend/grading-service/src/main/java/com/trainmark/grading/InMemoryGradingJobStore.java`
+- `backend/grading-service/src/main/java/com/trainmark/grading/JdbcGradingJobStore.java`
+- `backend/grading-service/src/main/java/com/trainmark/grading/GradingService.java`
+- `backend/grading-service/src/main/resources/application.yml`
+- `.env.example`
+- `README.md`
+- `PROGRESS.md`
+
 ### 11. OCR 与文档结构化基础
 
 - 已实现 OCR 任务状态枚举。
@@ -1721,6 +1739,21 @@ curl --noproxy '*' -H 'Content-Type: application/json' -d '{...}' http://localho
 curl --noproxy '*' 'http://localhost:8085/api/grading/results/appeals?status=ACCEPTED'
 ```
 
+批改任务 PostgreSQL 存储已通过后端模块编译：
+
+```bash
+mvn -f backend/pom.xml -pl grading-service -am package -DskipTests
+```
+
+评分服务默认内存模式已通过单服务启动、批改任务列表/创建和任务创建后批改结果读取验证：
+
+```bash
+timeout 90s bash scripts/dev-service.sh grading-service
+curl --noproxy '*' 'http://localhost:8085/api/grading/jobs?assignmentId=1'
+curl --noproxy '*' -H 'Content-Type: application/json' -d '{...}' http://localhost:8085/api/grading/jobs
+curl --noproxy '*' 'http://localhost:8085/api/grading/results?assignmentId=1'
+```
+
 ## 已提交记录
 
 主要提交：
@@ -1795,6 +1828,7 @@ curl --noproxy '*' 'http://localhost:8085/api/grading/results/appeals?status=ACC
 - `feat: add grade export jdbc store`
 - `feat: add publication audit jdbc store`
 - `feat: add appeal jdbc store`
+- `feat: add grading job jdbc store`
 
 ## 接下来需要做
 

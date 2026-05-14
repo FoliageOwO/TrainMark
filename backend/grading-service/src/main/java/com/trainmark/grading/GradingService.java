@@ -1,6 +1,5 @@
 package com.trainmark.grading;
 
-import com.trainmark.shared.GradingJobStatus;
 import com.trainmark.shared.AppealStatus;
 import com.trainmark.shared.PublicationStatus;
 import com.trainmark.shared.ReviewStatus;
@@ -37,11 +36,10 @@ public class GradingService {
   private final GradeExportStore gradeExportStore;
   private final GradePublicationAuditStore publicationAuditStore;
   private final AppealStore appealStore;
+  private final GradingJobStore gradingJobStore;
   private final ScoringProvider scoringProvider;
   private final AnnotationProvider annotationProvider;
-  private final AtomicLong jobIds = new AtomicLong(2);
   private final AtomicLong resultIds = new AtomicLong(2);
-  private final Map<Long, GradingJobSummary> jobs = new LinkedHashMap<>();
   private final Map<Long, GradingResultSummary> results = new LinkedHashMap<>();
 
   public GradingService(
@@ -49,6 +47,7 @@ public class GradingService {
       GradeExportStore gradeExportStore,
       GradePublicationAuditStore publicationAuditStore,
       AppealStore appealStore,
+      GradingJobStore gradingJobStore,
       ScoringProvider scoringProvider,
       AnnotationProvider annotationProvider
   ) {
@@ -56,9 +55,9 @@ public class GradingService {
     this.gradeExportStore = gradeExportStore;
     this.publicationAuditStore = publicationAuditStore;
     this.appealStore = appealStore;
+    this.gradingJobStore = gradingJobStore;
     this.scoringProvider = scoringProvider;
     this.annotationProvider = annotationProvider;
-    jobs.put(1L, new GradingJobSummary(1L, 1L, 1L, 65, 47, GradingJobStatus.SCORING, 86, OffsetDateTime.now().minusMinutes(18)));
     results.put(1L, new GradingResultSummary(
         1L,
         1L,
@@ -130,26 +129,12 @@ public class GradingService {
   }
 
   public Collection<GradingJobSummary> listJobs(Long assignmentId) {
-    return jobs.values().stream()
-        .filter(item -> assignmentId == null || assignmentId.equals(item.assignmentId()))
-        .toList();
+    return gradingJobStore.listJobs(assignmentId);
   }
 
   public GradingJobSummary createJob(CreateGradingJobRequest request) {
-    var id = jobIds.getAndIncrement();
     request.submissionIds().forEach(submissionId -> ensureScoredResult(request.assignmentId(), submissionId));
-    var job = new GradingJobSummary(
-        id,
-        request.assignmentId(),
-        request.rubricId(),
-        request.submissionIds().size(),
-        request.submissionIds().size(),
-        GradingJobStatus.COMPLETED,
-        86,
-        OffsetDateTime.now()
-    );
-    jobs.put(id, job);
-    return job;
+    return gradingJobStore.createJob(request);
   }
 
   public Collection<GradingResultSummary> listResults(Long assignmentId, ReviewStatus reviewStatus) {
