@@ -3,6 +3,7 @@
 TrainMark AI，中文名“智训批”，是面向高校实训教学场景的实训报告智能批改与管理系统。项目采用 Monorepo 组织，前端、后端、AI 服务、基础设施配置和文档均放在本仓库中。
 
 完整产品计划见 [`PROJECT.md`](./PROJECT.md)。
+当前 MVP 接口清单见 [`docs/API.md`](./docs/API.md)。
 
 ## 当前进度
 

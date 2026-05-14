@@ -335,6 +335,19 @@
 - `README.md`
 - `PROGRESS.md`
 
+### 21. MVP 接口文档
+
+- 已新增 `docs/API.md`，按服务分组整理当前 MVP API。
+- 已记录 gateway 地址、直连服务端口、统一响应 envelope、主要请求 DTO 和响应 DTO。
+- 已覆盖认证、组织用户、课程任务、提交上传、收集催交、评分标准、OCR、人工复核、发布审计、申诉、查重和统计分析接口。
+- 已在 README 增加接口文档入口。
+
+主要代码：
+
+- `docs/API.md`
+- `README.md`
+- `PROGRESS.md`
+
 ## 已验证
 
 前端构建已通过：
@@ -379,6 +392,12 @@ mvn -f backend/pom.xml package -DskipTests
 pnpm --filter trainmark-ai-web lint
 ```
 
+MVP 接口文档已根据当前控制器注解和 gateway 路由核对：
+
+```bash
+rg -n "@(GetMapping|PostMapping|PatchMapping|RequestMapping)" backend/*-service/src/main/java -g "*.java"
+```
+
 全部后端模块已通过编译：
 
 ```bash
@@ -410,6 +429,7 @@ Docker Compose 暂未本地验证，因为当前机器没有 Docker。
 - `feat: add frontend http api`
 - `feat: extend assessment schema`
 - `chore: add frontend lint config`
+- `docs: add api reference`
 
 ## 接下来需要做
 
@@ -431,4 +451,3 @@ Docker Compose 暂未本地验证，因为当前机器没有 Docker。
 
 - 拆分前端页面组件。
 - 增加基础测试。
-- 补接口文档。
