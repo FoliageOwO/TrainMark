@@ -33,7 +33,7 @@ Most services still use in-memory data for local MVP demonstration. The gateway 
 | ocr-service | 8086 | `/api/ocr/**` |
 | similarity-service | 8087 | `/api/similarity/**` |
 | notification-service | 8089 | `/api/notifications/**` |
-| admin-service | 8090 | no MVP public API yet |
+| admin-service | 8090 | `/api/admin/**` |
 | analytics-service | 8091 | `/api/analytics/**` |
 
 ## Auth
@@ -143,6 +143,7 @@ Most services still use in-memory data for local MVP demonstration. The gateway 
 | Method | Path | Request | Response data |
 |---|---|---|---|
 | `GET` | `/api/admin/audit-logs?action=GRADE_EXPORT&resourceType=GRADE_EXPORT` | optional `action`, `resourceType` query | `AuditLogSummary[]` |
+| `GET` | `/api/admin/settings?category=AI` | optional `category` query | `SystemSettingSummary[]` |
 
 ## Frontend HTTP Mode
 

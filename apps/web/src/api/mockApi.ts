@@ -18,6 +18,7 @@ import type {
   RubricSummary,
   LossPointSummary,
   SimilarityJobSummary,
+  SystemSettingSummary,
   StudentImportPreview,
   SubmissionTask,
   TeachingClassSummary,
@@ -281,6 +282,15 @@ const auditLogs: AuditLogSummary[] = [
   { id: 7, actorName: '王老师', action: 'GRADE_EXPORT', resourceType: 'GRADE_EXPORT', resourceId: '1', detail: '导出 CSV 成绩单 48 行', ipAddress: '127.0.0.1', createdAt: '2026-05-14T14:00:00+08:00' },
 ];
 
+const systemSettings: SystemSettingSummary[] = [
+  { key: 'ai.ocr.provider', name: 'OCR Provider', value: 'LOCAL_DETERMINISTIC', category: 'AI', sensitive: false },
+  { key: 'ai.scoring.provider', name: 'Scoring Provider', value: 'LOCAL_RULES', category: 'AI', sensitive: false },
+  { key: 'upload.max-file-size-mb', name: 'Max Upload Size', value: '50', category: 'FILE', sensitive: false },
+  { key: 'export.retention-days', name: 'Export Retention', value: '30', category: 'EXPORT', sensitive: false },
+  { key: 'notification.default-channels', name: 'Default Reminder Channels', value: 'IN_APP,EMAIL,WECHAT_WORK', category: 'NOTIFICATION', sensitive: false },
+  { key: 'security.jwt-secret', name: 'JWT Secret', value: '******', category: 'SECURITY', sensitive: true },
+];
+
 export const mockApi = {
   login(role: RoleCode): UserProfile {
     return users[role];
@@ -456,6 +466,9 @@ export const mockApi = {
   },
   listAuditLogs(): AuditLogSummary[] {
     return auditLogs;
+  },
+  listSystemSettings(): SystemSettingSummary[] {
+    return systemSettings;
   },
   listAppeals(resultId?: number, studentId?: number): AppealSummary[] {
     return appeals.filter((item) => (

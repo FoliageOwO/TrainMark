@@ -16,6 +16,7 @@ import type {
   ReminderResult,
   RubricSummary,
   SimilarityJobSummary,
+  SystemSettingSummary,
   TeachingClassSummary,
   UploadReceipt,
   UnsubmittedStudent,
@@ -48,6 +49,7 @@ export type WorkspaceData = {
   appeals: AppealSummary[];
   similarityJobs: SimilarityJobSummary[];
   auditLogs: AuditLogSummary[];
+  systemSettings: SystemSettingSummary[];
 };
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8080';
@@ -78,6 +80,7 @@ export async function loadWorkspaceData(selectedCourseId: number, studentId: num
     appeals,
     similarityJobs,
     auditLogs,
+    systemSettings,
   ] = await Promise.all([
     getOr('/api/courses', mockApi.listCourses()),
     getOr(`/api/courses/${selectedCourseId}/classes`, mockApi.listClasses(selectedCourseId)),
@@ -97,6 +100,7 @@ export async function loadWorkspaceData(selectedCourseId: number, studentId: num
     getOr('/api/grading/results/appeals', mockApi.listAppeals()),
     getOr('/api/similarity/jobs', mockApi.listSimilarityJobs()),
     getOr('/api/admin/audit-logs', mockApi.listAuditLogs()),
+    getOr('/api/admin/settings', mockApi.listSystemSettings()),
   ]);
 
   return {
@@ -119,6 +123,7 @@ export async function loadWorkspaceData(selectedCourseId: number, studentId: num
     appeals,
     similarityJobs,
     auditLogs,
+    systemSettings,
   };
 }
 

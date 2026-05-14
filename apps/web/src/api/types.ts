@@ -332,3 +332,11 @@ export type AuditLogSummary = {
   ipAddress: string;
   createdAt: string;
 };
+
+export type SystemSettingSummary = {
+  key: string;
+  name: string;
+  value: string;
+  category: 'AI' | 'FILE' | 'EXPORT' | 'NOTIFICATION' | 'SECURITY';
+  sensitive: boolean;
+};

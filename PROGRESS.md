@@ -477,6 +477,27 @@
 - `README.md`
 - `PROGRESS.md`
 
+### 30. 管理端系统配置
+
+- 已新增系统配置摘要 DTO。
+- 已为 admin-service 增加系统配置服务和查询接口，支持按配置分类筛选。
+- 已在前端 mock 和 HTTP 数据层加入系统配置读取。
+- 已在管理端看板新增系统与模型配置视图，覆盖 AI、文件、导出、通知和安全配置。
+- 已更新 API 文档、README 状态表和进度记录。
+
+主要代码：
+
+- `backend/shared/src/main/java/com/trainmark/shared/dto/SystemSettingSummary.java`
+- `backend/admin-service/src/main/java/com/trainmark/admin/SystemSettingService.java`
+- `backend/admin-service/src/main/java/com/trainmark/admin/SystemSettingController.java`
+- `apps/web/src/api/types.ts`
+- `apps/web/src/api/mockApi.ts`
+- `apps/web/src/api/httpApi.ts`
+- `apps/web/src/pages/App.tsx`
+- `docs/API.md`
+- `README.md`
+- `PROGRESS.md`
+
 ## 已验证
 
 前端构建已通过：
@@ -585,6 +606,14 @@ pnpm lint:web
 pnpm build:web
 ```
 
+管理端系统配置已通过后端模块编译、前端静态检查和构建：
+
+```bash
+mvn -f backend/pom.xml -pl admin-service -am package -DskipTests
+pnpm lint:web
+pnpm build:web
+```
+
 全部后端模块已通过编译：
 
 ```bash
@@ -625,6 +654,7 @@ Docker Compose 暂未本地验证，因为当前机器没有 Docker。
 - `feat: add local ocr provider`
 - `feat: add local scoring provider`
 - `feat: add admin audit logs`
+- `feat: add admin settings`
 
 ## 接下来需要做
 

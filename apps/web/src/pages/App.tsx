@@ -115,6 +115,7 @@ export function App() {
   const appeals = workspaceData?.appeals.filter((item) => item.studentId === user.id) ?? mockApi.listAppeals(undefined, user.id);
   const similarityJobs = workspaceData?.similarityJobs ?? mockApi.listSimilarityJobs();
   const auditLogs = workspaceData?.auditLogs ?? mockApi.listAuditLogs();
+  const systemSettings = workspaceData?.systemSettings ?? mockApi.listSystemSettings();
 
   useEffect(() => {
     if (!shouldUseHttpApi()) {
@@ -158,6 +159,7 @@ export function App() {
           organizations={organizations}
           students={students}
           auditLogs={auditLogs}
+          systemSettings={systemSettings}
         />
       ) : (
         <TeacherDashboard
@@ -953,13 +955,16 @@ function AdminDashboard({
   organizations,
   students,
   auditLogs,
+  systemSettings,
 }: {
   organizations: ReturnType<typeof mockApi.listOrganizations>;
   students: ReturnType<typeof mockApi.listUsers>;
   auditLogs: ReturnType<typeof mockApi.listAuditLogs>;
+  systemSettings: ReturnType<typeof mockApi.listSystemSettings>;
 }) {
   const activeStudents = students.filter((student) => student.status === 'ACTIVE').length;
   const resourceTypes = Array.from(new Set(auditLogs.map((item) => item.resourceType)));
+  const aiSettings = systemSettings.filter((item) => item.category === 'AI');
 
   return (
     <>
@@ -1026,6 +1031,29 @@ function AdminDashboard({
               <div className="audit-row" key={log.id}>
                 <span>{log.action} · {log.actorName}</span>
                 <small>{log.resourceType} #{log.resourceId} · {log.detail} · {formatDate(log.createdAt)}</small>
+              </div>
+            ))}
+          </div>
+        </article>
+      </section>
+
+      <section className="management-grid">
+        <article className="panel roster-panel">
+          <div className="panel-heading">
+            <div>
+              <p className="eyebrow">System Settings</p>
+              <h3>系统与模型配置</h3>
+            </div>
+            <span className="status-pill">{aiSettings.length} 项 AI 配置</span>
+          </div>
+          <div className="student-list">
+            {systemSettings.map((setting) => (
+              <div className="student-row" key={setting.key}>
+                <div>
+                  <strong>{setting.name}</strong>
+                  <span>{setting.key} · {setting.category}</span>
+                </div>
+                <span className="status-pill">{setting.sensitive ? '敏感配置' : setting.value}</span>
               </div>
             ))}
           </div>
