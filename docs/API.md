@@ -18,6 +18,10 @@ All current endpoints return the shared response envelope:
 }
 ```
 
+File upload validation errors also use this envelope with HTTP 400. Business
+validation failures return `success: false` and a message; DTO validation
+failures return field-level messages in `data`.
+
 Most services still use in-memory data for local MVP demonstration. The gateway forwards `/api/**` requests to the service ports listed below.
 
 ## Service Ports
@@ -70,7 +74,10 @@ Most services still use in-memory data for local MVP demonstration. The gateway 
 
 Upload initialization validates file extension, content type and file size. The
 default accepted formats are PDF, Word, PNG and JPG/JPEG. The default max file
-size is 50MB and can be overridden with `UPLOAD_MAX_FILE_SIZE_MB`.
+size is 50MB and can be overridden with `UPLOAD_MAX_FILE_SIZE_MB`. Upload
+initialization and completion return `ApiResponse.fail(...)` with HTTP 400 when
+the request body is invalid, file constraints fail, the upload session is
+missing, the object key does not match, or the checksum is inconsistent.
 
 | Method | Path | Request | Response data |
 |---|---|---|---|

@@ -744,6 +744,21 @@
 - `README.md`
 - `PROGRESS.md`
 
+### 45. 上传错误统一响应
+
+- 已为 `file-service` 增加上传接口异常处理器。
+- 上传请求体字段校验失败时返回 HTTP 400，并在 `ApiResponse.data` 中返回字段级错误信息。
+- 上传业务校验失败时返回 HTTP 400 和 `ApiResponse.fail(...)`，覆盖文件大小、内容类型、扩展名、上传会话、objectKey 和 checksum 错误。
+- 请求体无法解析时返回 HTTP 400 和统一错误 envelope，避免暴露 Spring 默认错误结构。
+- 已更新 API 文档和 README 状态表。
+
+主要代码：
+
+- `backend/file-service/src/main/java/com/trainmark/file/FileExceptionHandler.java`
+- `docs/API.md`
+- `README.md`
+- `PROGRESS.md`
+
 ## 已验证
 
 前端构建已通过：
@@ -957,6 +972,12 @@ mvn -f backend/pom.xml -pl grading-service -am package -DskipTests
 mvn -f backend/pom.xml -pl file-service -am package -DskipTests
 ```
 
+上传错误统一响应已通过后端模块编译：
+
+```bash
+mvn -f backend/pom.xml -pl file-service -am package -DskipTests
+```
+
 全部后端模块已通过编译：
 
 ```bash
@@ -1012,6 +1033,7 @@ Docker Compose 已完成配置展开校验，暂未拉起 PostgreSQL、Redis、R
 - `feat: add ocr provider switch`
 - `feat: add scoring provider switch`
 - `feat: validate uploads`
+- `feat: add upload error responses`
 
 ## 接下来需要做
 
