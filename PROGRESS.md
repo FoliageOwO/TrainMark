@@ -914,6 +914,21 @@
 - `README.md`
 - `PROGRESS.md`
 
+### 56. 后端开发启动修复
+
+- 已修复 `scripts/dev-backend.sh` 的 Maven 启动方式，避免 `spring-boot:run` 误在根聚合 POM 上执行。
+- 后端总启动脚本会先安装根父 POM 和 `shared` 模块，再分别从具体服务模块启动 Spring Boot。
+- 已新增 `scripts/dev-service.sh`，统一单服务启动流程。
+- 已将 `package.json` 中所有 `dev:backend:*` 脚本切换到 `scripts/dev-service.sh`。
+- 该修复来自真实启动验证中暴露的 `Unable to find a suitable main class` 错误。
+
+主要代码：
+
+- `scripts/dev-backend.sh`
+- `scripts/dev-service.sh`
+- `package.json`
+- `PROGRESS.md`
+
 ## 已验证
 
 前端构建已通过：
@@ -1201,6 +1216,14 @@ bash -n scripts/smoke-api.sh
 SMOKE_DRY_RUN=1 SMOKE_INCLUDE_WRITES=1 pnpm smoke:api
 ```
 
+后端开发启动脚本已通过脚本语法检查和单服务启动验证：
+
+```bash
+bash -n scripts/dev-backend.sh
+bash -n scripts/dev-service.sh
+timeout 25s bash scripts/dev-service.sh auth-service
+```
+
 全部后端模块已通过编译：
 
 ```bash
@@ -1267,6 +1290,7 @@ Docker Compose 已完成配置展开校验，暂未拉起 PostgreSQL、Redis、R
 - `chore: add smoke retries`
 - `chore: add mvp dev launcher`
 - `chore: smoke write apis`
+- `fix: start backend services`
 
 ## 接下来需要做
 
