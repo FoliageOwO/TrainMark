@@ -580,6 +580,18 @@
 - `apps/web/src/pages/App.tsx`
 - `PROGRESS.md`
 
+### 22.5 教师端成绩分析组件拆分
+
+- 已从教师端工作台中拆出 `TeacherAnalyticsPanel`，成绩统计、导出记录、高频失分点和课程目标达成度集中维护。
+- 成绩导出下载链接解析和日期展示随组件下沉，减少 `App.tsx` 分析报表展示逻辑。
+- `App.tsx` 继续负责导出任务创建和导出记录状态合并。
+
+主要代码：
+
+- `apps/web/src/components/TeacherAnalyticsPanel.tsx`
+- `apps/web/src/pages/App.tsx`
+- `PROGRESS.md`
+
 ### 23. 前端 HTTP 写操作联调
 
 - 已扩展前端 HTTP API 层，支持在 `VITE_API_MODE=http` 下调用后端写接口。
@@ -1465,6 +1477,14 @@ pnpm verify:mvp
 ```
 
 教师端人工复核组件拆分后已通过静态检查和构建：
+
+```bash
+pnpm --filter trainmark-ai-web lint
+pnpm --filter trainmark-ai-web build
+pnpm verify:mvp
+```
+
+教师端成绩分析组件拆分后已通过静态检查和构建：
 
 ```bash
 pnpm --filter trainmark-ai-web lint
