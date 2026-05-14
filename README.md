@@ -341,7 +341,7 @@ SCORING_PROVIDER=semantic
 
 该适配器会优先调用 SentenceTransformers 语义相似度模型，并在本地未安装模型库时回退为确定性相似度结果。
 
-批注 PDF 地址 `/annotations/submissions/{submissionId}/annotated.pdf` 会根据当前批改结果生成本地摘要 PDF，包含成绩、复核状态、批注和分项证据。
+批注 PDF 地址 `/annotations/submissions/{submissionId}/annotated.pdf` 会根据当前批改结果生成本地摘要 PDF，包含成绩、复核状态、批注和分项证据。ZIP 格式的成绩导出会在 `annotations/` 目录内附带当前作业的批注 PDF。
 
 仅查看将要检查的端点：
 

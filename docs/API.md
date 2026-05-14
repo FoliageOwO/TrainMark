@@ -134,7 +134,7 @@ Generated MVP assets are exposed through the gateway for local demonstration:
 | Method | Path | Response |
 |---|---|---|
 | `GET` | `/annotations/submissions/{submissionId}/annotated.pdf` | annotated PDF placeholder |
-| `GET` | `/exports/assignments/{assignmentId}/{fileName}` | CSV, PDF or ZIP grade export placeholder |
+| `GET` | `/exports/assignments/{assignmentId}/{fileName}` | CSV, PDF or ZIP grade export; ZIP includes annotated PDFs under `annotations/` |
 
 ## Appeals
 

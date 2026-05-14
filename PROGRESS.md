@@ -944,6 +944,22 @@
 - `README.md`
 - `PROGRESS.md`
 
+### 25.1 批注 PDF ZIP 导出包
+
+- 已让 ZIP 格式导出在 `grades.csv` 外附带当前作业批改结果对应的批注 PDF，文件位于 `annotations/annotated-{submissionId}.pdf`。
+- 已在 ZIP README 中写入作业 ID 和批注 PDF 数量，便于下载后核对导出内容。
+- 已将批注 PDF ZIP 资源地址加入 smoke 端点清单，MVP 验证会覆盖该下载入口。
+- 已更新 API 文档和 README，说明 ZIP 导出会包含批注 PDF 包。
+- 本模块已通过后端打包、smoke dry-run 和 MVP 验证脚本。
+
+主要代码：
+
+- `backend/grading-service/src/main/java/com/trainmark/grading/GradingAssetController.java`
+- `scripts/smoke-api.sh`
+- `docs/API.md`
+- `README.md`
+- `PROGRESS.md`
+
 ### 26. MVP 回归验证脚本
 
 - 已新增 `scripts/verify-mvp.sh`，串联当前 MVP 的基础回归验证。
@@ -2632,6 +2648,14 @@ pnpm verify:mvp
 ```bash
 pnpm verify:ai
 mvn -f backend/pom.xml package -DskipTests
+pnpm verify:mvp
+```
+
+批注 PDF ZIP 导出包已通过后端打包、smoke dry-run 和 MVP 验证：
+
+```bash
+mvn -f backend/pom.xml package -DskipTests
+SMOKE_DRY_RUN=1 pnpm smoke:api
 pnpm verify:mvp
 ```
 

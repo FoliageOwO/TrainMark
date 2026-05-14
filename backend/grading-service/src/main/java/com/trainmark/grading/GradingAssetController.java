@@ -76,14 +76,26 @@ public class GradingAssetController {
         zip.putNextEntry(new ZipEntry("grades.csv"));
         zip.write(csvBytes(assignmentId));
         zip.closeEntry();
+        var results = gradingService.listResults(assignmentId, null);
+        for (var result : results) {
+          zip.putNextEntry(new ZipEntry("annotations/annotated-%d.pdf".formatted(result.submissionId())));
+          zip.write(pdfBytes(annotationLines(result)));
+          zip.closeEntry();
+        }
         zip.putNextEntry(new ZipEntry("README.txt"));
-        zip.write("TrainMark AI grade export bundle\n".getBytes(StandardCharsets.UTF_8));
+        zip.write(zipReadme(assignmentId, results.size()).getBytes(StandardCharsets.UTF_8));
         zip.closeEntry();
       }
       return output.toByteArray();
     } catch (IOException exception) {
       throw new IllegalStateException("Failed to build grade export zip", exception);
     }
+  }
+
+  private String zipReadme(Long assignmentId, int annotationCount) {
+    return "TrainMark AI grade export bundle\n"
+        + "Assignment ID: " + assignmentId + "\n"
+        + "Included annotated PDFs: " + annotationCount + "\n";
   }
 
   private List<String> annotationLines(GradingResultSummary result) {
