@@ -20,7 +20,14 @@ apply_sql() {
     psql -v ON_ERROR_STOP=1 -U "$POSTGRES_USER" -d "$POSTGRES_DB" < "$sql_file"
 }
 
+ensure_extended_demo_roles() {
+  docker exec -i "$POSTGRES_CONTAINER" \
+    psql -v ON_ERROR_STOP=1 -U "$POSTGRES_USER" -d "$POSTGRES_DB" < "$ROOT_DIR/backend/db/migration/V12__seed_extended_demo_roles.sql" \
+    >/dev/null
+}
+
 if [[ "$(table_exists users)" == "t" ]]; then
+  ensure_extended_demo_roles
   echo "[db:migrate] core schema already present"
   exit 0
 fi
@@ -29,6 +36,8 @@ echo "[db:migrate] core schema missing; applying local migrations"
 while IFS= read -r sql_file; do
   apply_sql "$sql_file"
 done < <(find "$ROOT_DIR/backend/db/migration" -maxdepth 1 -name 'V*.sql' | sort -V)
+
+ensure_extended_demo_roles
 
 docker exec "$POSTGRES_CONTAINER" \
   psql -v ON_ERROR_STOP=1 -U "$POSTGRES_USER" -d "$POSTGRES_DB" -c \

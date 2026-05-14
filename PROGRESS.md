@@ -2123,6 +2123,21 @@
 - `README.md`
 - `PROGRESS.md`
 
+### 72. JDBC 演示全角色种子与登录冒烟
+
+- 已新增 `V12__seed_extended_demo_roles.sql`，为 JDBC 演示库补齐课程负责人 `owner` 和督导 `supervisor` 账号，并分别绑定 `COURSE_OWNER` 与 `SUPERVISOR` 角色。
+- 已让本地数据库迁移脚本在核心表已存在时仍幂等执行扩展演示角色种子，保证旧 PostgreSQL volume 也能补齐全角色联调数据。
+- 已扩展 API smoke 脚本，覆盖 teacher、student、course owner、supervisor 和 admin 五类登录与 `/api/auth/me` 角色校验。
+- 本模块已通过迁移脚本语法检查、smoke dry-run、现有 55432 PostgreSQL 迁移补齐查询验证。
+
+主要代码：
+
+- `backend/db/migration/V12__seed_extended_demo_roles.sql`
+- `scripts/apply-db-migrations.sh`
+- `scripts/smoke-api.sh`
+- `README.md`
+- `PROGRESS.md`
+
 ## 已验证
 
 前端构建已通过：
@@ -3244,6 +3259,7 @@ pnpm verify:mvp
 - `feat: add grading result jdbc store`
 - `fix: verify jdbc mvp launcher`
 - `feat: add strict http mode`
+- `feat: seed jdbc demo roles`
 
 ## 接下来需要做
 

@@ -182,6 +182,34 @@ json_field() {
   python3 -c "import json, sys; print(json.load(sys.stdin)['data']['$field'])"
 }
 
+assert_profile_role() {
+  local expected_role="$1"
+  python3 -c 'import json, sys; expected = sys.argv[1]; payload = json.load(sys.stdin); roles = payload.get("data", {}).get("roles", []); raise SystemExit(0 if expected in roles else 1)' "$expected_role"
+}
+
+check_login_role() {
+  local label="$1"
+  local username="$2"
+  local expected_role="$3"
+
+  if [[ "$SMOKE_DRY_RUN" == "1" ]]; then
+    post_json "$label login" "$GATEWAY_URL/api/auth/login" "{\"username\":\"$username\",\"password\":\"trainmark\"}"
+    check_api_auth "$label profile" "$GATEWAY_URL/api/auth/me" "<from $label login>"
+    return
+  fi
+
+  local login_response
+  local access_token
+  local profile_response
+  login_response="$(post_json "$label login" "$GATEWAY_URL/api/auth/login" "{\"username\":\"$username\",\"password\":\"trainmark\"}")"
+  access_token="$(json_field accessToken <<< "$login_response")"
+  profile_response="$(curl --noproxy '*' --fail --silent --show-error --max-time 5 \
+    -H "Authorization: Bearer $access_token" \
+    "$GATEWAY_URL/api/auth/me")"
+  api_success "$profile_response"
+  assert_profile_role "$expected_role" <<< "$profile_response"
+}
+
 check_url "gateway health" "$GATEWAY_URL/actuator/health"
 
 check_url "auth-service health" "${AUTH_SERVICE_URL:-http://localhost:8081}/actuator/health"
@@ -195,14 +223,11 @@ check_url "notification-service health" "${NOTIFICATION_SERVICE_URL:-http://loca
 check_url "admin-service health" "${ADMIN_SERVICE_URL:-http://localhost:8090}/actuator/health"
 check_url "analytics-service health" "${ANALYTICS_SERVICE_URL:-http://localhost:8091}/actuator/health"
 
-if [[ "$SMOKE_DRY_RUN" == "1" ]]; then
-  post_json "gateway auth login" "$GATEWAY_URL/api/auth/login" '{"username":"admin","password":"trainmark"}'
-  check_api_auth "gateway auth profile" "$GATEWAY_URL/api/auth/me" "<from auth login>"
-else
-  auth_login_response="$(post_json "gateway auth login" "$GATEWAY_URL/api/auth/login" '{"username":"admin","password":"trainmark"}')"
-  auth_access_token="$(json_field accessToken <<< "$auth_login_response")"
-  check_api_auth "gateway auth profile" "$GATEWAY_URL/api/auth/me" "$auth_access_token"
-fi
+check_login_role "teacher" "teacher" "TEACHER"
+check_login_role "student" "student" "STUDENT"
+check_login_role "course owner" "owner" "COURSE_OWNER"
+check_login_role "supervisor" "supervisor" "SUPERVISOR"
+check_login_role "admin" "admin" "ADMIN"
 check_api "gateway organizations" "$GATEWAY_URL/api/organizations"
 check_api "gateway users" "$GATEWAY_URL/api/users"
 check_api "gateway courses" "$GATEWAY_URL/api/courses"
