@@ -913,6 +913,25 @@
 - `README.md`
 - `PROGRESS.md`
 
+### 39.1 批注 PDF 摘要生成
+
+- 已让本地 `LocalAnnotationProvider` 根据批改结果生成多条批注摘要，覆盖总分、分项扣分原因和 evidence。
+- 已让 `/annotations/submissions/{submissionId}/annotated.pdf` 按提交 ID 查找真实批改结果，生成包含学生、成绩、状态、批注和分项证据的 PDF 摘要。
+- 未找到批改结果时仍返回明确的占位 PDF，避免下载接口出现空响应。
+- 已为 grading asset controller 的路径参数补充显式 `@PathVariable` 名称，避免运行期依赖 Java 参数名反射。
+- 已修正 `CommandAnnotationProvider` 的外部命令工作目录，支持从服务目录启动时调用仓库根目录下的 `ai/annotation` 脚本。
+- 已更新批注 provider README、README 和进度记录。
+
+主要代码：
+
+- `backend/grading-service/src/main/java/com/trainmark/grading/LocalAnnotationProvider.java`
+- `backend/grading-service/src/main/java/com/trainmark/grading/CommandAnnotationProvider.java`
+- `backend/grading-service/src/main/java/com/trainmark/grading/GradingAssetController.java`
+- `backend/grading-service/src/main/java/com/trainmark/grading/GradingService.java`
+- `ai/annotation/README.md`
+- `README.md`
+- `PROGRESS.md`
+
 ### 40. AI Provider 验证脚本
 
 - 已新增 `pnpm verify:ai` 脚本入口。
@@ -1511,6 +1530,19 @@ mvn -f backend/pom.xml -pl grading-service -am package -DskipTests
 bash scripts/dev-service.sh grading-service
 curl --noproxy '*' -fsS -X POST http://localhost:8085/api/grading/jobs -H 'Content-Type: application/json' -d '{"assignmentId":1,"rubricId":1,"submissionIds":[901]}'
 curl --noproxy '*' -fsS 'http://localhost:8085/api/grading/results?assignmentId=1'
+pnpm verify:mvp
+```
+
+批注 PDF 摘要生成已通过 grading 模块编译和单服务下载验证：
+
+```bash
+mvn -f backend/pom.xml -pl grading-service -am package -DskipTests
+bash scripts/dev-service.sh grading-service
+curl --noproxy '*' -fsS -X POST http://localhost:8085/api/grading/jobs -H 'Content-Type: application/json' -d '{"assignmentId":1,"rubricId":1,"submissionIds":[902]}'
+curl --noproxy '*' -fsS http://localhost:8085/annotations/submissions/902/annotated.pdf > /tmp/trainmark-annotated-902.pdf
+head -c 8 /tmp/trainmark-annotated-902.pdf | grep -q '%PDF-1.'
+grep -a 'Score:' /tmp/trainmark-annotated-902.pdf
+grep -a 'Items:' /tmp/trainmark-annotated-902.pdf
 pnpm verify:mvp
 ```
 

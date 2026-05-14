@@ -323,6 +323,8 @@ DOCUMENT_PREPROCESSOR_PROVIDER=command
 DOCUMENT_PREPROCESSOR_COMMAND="python3 ai/document/local_converter.py --submission-id {submissionId} --object-key {objectKey}"
 ```
 
+批注 PDF 地址 `/annotations/submissions/{submissionId}/annotated.pdf` 会根据当前批改结果生成本地摘要 PDF，包含成绩、复核状态、批注和分项证据。
+
 仅查看将要检查的端点：
 
 ```bash

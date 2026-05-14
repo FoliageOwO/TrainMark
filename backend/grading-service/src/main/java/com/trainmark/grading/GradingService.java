@@ -24,6 +24,7 @@ import com.trainmark.shared.dto.WithdrawGradeRequest;
 import java.time.OffsetDateTime;
 import java.util.Collection;
 import java.util.List;
+import java.util.Optional;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -81,6 +82,12 @@ public class GradingService {
   public GradingResultSummary getResult(Long resultId) {
     return gradingResultStore.findResult(resultId)
         .orElseThrow(() -> new IllegalArgumentException("Grading result not found: " + resultId));
+  }
+
+  public Optional<GradingResultSummary> findResultBySubmission(Long submissionId) {
+    return gradingResultStore.listResults(null, null).stream()
+        .filter(result -> submissionId.equals(result.submissionId()))
+        .findFirst();
   }
 
   public GradingResultSummary updateReviewItem(Long resultId, UpdateReviewItemRequest request) {

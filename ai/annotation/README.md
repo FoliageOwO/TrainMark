@@ -49,3 +49,12 @@ mvn -f backend/pom.xml -pl grading-service spring-boot:run
 Placeholders are shell-quoted by the backend before execution. The command must
 print a JSON manifest containing `annotationPdfUrl`; optional `annotations`
 entries are mapped back to `GradingAnnotationSummary`.
+
+## Local Asset Endpoint
+
+The grading service serves `/annotations/submissions/{submissionId}/annotated.pdf`.
+In local mode the endpoint now looks up the grading result for that submission
+and writes a PDF summary containing the student identity, score, review status,
+annotation comments, item scores, and top evidence lines. If no grading result
+exists yet, it returns a small placeholder PDF that states the result is not
+available.

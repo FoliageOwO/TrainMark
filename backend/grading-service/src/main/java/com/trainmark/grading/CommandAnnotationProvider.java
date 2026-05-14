@@ -6,6 +6,7 @@ import com.trainmark.shared.dto.GradingAnnotationSummary;
 import com.trainmark.shared.dto.GradingResultSummary;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Path;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
@@ -32,7 +33,9 @@ public class CommandAnnotationProvider implements AnnotationProvider {
         .replace("{outputDir}", shellQuote(outputDir))
         .replace("{comment}", shellQuote(result.overallComment()));
     try {
-      var process = new ProcessBuilder(shellCommand(command)).start();
+      var processBuilder = new ProcessBuilder(shellCommand(command));
+      processBuilder.directory(workspaceRoot().toFile());
+      var process = processBuilder.start();
       var completed = process.waitFor(timeout.toMillis(), java.util.concurrent.TimeUnit.MILLISECONDS);
       var stdout = new String(process.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
       var stderr = new String(process.getErrorStream().readAllBytes(), StandardCharsets.UTF_8);
@@ -93,5 +96,17 @@ public class CommandAnnotationProvider implements AnnotationProvider {
       return "\"" + value.replace("\"", "\\\"") + "\"";
     }
     return "'" + value.replace("'", "'\"'\"'") + "'";
+  }
+
+  private Path workspaceRoot() {
+    var current = Path.of(System.getProperty("user.dir")).toAbsolutePath();
+    var cursor = current;
+    while (cursor != null) {
+      if (cursor.resolve("ai/annotation/local_provider.py").toFile().exists()) {
+        return cursor;
+      }
+      cursor = cursor.getParent();
+    }
+    return current;
   }
 }
