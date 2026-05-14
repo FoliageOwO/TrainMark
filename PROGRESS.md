@@ -759,6 +759,22 @@
 - `README.md`
 - `PROGRESS.md`
 
+### 46. AI Provider 错误统一响应
+
+- 已为 `ocr-service` 增加接口异常处理器，覆盖请求校验、请求体解析、业务参数错误和 OCR provider 执行失败。
+- 已为 `grading-service` 增加接口异常处理器，覆盖请求校验、请求体解析、业务参数错误和评分 provider 执行失败。
+- OCR / 评分命令 provider 超时、退出码非 0、执行失败或解析失败时返回 HTTP 502 和 `ApiResponse.fail(...)`。
+- OCR / 评分请求参数错误返回 HTTP 400 和统一响应 envelope，便于前端 HTTP 模式稳定处理失败状态。
+- 已更新 API 文档和 README 状态表。
+
+主要代码：
+
+- `backend/ocr-service/src/main/java/com/trainmark/ocr/OcrExceptionHandler.java`
+- `backend/grading-service/src/main/java/com/trainmark/grading/GradingExceptionHandler.java`
+- `docs/API.md`
+- `README.md`
+- `PROGRESS.md`
+
 ## 已验证
 
 前端构建已通过：
@@ -978,6 +994,12 @@ mvn -f backend/pom.xml -pl file-service -am package -DskipTests
 mvn -f backend/pom.xml -pl file-service -am package -DskipTests
 ```
 
+AI Provider 错误统一响应已通过后端模块编译：
+
+```bash
+mvn -f backend/pom.xml -pl ocr-service,grading-service -am package -DskipTests
+```
+
 全部后端模块已通过编译：
 
 ```bash
@@ -1034,6 +1056,7 @@ Docker Compose 已完成配置展开校验，暂未拉起 PostgreSQL、Redis、R
 - `feat: add scoring provider switch`
 - `feat: validate uploads`
 - `feat: add upload error responses`
+- `feat: add ai error responses`
 
 ## 接下来需要做
 

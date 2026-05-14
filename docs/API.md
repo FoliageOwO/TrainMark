@@ -22,6 +22,10 @@ File upload validation errors also use this envelope with HTTP 400. Business
 validation failures return `success: false` and a message; DTO validation
 failures return field-level messages in `data`.
 
+OCR and grading provider failures return the same envelope. Invalid requests use
+HTTP 400; external command provider failures use HTTP 502 with the provider error
+message in `message`.
+
 Most services still use in-memory data for local MVP demonstration. The gateway forwards `/api/**` requests to the service ports listed below.
 
 ## Service Ports
