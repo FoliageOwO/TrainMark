@@ -2024,6 +2024,20 @@
 - `backend/auth-service/src/main/java/com/trainmark/auth/AuthExceptionHandler.java`
 - `PROGRESS.md`
 
+### 66. 前端 HTTP 请求携带登录 Token
+
+- 已让前端 HTTP 数据层在读取接口、JSON 写接口和上传内容接口中自动携带 `Authorization: Bearer <accessToken>`。
+- 登录请求本身不依赖旧 token，登录成功后继续写入 `localStorage`，登录失败回退 Mock 时会清除旧 token，避免后续真实请求继续使用过期身份。
+- 已保留 Mock 模式行为不变，只有 `VITE_API_MODE=http` 下的 HTTP 请求会携带 token。
+- 已更新 README 当前进度。
+- 本模块已通过前端 lint、前端构建、写接口 smoke dry-run 和 MVP 主验证。
+
+主要代码：
+
+- `apps/web/src/api/httpApi.ts`
+- `README.md`
+- `PROGRESS.md`
+
 ## 已验证
 
 前端构建已通过：

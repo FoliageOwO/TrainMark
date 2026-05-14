@@ -154,13 +154,19 @@ export async function loginAsRole(role: RoleCode): Promise<UserProfile> {
     return mockApi.login(role);
   }
   try {
-    const response = await request<LoginResponse>('/api/auth/login', 'POST', {
-      username: roleLoginUsernames[role],
-      password: 'trainmark',
-    });
+    const response = await request<LoginResponse>(
+      '/api/auth/login',
+      'POST',
+      {
+        username: roleLoginUsernames[role],
+        password: 'trainmark',
+      },
+      false,
+    );
     persistTokens(response);
     return response.user;
   } catch {
+    clearTokens();
     return mockApi.login(role);
   }
 }
@@ -318,7 +324,9 @@ async function getOr<T, R = T>(path: string, fallback: T, normalize?: (value: R)
   }
 
   try {
-    const response = await fetch(`${API_BASE_URL}${path}`);
+    const response = await fetch(`${API_BASE_URL}${path}`, {
+      headers: authHeaders(),
+    });
     if (!response.ok) {
       return fallback;
     }
@@ -553,6 +561,7 @@ async function uploadObjectContent(uploadId: string, objectKey: string, file: Fi
   body.append('file', file);
   const response = await fetch(`${API_BASE_URL}/api/submissions/upload/content`, {
     method: 'PUT',
+    headers: authHeaders(),
     body,
   });
   if (!response.ok) {
@@ -583,10 +592,10 @@ async function mutateOr<T, R = T>(
   }
 }
 
-async function request<T>(path: string, method: 'POST' | 'PATCH', body: unknown): Promise<T> {
+async function request<T>(path: string, method: 'POST' | 'PATCH', body: unknown, includeAuth = true): Promise<T> {
   const response = await fetch(`${API_BASE_URL}${path}`, {
     method,
-    headers: { 'Content-Type': 'application/json' },
+    headers: authHeaders({ contentType: 'application/json', includeAuth }),
     body: JSON.stringify(body),
   });
   if (!response.ok) {
@@ -605,6 +614,29 @@ function persistTokens(response: LoginResponse) {
   }
   window.localStorage.setItem('trainmark.accessToken', response.accessToken);
   window.localStorage.setItem('trainmark.refreshToken', response.refreshToken);
+}
+
+function clearTokens() {
+  if (typeof window === 'undefined') {
+    return;
+  }
+  window.localStorage.removeItem('trainmark.accessToken');
+  window.localStorage.removeItem('trainmark.refreshToken');
+}
+
+function authHeaders(options?: { contentType?: string; includeAuth?: boolean }): Record<string, string> {
+  const headers: Record<string, string> = {};
+  if (options?.contentType) {
+    headers['Content-Type'] = options.contentType;
+  }
+  if (options?.includeAuth === false || typeof window === 'undefined') {
+    return headers;
+  }
+  const token = window.localStorage.getItem('trainmark.accessToken');
+  if (token) {
+    headers.Authorization = `Bearer ${token}`;
+  }
+  return headers;
 }
 
 type BackendOcrJobSummary = Omit<OcrJobSummary, 'blocks'> & { blocks?: OcrJobSummary['blocks'] };
