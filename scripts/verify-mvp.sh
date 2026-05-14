@@ -17,6 +17,9 @@ mvn -f backend/pom.xml package -DskipTests
 echo "[verify] AI providers"
 pnpm verify:ai
 
+echo "[verify] API smoke endpoint list"
+SMOKE_DRY_RUN=1 pnpm smoke:api
+
 echo "[verify] API route surface"
 rg -n "@(GetMapping|PostMapping|PatchMapping|RequestMapping)" backend/*-service/src/main/java -g "*.java" >/dev/null
 

@@ -189,6 +189,8 @@ pnpm smoke:api
 SMOKE_DRY_RUN=1 pnpm smoke:api
 ```
 
+`pnpm verify:mvp` 会执行 smoke dry-run，确保核心 gateway 端点清单能随 MVP 验证一起被检查。
+
 生成本地发布包：
 
 ```bash

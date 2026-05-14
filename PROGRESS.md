@@ -775,6 +775,19 @@
 - `README.md`
 - `PROGRESS.md`
 
+### 47. MVP 冒烟端点覆盖
+
+- 已扩展 `scripts/smoke-api.sh` 的 gateway 核心端点清单，覆盖组织、用户、任务、提交、收集概览、评分标准、批改任务、复核结果、OCR、查重、统计、审计日志和系统设置。
+- 已将 `SMOKE_DRY_RUN=1 pnpm smoke:api` 串入 `pnpm verify:mvp`，服务未启动时也能校验冒烟脚本端点清单。
+- 已在 README 说明 MVP 验证会覆盖 smoke dry-run。
+
+主要代码：
+
+- `scripts/smoke-api.sh`
+- `scripts/verify-mvp.sh`
+- `README.md`
+- `PROGRESS.md`
+
 ## 已验证
 
 前端构建已通过：
@@ -1000,6 +1013,14 @@ AI Provider 错误统一响应已通过后端模块编译：
 mvn -f backend/pom.xml -pl ocr-service,grading-service -am package -DskipTests
 ```
 
+MVP 冒烟端点覆盖已通过脚本语法检查和 dry-run：
+
+```bash
+bash -n scripts/smoke-api.sh
+bash -n scripts/verify-mvp.sh
+SMOKE_DRY_RUN=1 pnpm smoke:api
+```
+
 全部后端模块已通过编译：
 
 ```bash
@@ -1057,6 +1078,7 @@ Docker Compose 已完成配置展开校验，暂未拉起 PostgreSQL、Redis、R
 - `feat: validate uploads`
 - `feat: add upload error responses`
 - `feat: add ai error responses`
+- `chore: expand smoke coverage`
 
 ## 接下来需要做
 
