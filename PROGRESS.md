@@ -2267,6 +2267,17 @@
 - `scripts/smoke-api.sh`
 - `PROGRESS.md`
 
+### 82. Strict HTTP/JDBC 写路径 Smoke 字段断言
+
+- 已为 API smoke 增加通用 JSON 字段断言，live 写路径不再只依赖 HTTP 成功和 `ApiResponse.success=true`。
+- 已覆盖组织类型、用户角色、学生导入数量、管理配置值、上传回执、任务状态、rubric 总分、批改任务状态、复核状态、发布状态、申诉处理状态、导出状态、催交状态和查重任务提交数量等关键字段。
+- 已保持 `SMOKE_DRY_RUN=1 SMOKE_INCLUDE_WRITES=1 pnpm smoke:api` 的端点清单完整输出，并实跑带字段断言的 `SMOKE_INCLUDE_WRITES=1 TRAINMARK_SKIP_INFRA=1 SMOKE_RETRIES=90 SMOKE_RETRY_DELAY_SECONDS=2 timeout 600s pnpm smoke:mvp:jdbc`。
+
+主要代码：
+
+- `scripts/smoke-api.sh`
+- `PROGRESS.md`
+
 ## 已验证
 
 前端构建已通过：
@@ -3409,7 +3420,7 @@ pnpm verify:mvp
 
 - 已新增可重复运行的 `pnpm smoke:mvp:jdbc` 入口，覆盖 strict HTTP/JDBC API smoke 与严格认证 token 正负路径。
 - 已用 `SMOKE_INCLUDE_WRITES=1 pnpm smoke:mvp:jdbc` 跑通上传、批改、发布、导出、申诉、催交、查重和管理配置写入。
-- 后续继续把这条 live smoke 的断言从“接口成功”增强为关键字段校验和数据落库校验。
+- 已将写路径 live smoke 从“接口成功”增强为关键字段校验；后续继续补充数据库落库校验。
 
 ### 3. 工程质量
 
