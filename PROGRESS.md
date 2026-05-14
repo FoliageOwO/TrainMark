@@ -556,6 +556,18 @@
 - `apps/web/src/pages/App.tsx`
 - `PROGRESS.md`
 
+### 22.3 教师端 AI 流水线组件拆分
+
+- 已从教师端工作台中拆出 `TeacherAiPipeline`，评分标准、批改队列、OCR 任务和结构化识别结果集中维护。
+- 批改/OCR 状态文案随组件下沉，减少 `App.tsx` 顶层展示常量。
+- `App.tsx` 仅向该组件传入评分标准、批改任务、OCR 任务和启动批改动作。
+
+主要代码：
+
+- `apps/web/src/components/TeacherAiPipeline.tsx`
+- `apps/web/src/pages/App.tsx`
+- `PROGRESS.md`
+
 ### 23. 前端 HTTP 写操作联调
 
 - 已扩展前端 HTTP API 层，支持在 `VITE_API_MODE=http` 下调用后端写接口。
@@ -1425,6 +1437,14 @@ pnpm verify:mvp
 ```
 
 管理端工作台组件拆分后已通过静态检查和构建：
+
+```bash
+pnpm --filter trainmark-ai-web lint
+pnpm --filter trainmark-ai-web build
+pnpm verify:mvp
+```
+
+教师端 AI 流水线组件拆分后已通过静态检查和构建：
 
 ```bash
 pnpm --filter trainmark-ai-web lint
