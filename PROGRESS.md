@@ -838,6 +838,25 @@
 - `README.md`
 - `PROGRESS.md`
 
+### 37.2 文档预处理后端 Provider 切换
+
+- 已新增 `CommandDocumentPreprocessor`，支持通过外部命令执行 Word/PDF/图片预处理并读取 stdout JSON manifest。
+- 已让 OCR 服务通过 `DOCUMENT_PREPROCESSOR_PROVIDER` 在本地 Java 预处理和命令预处理之间切换。
+- 已补充 `{submissionId}`、`{objectKey}` 命令占位符和超时配置，后续可直接接入 LibreOffice / PDFBox / 图片转换脚本。
+- 已加强 `pnpm verify:ai` 对文档预处理输出字段的校验。
+- 已更新 README、文档预处理 README、环境变量说明和进度记录。
+
+主要代码：
+
+- `backend/ocr-service/src/main/java/com/trainmark/ocr/CommandDocumentPreprocessor.java`
+- `backend/ocr-service/src/main/java/com/trainmark/ocr/DocumentPreprocessorConfig.java`
+- `backend/ocr-service/src/main/resources/application.yml`
+- `ai/document/README.md`
+- `scripts/verify-ai.sh`
+- `.env.example`
+- `README.md`
+- `PROGRESS.md`
+
 ### 38. 评分 Provider CLI 契约
 
 - 已补齐 `ai/scoring/` 目录，承接后续规则评分、语义评分和 LLM 评语生成能力。
@@ -1473,6 +1492,17 @@ curl --noproxy '*' --fail --silent --show-error -H 'Content-Type: application/js
   -d '{"submissionId":77,"objectKey":"assignments/1/students/2/database-report.docx","mode":"STRUCTURE"}' \
   http://localhost:8086/api/ocr/jobs
 curl --noproxy '*' --fail --silent --show-error http://localhost:8086/api/ocr/jobs/2/result
+```
+
+文档预处理命令 Provider 已通过 AI 契约验证、OCR 模块编译和 command 模式单服务接口验证：
+
+```bash
+pnpm verify:ai
+mvn -f backend/pom.xml -pl ocr-service -am package -DskipTests
+DOCUMENT_PREPROCESSOR_PROVIDER=command DOCUMENT_PREPROCESSOR_COMMAND="python3 ai/document/local_converter.py --submission-id {submissionId} --object-key {objectKey}" bash scripts/dev-service.sh ocr-service
+curl --noproxy '*' -fsS -X POST http://localhost:8086/api/ocr/jobs -H 'Content-Type: application/json' -d '{"submissionId":1,"objectKey":"assignments/1/students/2/database-report.docx","mode":"STRUCTURE"}'
+curl --noproxy '*' -fsS http://localhost:8086/api/ocr/jobs/2/result
+pnpm verify:mvp
 ```
 
 MVP 主验证已覆盖 AI Provider 验证：

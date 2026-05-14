@@ -10,6 +10,11 @@ management:
         include: health,info
 
 trainmark:
+  document:
+    preprocessor:
+      provider: ${DOCUMENT_PREPROCESSOR_PROVIDER:local}
+      command: ${DOCUMENT_PREPROCESSOR_COMMAND:}
+      timeout-seconds: ${DOCUMENT_PREPROCESSOR_TIMEOUT_SECONDS:60}
   ocr:
     store: ${TRAINMARK_OCR_STORE:memory}
     provider: ${OCR_PROVIDER:local}

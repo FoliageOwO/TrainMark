@@ -19,10 +19,15 @@ python3 ai/document/local_converter.py \
   --submission-id 1 \
   --object-key assignments/1/students/2/database-report.docx > "$TMP_DIR/document-docx.json"
 python3 -m json.tool "$TMP_DIR/document-docx.json" >/dev/null
+grep -q '"sourceFormat": "WORD"' "$TMP_DIR/document-docx.json"
+grep -q '"targetFormat": "PDF"' "$TMP_DIR/document-docx.json"
+grep -q '"normalizedObjectKey": "converted/assignments/1/students/2/database-report.pdf"' "$TMP_DIR/document-docx.json"
 python3 ai/document/local_converter.py \
   --submission-id 2 \
   --object-key assignments/1/students/3/screenshot.png > "$TMP_DIR/document-image.json"
 python3 -m json.tool "$TMP_DIR/document-image.json" >/dev/null
+grep -q '"sourceFormat": "IMAGE"' "$TMP_DIR/document-image.json"
+grep -q '"targetFormat": "IMAGE"' "$TMP_DIR/document-image.json"
 
 echo "[verify:ai] OCR provider"
 python3 ai/ocr/local_provider.py \

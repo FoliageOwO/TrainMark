@@ -30,6 +30,25 @@ The command writes a JSON manifest:
 }
 ```
 
+## OCR Service Integration
+
+The OCR service uses the local Java preprocessor by default:
+
+```bash
+DOCUMENT_PREPROCESSOR_PROVIDER=local
+```
+
+To route preprocessing through an external converter command:
+
+```bash
+DOCUMENT_PREPROCESSOR_PROVIDER=command
+DOCUMENT_PREPROCESSOR_COMMAND="python3 ai/document/local_converter.py --submission-id {submissionId} --object-key {objectKey}"
+DOCUMENT_PREPROCESSOR_TIMEOUT_SECONDS=60
+```
+
+The service replaces `{submissionId}` and `{objectKey}` before running the
+command. The command must write the JSON manifest above to stdout.
+
 ## Production Migration Notes
 
 A real converter should keep this JSON shape and replace the deterministic

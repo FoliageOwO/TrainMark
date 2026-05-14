@@ -316,6 +316,13 @@ SMOKE_RETRIES=30 SMOKE_RETRY_DELAY_SECONDS=2 pnpm smoke:api
 SMOKE_INCLUDE_WRITES=1 SMOKE_RETRIES=30 SMOKE_RETRY_DELAY_SECONDS=2 pnpm smoke:api
 ```
 
+OCR 服务默认使用本地文档预处理实现。需要把 Word/PDF/图片预处理切换到外部命令时，可设置：
+
+```bash
+DOCUMENT_PREPROCESSOR_PROVIDER=command
+DOCUMENT_PREPROCESSOR_COMMAND="python3 ai/document/local_converter.py --submission-id {submissionId} --object-key {objectKey}"
+```
+
 仅查看将要检查的端点：
 
 ```bash

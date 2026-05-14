@@ -1,34 +1,29 @@
 package com.trainmark.ocr;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.trainmark.shared.dto.CreateOcrJobRequest;
-import com.trainmark.shared.dto.OcrResultSummary;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.time.Duration;
 
-public class CommandOcrProvider implements OcrProvider {
+public class CommandDocumentPreprocessor implements DocumentPreprocessor {
   private final String commandTemplate;
   private final Duration timeout;
   private final ObjectMapper objectMapper;
 
-  public CommandOcrProvider(String commandTemplate, Duration timeout, ObjectMapper objectMapper) {
+  public CommandDocumentPreprocessor(String commandTemplate, Duration timeout, ObjectMapper objectMapper) {
     this.commandTemplate = commandTemplate;
     this.timeout = timeout;
     this.objectMapper = objectMapper;
   }
 
   @Override
-  public OcrResultSummary recognize(Long jobId, CreateOcrJobRequest request, DocumentPreprocessResult document) {
+  public DocumentPreprocessResult preprocess(CreateOcrJobRequest request) {
     var command = commandTemplate
-        .replace("{jobId}", shellQuote(jobId.toString()))
         .replace("{submissionId}", shellQuote(request.submissionId().toString()))
-        .replace("{objectKey}", shellQuote(request.objectKey()))
-        .replace("{normalizedObjectKey}", shellQuote(document.normalizedObjectKey()))
-        .replace("{sourceFormat}", shellQuote(document.sourceFormat()))
-        .replace("{targetFormat}", shellQuote(document.targetFormat()))
-        .replace("{pageCount}", shellQuote(Integer.toString(document.pageCount())));
+        .replace("{objectKey}", shellQuote(request.objectKey()));
     try {
       var processBuilder = new ProcessBuilder(shellCommand(command));
       processBuilder.directory(workspaceRoot().toFile());
@@ -38,18 +33,47 @@ public class CommandOcrProvider implements OcrProvider {
       var stderr = new String(process.getErrorStream().readAllBytes(), StandardCharsets.UTF_8);
       if (!completed) {
         process.destroyForcibly();
-        throw new IllegalStateException("OCR command timed out after " + timeout.toSeconds() + "s");
+        throw new IllegalStateException("Document preprocessing command timed out after " + timeout.toSeconds() + "s");
       }
       if (process.exitValue() != 0) {
-        throw new IllegalStateException("OCR command failed: " + stderr);
+        throw new IllegalStateException("Document preprocessing command failed: " + stderr);
       }
-      return objectMapper.readValue(stdout, OcrResultSummary.class);
+      return parseResult(stdout);
     } catch (IOException exception) {
-      throw new IllegalStateException("Failed to run OCR command", exception);
+      throw new IllegalStateException("Failed to run document preprocessing command", exception);
     } catch (InterruptedException exception) {
       Thread.currentThread().interrupt();
-      throw new IllegalStateException("OCR command interrupted", exception);
+      throw new IllegalStateException("Document preprocessing command interrupted", exception);
     }
+  }
+
+  private DocumentPreprocessResult parseResult(String stdout) throws IOException {
+    var root = objectMapper.readTree(stdout);
+    return new DocumentPreprocessResult(
+        requiredText(root, "sourceObjectKey"),
+        requiredText(root, "normalizedObjectKey"),
+        requiredText(root, "sourceFormat"),
+        requiredText(root, "targetFormat"),
+        requiredInt(root, "pageCount"),
+        requiredInt(root, "imageCount"),
+        requiredInt(root, "tableHintCount")
+    );
+  }
+
+  private String requiredText(JsonNode root, String field) {
+    var value = root.get(field);
+    if (value == null || !value.isTextual() || value.asText().isBlank()) {
+      throw new IllegalStateException("Document preprocessing output missing text field: " + field);
+    }
+    return value.asText();
+  }
+
+  private int requiredInt(JsonNode root, String field) {
+    var value = root.get(field);
+    if (value == null || !value.canConvertToInt()) {
+      throw new IllegalStateException("Document preprocessing output missing integer field: " + field);
+    }
+    return value.asInt();
   }
 
   private String[] shellCommand(String command) {
@@ -70,7 +94,7 @@ public class CommandOcrProvider implements OcrProvider {
     var current = Path.of(System.getProperty("user.dir")).toAbsolutePath();
     var cursor = current;
     while (cursor != null) {
-      if (cursor.resolve("ai/ocr/local_provider.py").toFile().exists()) {
+      if (cursor.resolve("ai/document/local_converter.py").toFile().exists()) {
         return cursor;
       }
       cursor = cursor.getParent();
