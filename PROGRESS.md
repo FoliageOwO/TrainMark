@@ -519,6 +519,20 @@
 - `README.md`
 - `PROGRESS.md`
 
+### 32. PWA 角色快捷入口
+
+- 已支持从 URL 查询参数读取初始角色，例如 `?role=student`、`?role=teacher` 和 `?role=admin`。
+- 已在角色切换时同步更新当前 URL，便于复制链接或安装快捷入口保留角色上下文。
+- 已监听浏览器前进/后退事件，保证历史导航后的角色状态与 URL 保持一致。
+- 已让 PWA manifest 中的学生端和教师端 shortcuts 能落到对应角色工作台。
+- 已更新 README 状态表和进度记录。
+
+主要代码：
+
+- `apps/web/src/pages/App.tsx`
+- `README.md`
+- `PROGRESS.md`
+
 ## 已验证
 
 前端构建已通过：
@@ -643,6 +657,13 @@ pnpm build:web
 find apps/web/dist -maxdepth 3 -type f | sort
 ```
 
+PWA 角色快捷入口已通过前端静态检查和构建：
+
+```bash
+pnpm lint:web
+pnpm build:web
+```
+
 全部后端模块已通过编译：
 
 ```bash
@@ -685,6 +706,7 @@ Docker Compose 暂未本地验证，因为当前机器没有 Docker。
 - `feat: add admin audit logs`
 - `feat: add admin settings`
 - `feat: add pwa shell`
+- `feat: add role deep links`
 
 ## 接下来需要做
 

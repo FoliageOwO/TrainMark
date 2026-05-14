@@ -32,10 +32,15 @@ import {
   withdrawGradingResult,
   type WorkspaceData,
 } from '../api/httpApi';
-import type { CourseSummary, UserProfile } from '../api/types';
+import type { CourseSummary, RoleCode, UserProfile } from '../api/types';
 import { AppChrome } from '../components/AppChrome';
 
 const pipelineSteps = ['文件预处理', 'OCR 识别', '结构化提取', '语义评分', 'PDF 批注', '教师复核'];
+const routeRoleMap: Record<string, RoleCode> = {
+  admin: 'ADMIN',
+  student: 'STUDENT',
+  teacher: 'TEACHER',
+};
 
 const statusText = {
   ACTIVE: '进行中',
@@ -84,8 +89,27 @@ const appealStatusText = {
   REJECTED: '已驳回',
 };
 
+function getRoleFromLocation(): RoleCode {
+  if (typeof window === 'undefined') {
+    return 'TEACHER';
+  }
+
+  const role = new URLSearchParams(window.location.search).get('role')?.toLowerCase();
+  return role ? routeRoleMap[role] ?? 'TEACHER' : 'TEACHER';
+}
+
+function writeRoleToLocation(role: RoleCode) {
+  if (typeof window === 'undefined') {
+    return;
+  }
+
+  const nextUrl = new URL(window.location.href);
+  nextUrl.searchParams.set('role', role.toLowerCase());
+  window.history.replaceState(null, '', nextUrl);
+}
+
 export function App() {
-  const [user, setUser] = useState<UserProfile>(() => mockApi.login('TEACHER'));
+  const [user, setUser] = useState<UserProfile>(() => mockApi.login(getRoleFromLocation()));
   const [activeNav, setActiveNav] = useState('工作台');
   const [selectedCourseId, setSelectedCourseId] = useState(1);
   const [workspaceData, setWorkspaceData] = useState<WorkspaceData | null>(null);
@@ -116,6 +140,20 @@ export function App() {
   const similarityJobs = workspaceData?.similarityJobs ?? mockApi.listSimilarityJobs();
   const auditLogs = workspaceData?.auditLogs ?? mockApi.listAuditLogs();
   const systemSettings = workspaceData?.systemSettings ?? mockApi.listSystemSettings();
+
+  useEffect(() => {
+    const syncRoleFromLocation = () => {
+      setUser(mockApi.login(getRoleFromLocation()));
+    };
+
+    window.addEventListener('popstate', syncRoleFromLocation);
+    return () => window.removeEventListener('popstate', syncRoleFromLocation);
+  }, []);
+
+  const handleRoleChange = (role: RoleCode) => {
+    writeRoleToLocation(role);
+    setUser(mockApi.login(role));
+  };
 
   useEffect(() => {
     if (!shouldUseHttpApi()) {
@@ -150,7 +188,7 @@ export function App() {
       primaryRole={primaryRole}
       user={user}
       onNavChange={setActiveNav}
-      onRoleChange={(role) => setUser(mockApi.login(role))}
+      onRoleChange={handleRoleChange}
     >
       {primaryRole === 'STUDENT' ? (
         <StudentDashboard tasks={studentTasks} publishedResults={publishedResults} appeals={appeals} userId={user.id} />
