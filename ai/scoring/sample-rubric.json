@@ -1,0 +1,32 @@
+{
+  "totalScore": 100,
+  "items": [
+    {
+      "id": 1,
+      "title": "需求与设计",
+      "score": 20,
+      "points": [
+        {
+          "title": "功能模块完整",
+          "keywords": ["登录", "课程", "任务", "提交"]
+        },
+        {
+          "title": "数据库设计合理",
+          "keywords": ["ER图", "表结构", "约束"]
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "title": "系统实现",
+      "score": 50,
+      "points": []
+    },
+    {
+      "id": 3,
+      "title": "报告规范",
+      "score": 30,
+      "points": []
+    }
+  ]
+}

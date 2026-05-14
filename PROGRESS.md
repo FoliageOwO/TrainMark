@@ -619,6 +619,25 @@
 - `README.md`
 - `PROGRESS.md`
 
+### 38. 评分 Provider CLI 契约
+
+- 已补齐 `ai/scoring/` 目录，承接后续规则评分、语义评分和 LLM 评语生成能力。
+- 已新增无第三方依赖的 `local_provider.py`，输出与后端 `GradingResultSummary` 兼容的 JSON。
+- 已让本地评分 CLI 支持默认 rubric 和外部 rubric JSON 文件。
+- 已新增 sample rubric，便于本地验证和后续 provider 联调。
+- 已新增语义评分配置样例，明确关键词、语义、结构权重、自动扣分上限和教师复核阈值。
+- 已新增评分 provider README，记录本地 provider 调用方式、自定义 rubric 格式和语义评分迁移边界。
+- 已更新 README 状态表和进度记录。
+
+主要代码：
+
+- `ai/scoring/README.md`
+- `ai/scoring/local_provider.py`
+- `ai/scoring/sample-rubric.json`
+- `ai/scoring/semantic-scoring.example.yml`
+- `README.md`
+- `PROGRESS.md`
+
 ## 已验证
 
 前端构建已通过：
@@ -786,6 +805,14 @@ python3 ai/ocr/local_provider.py --job-id 1001 --submission-id 1 --object-key as
 python3 ai/ocr/local_provider.py --job-id 1002 --submission-id 2 --object-key assignments/1/students/3/screenshot.png
 ```
 
+评分 Provider CLI 契约已通过 Python 编译检查和默认 / 自定义 rubric 样例输出验证：
+
+```bash
+python3 -m py_compile ai/scoring/local_provider.py
+python3 ai/scoring/local_provider.py --result-id 2001 --assignment-id 1 --submission-id 7 --student-id 2 --student-name 张三 --student-no 2024010101
+python3 ai/scoring/local_provider.py --result-id 2002 --assignment-id 1 --submission-id 8 --student-id 3 --student-name 李四 --student-no 2024010102 --rubric-file ai/scoring/sample-rubric.json
+```
+
 全部后端模块已通过编译：
 
 ```bash
@@ -834,6 +861,7 @@ Docker Compose 已完成配置展开校验，暂未拉起 PostgreSQL、Redis、R
 - `chore: add api smoke script`
 - `chore: add local deploy bundle`
 - `feat: add ocr provider cli`
+- `feat: add scoring provider cli`
 
 ## 接下来需要做
 

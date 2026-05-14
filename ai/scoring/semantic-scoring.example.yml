@@ -1,0 +1,17 @@
+provider: semantic-scoring
+runtime:
+  model: trainmark-semantic-reranker
+  timeout_seconds: 90
+  max_tokens_per_report: 24000
+rules:
+  keyword_weight: 0.35
+  semantic_weight: 0.45
+  structure_weight: 0.2
+  max_auto_deduction_ratio: 0.35
+output:
+  format: trainmark-grading-result-v1
+  stdout_json: true
+  log_to_stderr: true
+review:
+  require_teacher_review_below_confidence: 88
+  always_include_evidence: true
