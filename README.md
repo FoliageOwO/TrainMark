@@ -37,7 +37,7 @@ TrainMark AI，中文名“智训批”，是面向高校实训教学场景的�
 | 课程与任务 PostgreSQL 存储 | 已支持 |
 | 上传与提交 PostgreSQL 存储 | 已支持 |
 | OCR 任务 PostgreSQL 存储 | 已支持 |
-| 评分标准 PostgreSQL 存储 | 已支持 |
+| 评分标准与成绩导出 PostgreSQL 存储 | 已支持 |
 | 催交通知 PostgreSQL 存储 | 已支持 |
 | 查重任务 PostgreSQL 存储 | 已支持 |
 | 统计分析 PostgreSQL 存储 | 已支持 |
@@ -196,6 +196,7 @@ pnpm dev:backend:ocr
 
 ```bash
 TRAINMARK_GRADING_RUBRIC_STORE=jdbc \
+TRAINMARK_GRADING_EXPORT_STORE=jdbc \
 TRAINMARK_GRADING_JDBC_URL=jdbc:postgresql://localhost:5432/trainmark_ai \
 TRAINMARK_GRADING_JDBC_USERNAME=trainmark \
 TRAINMARK_GRADING_JDBC_PASSWORD=trainmark_dev \

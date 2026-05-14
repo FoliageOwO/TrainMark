@@ -12,6 +12,7 @@ management:
 trainmark:
   grading:
     rubric-store: ${TRAINMARK_GRADING_RUBRIC_STORE:memory}
+    export-store: ${TRAINMARK_GRADING_EXPORT_STORE:memory}
     jdbc:
       url: ${TRAINMARK_GRADING_JDBC_URL:}
       username: ${TRAINMARK_GRADING_JDBC_USERNAME:}

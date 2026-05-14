@@ -164,6 +164,24 @@
 - `README.md`
 - `PROGRESS.md`
 
+### 10.2 成绩导出 PostgreSQL 存储
+
+- 已为成绩导出记录抽象 `GradeExportStore`，默认保留内存实现。
+- 已新增 JDBC 实现，可将导出文件名、格式、行数、下载地址、状态和操作者写入 `grade_exports`。
+- 已保持导出行数按当前已发布成绩计算，确保 HTTP/mock 和默认内存演示行为一致。
+- 已复用 grading-service 的 PostgreSQL 连接配置，并补充独立 `TRAINMARK_GRADING_EXPORT_STORE` 切换项。
+
+主要代码：
+
+- `backend/grading-service/src/main/java/com/trainmark/grading/GradeExportStore.java`
+- `backend/grading-service/src/main/java/com/trainmark/grading/InMemoryGradeExportStore.java`
+- `backend/grading-service/src/main/java/com/trainmark/grading/JdbcGradeExportStore.java`
+- `backend/grading-service/src/main/java/com/trainmark/grading/GradingService.java`
+- `backend/grading-service/src/main/resources/application.yml`
+- `.env.example`
+- `README.md`
+- `PROGRESS.md`
+
 ### 11. OCR 与文档结构化基础
 
 - 已实现 OCR 任务状态枚举。
@@ -1618,6 +1636,21 @@ curl --noproxy '*' -H 'Content-Type: application/json' -d '{...}' http://localho
 curl --noproxy '*' 'http://localhost:8085/api/grading/results/1'
 ```
 
+成绩导出 PostgreSQL 存储已通过后端模块编译：
+
+```bash
+mvn -f backend/pom.xml -pl grading-service -am package -DskipTests
+```
+
+评分服务默认内存模式已通过单服务启动、导出列表/创建和评分标准读取验证：
+
+```bash
+timeout 90s bash scripts/dev-service.sh grading-service
+curl --noproxy '*' 'http://localhost:8085/api/grading/exports?assignmentId=1'
+curl --noproxy '*' -H 'Content-Type: application/json' -d '{...}' http://localhost:8085/api/grading/exports
+curl --noproxy '*' 'http://localhost:8085/api/rubrics?assignmentId=1'
+```
+
 ## 已提交记录
 
 主要提交：
@@ -1689,6 +1722,7 @@ curl --noproxy '*' 'http://localhost:8085/api/grading/results/1'
 - `feat: add admin jdbc store`
 - `feat: add ocr jdbc store`
 - `feat: add rubric jdbc store`
+- `feat: add grade export jdbc store`
 
 ## 接下来需要做
 

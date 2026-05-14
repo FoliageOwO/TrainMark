@@ -34,21 +34,26 @@ import org.springframework.stereotype.Service;
 @Service
 public class GradingService {
   private final RubricStore rubricStore;
+  private final GradeExportStore gradeExportStore;
   private final ScoringProvider scoringProvider;
   private final AnnotationProvider annotationProvider;
   private final AtomicLong jobIds = new AtomicLong(2);
   private final AtomicLong resultIds = new AtomicLong(2);
   private final AtomicLong auditIds = new AtomicLong(1);
   private final AtomicLong appealIds = new AtomicLong(2);
-  private final AtomicLong exportIds = new AtomicLong(2);
   private final Map<Long, GradingJobSummary> jobs = new LinkedHashMap<>();
   private final Map<Long, GradingResultSummary> results = new LinkedHashMap<>();
   private final Map<Long, List<GradePublicationAuditEntry>> publicationAudits = new LinkedHashMap<>();
   private final Map<Long, AppealSummary> appeals = new LinkedHashMap<>();
-  private final Map<Long, GradeExportSummary> exports = new LinkedHashMap<>();
 
-  public GradingService(RubricStore rubricStore, ScoringProvider scoringProvider, AnnotationProvider annotationProvider) {
+  public GradingService(
+      RubricStore rubricStore,
+      GradeExportStore gradeExportStore,
+      ScoringProvider scoringProvider,
+      AnnotationProvider annotationProvider
+  ) {
     this.rubricStore = rubricStore;
+    this.gradeExportStore = gradeExportStore;
     this.scoringProvider = scoringProvider;
     this.annotationProvider = annotationProvider;
     jobs.put(1L, new GradingJobSummary(1L, 1L, 1L, 65, 47, GradingJobStatus.SCORING, 86, OffsetDateTime.now().minusMinutes(18)));
@@ -124,16 +129,6 @@ public class GradingService {
         null,
         OffsetDateTime.now().minusHours(2),
         null
-    ));
-    exports.put(1L, new GradeExportSummary(
-        1L,
-        1L,
-        "Java Web 综合实训-成绩单.csv",
-        "CSV",
-        48,
-        "/exports/assignments/1/grades.csv",
-        "READY",
-        OffsetDateTime.now().minusMinutes(25)
     ));
   }
 
@@ -304,35 +299,15 @@ public class GradingService {
   }
 
   public Collection<GradeExportSummary> listGradeExports(Long assignmentId) {
-    return exports.values().stream()
-        .filter(item -> assignmentId == null || assignmentId.equals(item.assignmentId()))
-        .toList();
+    return gradeExportStore.listGradeExports(assignmentId);
   }
 
   public GradeExportSummary createGradeExport(CreateGradeExportRequest request) {
-    var id = exportIds.getAndIncrement();
     var rowCount = (int) results.values().stream()
         .filter(item -> request.assignmentId().equals(item.assignmentId()))
         .filter(item -> item.publicationStatus() == PublicationStatus.PUBLISHED)
         .count();
-    var format = request.format().toUpperCase();
-    var suffix = switch (format) {
-      case "PDF" -> "pdf";
-      case "ZIP" -> "zip";
-      default -> "csv";
-    };
-    var export = new GradeExportSummary(
-        id,
-        request.assignmentId(),
-        "assignment-%d-grades.%s".formatted(request.assignmentId(), suffix),
-        format,
-        rowCount,
-        "/exports/assignments/%d/grades-%d.%s".formatted(request.assignmentId(), id, suffix),
-        "READY",
-        OffsetDateTime.now()
-    );
-    exports.put(id, export);
-    return export;
+    return gradeExportStore.createGradeExport(request, rowCount);
   }
 
   private GradingResultSummary saveReviewedResult(
