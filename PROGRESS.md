@@ -2218,6 +2218,17 @@
 - `README.md`
 - `PROGRESS.md`
 
+### 78. MVP 主验证纳入严格认证 Smoke 清单
+
+- 已将 `SMOKE_DRY_RUN=1 pnpm smoke:auth:strict` 纳入 `scripts/verify-mvp.sh`，让主验证链固定检查严格认证 smoke 脚本入口和断言清单。
+- 保留 strict auth 的 live 验证为手动命令，避免默认 MVP 验证依赖正在运行的 JDBC auth-service。
+- 本模块已通过 `verify-mvp.sh` 语法检查、strict auth smoke dry-run 和 MVP 主验证。
+
+主要代码：
+
+- `scripts/verify-mvp.sh`
+- `PROGRESS.md`
+
 ## 已验证
 
 前端构建已通过：
@@ -3345,6 +3356,7 @@ pnpm verify:mvp
 - `fix: validate auth logout`
 - `feat: connect frontend auth session`
 - `chore: add strict auth smoke`
+- `chore: verify strict auth smoke`
 
 ## 接下来需要做
 
