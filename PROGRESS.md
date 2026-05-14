@@ -255,6 +255,18 @@
 - `apps/web/src/api/mockApi.ts`
 - `apps/web/src/styles/global.css`
 
+### 16. MVP 运行说明与环境样例
+
+- 已补充 `.env.example`，覆盖前端 API 地址、PostgreSQL、Redis、RabbitMQ、MinIO 和 AI/OCR provider 占位配置。
+- 已更新 `README.md` 当前进度，反映课程/任务、提交、催交、评分、OCR、复核、发布、申诉、统计等 MVP 功能。
+- 已补充本地启动、后端接口示例和验证命令说明。
+
+主要文件：
+
+- `.env.example`
+- `README.md`
+- `PROGRESS.md`
+
 ## 已验证
 
 前端构建已通过：
@@ -295,6 +307,7 @@ Docker Compose 暂未本地验证，因为当前机器没有 Docker。
 - `feat: add grade publishing`
 - `feat: add analytics`
 - `feat: add appeals`
+- `docs: update mvp runbook`
 
 ## 接下来需要做
 

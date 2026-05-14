@@ -6,15 +6,23 @@ TrainMark AI，中文名“智训批”，是面向高校实训教学场景的�
 
 ## 当前进度
 
-已完成阶段 1 的基础骨架：
+已形成可本地演示的 MVP 闭环，当前前端使用内存 mock 数据，后端各服务提供接口骨架和内存模拟实现：
 
 | 模块 | 状态 |
 |---|---|
 | Monorepo 目录 | 已创建 |
 | 前端 React/Vite 工程 | 已创建 |
-| 老师端/学生端首屏 UI 骨架 | 已创建 |
+| 老师端/学生端/管理端角色切换 | 已实现 |
+| 课程、班级、任务、名单导入展示 | 已实现 |
+| 学生报告上传交互 | 已实现 |
+| 报告收集、未交名单、一键催交 | 已实现 |
+| 评分标准、AI 批改队列、OCR 结构化 | 已实现 |
+| 人工复核、分项改分、批注预览 | 已实现 |
+| 成绩发布、撤回、发布审计 | 已实现 |
+| 学生成绩查看、批注入口、申诉 | 已实现 |
+| 成绩统计、失分分析、课程目标达成度 | 已实现 |
 | 后端 Spring Boot 聚合工程 | 已创建 |
-| 微服务启动类 | 已创建 |
+| 微服务接口骨架 | 已创建 |
 | Gateway 基础路由 | 已创建 |
 | 本地 Docker Compose 基础设施 | 已创建 |
 
@@ -39,7 +47,15 @@ TrainMark/
 pnpm install
 ```
 
-### 2. 启动前端
+### 2. 准备环境变量
+
+```bash
+cp .env.example .env
+```
+
+当前前端 MVP 使用内存 mock 数据，不依赖后端即可演示主流程。后端和基础设施启动后，可逐步切换到真实接口。
+
+### 3. 启动前端
 
 ```bash
 pnpm dev:web
@@ -47,7 +63,7 @@ pnpm dev:web
 
 访问：`http://localhost:5173`
 
-### 3. 启动本地基础设施
+### 4. 启动本地基础设施
 
 ```bash
 pnpm dev:infra
@@ -63,7 +79,7 @@ pnpm dev:infra
 | MinIO Console | `http://localhost:9001` |
 | Nginx | `http://localhost:8088` |
 
-### 4. 构建后端
+### 5. 构建后端
 
 ```bash
 pnpm build:backend
@@ -71,7 +87,7 @@ pnpm build:backend
 
 这一步只用于校验和打包所有 Maven 模块，不会启动后端服务。日常开发可以跳过构建，直接启动需要调试的服务；`spring-boot:run` 会自动编译当前服务及其依赖模块。
 
-### 5. 启动后端服务
+### 6. 启动后端服务
 
 ```bash
 pnpm dev:backend
@@ -111,10 +127,19 @@ pnpm dev:backend:gateway
 |---|---|
 | `GET http://localhost:8081/api/auth/me` | 当前用户模拟接口 |
 | `GET http://localhost:8083/api/courses` | 课程列表模拟接口 |
+| `GET http://localhost:8085/api/grading/results` | 批改结果与复核模拟接口 |
+| `GET http://localhost:8091/api/analytics/grade-statistics?assignmentId=1` | 成绩统计模拟接口 |
+
+## 验证命令
+
+```bash
+pnpm build:web
+mvn -f backend/pom.xml package -DskipTests
+```
 
 ## 环境说明
 
-当前仓库允许在没有 Maven 和 Docker 的机器上继续编码。后端 Maven 工程和 Docker Compose 配置会持续维护，但本机没有对应命令时可先不执行后端构建和基础设施启动。
+当前仓库允许在没有 Docker 的机器上继续编码。后端 Maven 工程和 Docker Compose 配置会持续维护，但本机没有 Docker 时可先不执行基础设施启动。
 
 前端统一使用 pnpm，不再使用 npm workspace。
 
@@ -130,8 +155,8 @@ pnpm dev:backend:gateway
 
 ## 下一步
 
-1. 接入数据库迁移工具并建立用户、课程、班级基础表。
-2. 实现登录、角色和菜单权限。
-3. 实现课程与班级管理页面。
-4. 实现学生名单 Excel 导入。
-5. 实现创建实训任务和学生提交入口。
+1. 将当前内存模拟服务接入 PostgreSQL / Flyway。
+2. 将前端 mock API 切换为真实 HTTP API。
+3. 接入真实 OCR、规则评分、语义评分和批注 PDF 生成。
+4. 增加基础单元测试、接口文档和端到端冒烟测试。
+5. 验证 Docker Compose 本地基础设施和多服务联调。
