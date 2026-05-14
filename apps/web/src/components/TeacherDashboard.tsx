@@ -92,7 +92,10 @@ export function TeacherDashboard({
   const [rubricRows, setRubricRows] = useState<RubricSummary[]>(rubrics);
   const [assignmentNotice, setAssignmentNotice] = useState('');
   const [rubricNotice, setRubricNotice] = useState('');
-  const rubric = rubricRows[0] ?? null;
+  const selectedAssignmentId = assignmentRows.find((assignment) => assignment.courseId === selectedCourseId)?.id
+    ?? assignmentRows[0]?.id
+    ?? collectionOverview.assignmentId;
+  const rubric = rubricRows.find((item) => item.assignmentId === selectedAssignmentId) ?? rubricRows[0] ?? null;
   const visibleJobs = startedJob ? [startedJob, ...gradingJobs] : gradingJobs;
   const selectedReview = reviewResults.find((item) => item.id === selectedReviewId) ?? reviewResults[0]!;
 
@@ -176,7 +179,10 @@ export function TeacherDashboard({
   };
 
   const handleStartSimilarity = async () => {
-    const job = await startSimilarityJob(selectedCourseId);
+    const submissionIds = submissions
+      .filter((submission) => submission.assignmentId === selectedAssignmentId)
+      .map((submission) => submission.id);
+    const job = await startSimilarityJob(selectedAssignmentId, submissionIds.length > 0 ? submissionIds : [1]);
     setSimilarityRows((current) => [job, ...current.filter((item) => item.id !== job.id)]);
   };
 

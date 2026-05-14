@@ -815,6 +815,20 @@
 - `apps/web/src/components/TeacherDashboard.tsx`
 - `PROGRESS.md`
 
+### 23.10 教师端作业维度 HTTP 数据同步
+
+- 已让 HTTP 工作区加载先解析当前课程下的作业，再用当前作业 ID 请求收交统计、未交名单、成绩导出、成绩分析、失分点、课程目标达成度和查重任务，避免继续固定读取 `assignmentId=1`。
+- 已让教师端评分标准优先匹配当前作业，并让查重启动使用当前作业 ID 和该作业真实提交 ID。
+- 已让 mock 查重任务接收作业 ID 和提交 ID，保持 HTTP 失败兜底时的作业维度一致。
+- 本模块已通过前端 lint、生产构建和 MVP 验证脚本。
+
+主要代码：
+
+- `apps/web/src/api/httpApi.ts`
+- `apps/web/src/api/mockApi.ts`
+- `apps/web/src/components/TeacherDashboard.tsx`
+- `PROGRESS.md`
+
 ### 24. Gateway 本地跨域联调
 
 - 已为 gateway 增加本地 Vite 开发端口 CORS 配置。
@@ -2427,6 +2441,14 @@ pnpm verify:mvp
 ```
 
 教师端 HTTP 工作区异步数据同步后已通过静态检查、构建和 MVP 验证：
+
+```bash
+pnpm --filter trainmark-ai-web lint
+pnpm --filter trainmark-ai-web build
+pnpm verify:mvp
+```
+
+教师端作业维度 HTTP 数据同步后已通过静态检查、构建和 MVP 验证：
 
 ```bash
 pnpm --filter trainmark-ai-web lint

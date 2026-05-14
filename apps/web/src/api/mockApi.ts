@@ -504,14 +504,14 @@ export const mockApi = {
   listCourseOutcomes(): CourseOutcomeAchievement[] {
     return courseOutcomes;
   },
-  listSimilarityJobs(): SimilarityJobSummary[] {
-    return similarityJobs;
+  listSimilarityJobs(assignmentId?: number): SimilarityJobSummary[] {
+    return similarityJobs.filter((item) => assignmentId === undefined || item.assignmentId === assignmentId);
   },
-  startSimilarityJob(): SimilarityJobSummary {
+  startSimilarityJob(assignmentId = 1, submissionIds = [1, 18, 43]): SimilarityJobSummary {
     const job: SimilarityJobSummary = {
       id: similarityJobs.length + 1,
-      assignmentId: 1,
-      checkedSubmissionCount: 65,
+      assignmentId,
+      checkedSubmissionCount: submissionIds.length,
       status: 'COMPLETED',
       maxSimilarity: 0.74,
       highRiskPairCount: 0,

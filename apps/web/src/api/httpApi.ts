@@ -109,10 +109,11 @@ export function resolveApiAssetUrl(path: string) {
 export async function loadWorkspaceData(selectedCourseId: number, userId: number, role: RoleCode): Promise<WorkspaceData> {
   const fallbackGradingResults = mockApi.listGradingResults();
   const submissionPath = role === 'STUDENT' ? `/api/submissions?studentId=${userId}` : '/api/submissions';
+  const assignments = await getOr(`/api/assignments?courseId=${selectedCourseId}`, mockApi.listAssignments(selectedCourseId));
+  const selectedAssignmentId = resolveWorkspaceAssignmentId(assignments, selectedCourseId);
   const [
     courses,
     classes,
-    assignments,
     organizations,
     students,
     collectionOverview,
@@ -133,22 +134,21 @@ export async function loadWorkspaceData(selectedCourseId: number, userId: number
   ] = await Promise.all([
     getOr('/api/courses', mockApi.listCourses()),
     getOr(`/api/courses/${selectedCourseId}/classes`, mockApi.listClasses(selectedCourseId)),
-    getOr(`/api/assignments?courseId=${selectedCourseId}`, mockApi.listAssignments(selectedCourseId)),
     getOr('/api/organizations', mockApi.listOrganizations()),
     getOr('/api/users?role=STUDENT', mockApi.listUsers('STUDENT')),
-    getOr('/api/notifications/assignments/1/collection', mockApi.getCollectionOverview()),
-    getOr('/api/notifications/assignments/1/unsubmitted', mockApi.listUnsubmittedStudents()),
+    getOr(`/api/notifications/assignments/${selectedAssignmentId}/collection`, mockApi.getCollectionOverview()),
+    getOr(`/api/notifications/assignments/${selectedAssignmentId}/unsubmitted`, mockApi.listUnsubmittedStudents()),
     getOr('/api/rubrics', mockApi.listRubrics()),
     getOr('/api/grading/jobs', mockApi.listGradingJobs()),
     loadOcrJobs(),
     getOr('/api/grading/results', fallbackGradingResults),
     getOr(submissionPath, [] as SubmissionSummary[]),
-    getOr('/api/grading/exports?assignmentId=1', mockApi.listGradeExports(1)),
-    getOr('/api/analytics/grade-statistics?assignmentId=1', mockApi.getGradeStatistics()),
-    getOr('/api/analytics/loss-points?assignmentId=1', mockApi.listLossPoints()),
-    getOr('/api/analytics/course-outcomes?assignmentId=1', mockApi.listCourseOutcomes()),
+    getOr(`/api/grading/exports?assignmentId=${selectedAssignmentId}`, mockApi.listGradeExports(selectedAssignmentId)),
+    getOr(`/api/analytics/grade-statistics?assignmentId=${selectedAssignmentId}`, mockApi.getGradeStatistics()),
+    getOr(`/api/analytics/loss-points?assignmentId=${selectedAssignmentId}`, mockApi.listLossPoints()),
+    getOr(`/api/analytics/course-outcomes?assignmentId=${selectedAssignmentId}`, mockApi.listCourseOutcomes()),
     getOr('/api/grading/results/appeals', mockApi.listAppeals()),
-    getOr('/api/similarity/jobs', mockApi.listSimilarityJobs()),
+    getOr(`/api/similarity/jobs?assignmentId=${selectedAssignmentId}`, mockApi.listSimilarityJobs(selectedAssignmentId)),
     getOr('/api/admin/audit-logs', mockApi.listAuditLogs()),
     getOr('/api/admin/settings', mockApi.listSystemSettings()),
   ]);
@@ -178,6 +178,10 @@ export async function loadWorkspaceData(selectedCourseId: number, userId: number
     auditLogs,
     systemSettings,
   };
+}
+
+function resolveWorkspaceAssignmentId(assignments: AssignmentSummary[], selectedCourseId: number) {
+  return assignments.find((assignment) => assignment.courseId === selectedCourseId)?.id ?? assignments[0]?.id ?? 1;
 }
 
 function deriveStudentTasks(
@@ -353,12 +357,12 @@ export async function remindUnsubmitted(assignmentId: number, studentIds: number
   );
 }
 
-export async function startSimilarityJob(assignmentId: number): Promise<SimilarityJobSummary> {
+export async function startSimilarityJob(assignmentId: number, submissionIds: number[] = [1, 18, 43]): Promise<SimilarityJobSummary> {
   return mutateOr(
     'POST',
     '/api/similarity/jobs',
-    { assignmentId, submissionIds: [1, 18, 43], includeHistory: true },
-    () => mockApi.startSimilarityJob(),
+    { assignmentId, submissionIds, includeHistory: true },
+    () => mockApi.startSimilarityJob(assignmentId, submissionIds),
   );
 }
 
