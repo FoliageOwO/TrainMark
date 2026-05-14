@@ -1831,6 +1831,22 @@
 - `README.md`
 - `PROGRESS.md`
 
+### 61.7 教师端写操作后工作区刷新
+
+- 已为教师端工作台增加写操作后的工作区刷新回调。
+- 创建任务、创建评分标准、启动 AI 批改、启动 OCR、启动查重、创建导出、一键催交、复核改分、复核通过、发布/撤回成绩和处理申诉后，会在保留本地即时反馈的同时重新读取 HTTP 工作区数据。
+- 该刷新链路会同步任务列表、评分标准、批改队列、OCR 队列、查重队列、导出列表、复核结果、发布审计、申诉列表和顶部指标，减少真实联调时的旧数据停留。
+- Mock 模式下刷新回调为 no-op，继续保持单前端演示行为。
+- 已更新 README 当前进度。
+- 本模块已通过前端 lint、前端构建和 MVP 主验证。
+
+主要代码：
+
+- `apps/web/src/pages/App.tsx`
+- `apps/web/src/components/TeacherDashboard.tsx`
+- `README.md`
+- `PROGRESS.md`
+
 ### 62. 数据库迁移版本修复
 
 - 已修复 demo 数据和上传会话迁移文件与既有迁移版本号重复的问题。
@@ -2836,6 +2852,14 @@ pnpm verify:mvp
 ```
 
 学生端写操作后工作区刷新已通过前端静态检查、构建和 MVP 主验证：
+
+```bash
+pnpm --filter trainmark-ai-web lint
+pnpm --filter trainmark-ai-web build
+pnpm verify:mvp
+```
+
+教师端写操作后工作区刷新已通过前端静态检查、构建和 MVP 主验证：
 
 ```bash
 pnpm --filter trainmark-ai-web lint

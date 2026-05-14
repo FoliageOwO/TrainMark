@@ -189,6 +189,7 @@ export function App() {
           courseOutcomes={courseOutcomes}
           appeals={allAppeals}
           similarityJobs={similarityJobs}
+          onWorkspaceRefresh={refreshWorkspaceData}
         />
       )}
     </AppChrome>

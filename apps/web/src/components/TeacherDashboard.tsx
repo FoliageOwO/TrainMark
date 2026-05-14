@@ -54,6 +54,7 @@ type TeacherDashboardProps = {
   courseOutcomes: ReturnType<typeof mockApi.listCourseOutcomes>;
   appeals: ReturnType<typeof mockApi.listAppeals>;
   similarityJobs: ReturnType<typeof mockApi.listSimilarityJobs>;
+  onWorkspaceRefresh: () => Promise<void>;
 };
 
 export function TeacherDashboard({
@@ -82,6 +83,7 @@ export function TeacherDashboard({
   courseOutcomes,
   appeals,
   similarityJobs,
+  onWorkspaceRefresh,
 }: TeacherDashboardProps) {
   const [reminderResult, setReminderResult] = useState<ReturnType<typeof mockApi.remindUnsubmitted> | null>(null);
   const [startedJob, setStartedJob] = useState<ReturnType<typeof mockApi.startGradingJob> | null>(null);
@@ -159,6 +161,7 @@ export function TeacherDashboard({
       .filter((submission) => submission.assignmentId === rubric.assignmentId)
       .map((submission) => submission.id);
     setStartedJob(await createGradingJob(rubric.assignmentId, rubric.id, submissionIds.length > 0 ? submissionIds : [1]));
+    await onWorkspaceRefresh();
   };
 
   const handleReviewItemSubmit = async (event: FormEvent<HTMLFormElement>, rubricItemId: number) => {
@@ -170,6 +173,7 @@ export function TeacherDashboard({
     const teacherScore = Number(formData.get('teacherScore'));
     const teacherComment = String(formData.get('teacherComment') ?? '');
     syncReviewResult(await updateReviewItem(selectedReview.id, rubricItemId, teacherScore, teacherComment));
+    await onWorkspaceRefresh();
   };
 
   const handleApproveResult = async () => {
@@ -177,6 +181,7 @@ export function TeacherDashboard({
       return;
     }
     syncReviewResult(await approveGradingResult(selectedReview.id, operatorName, selectedReview.overallComment));
+    await onWorkspaceRefresh();
   };
 
   const handlePublishResult = async () => {
@@ -185,6 +190,7 @@ export function TeacherDashboard({
     }
     syncReviewResult(await publishGradingResult(selectedReview.id, operatorName));
     setPublicationAuditRows(await loadPublicationAudits(selectedReview.id));
+    await onWorkspaceRefresh();
   };
 
   const handleWithdrawResult = async () => {
@@ -193,6 +199,7 @@ export function TeacherDashboard({
     }
     syncReviewResult(await withdrawGradingResult(selectedReview.id, operatorName));
     setPublicationAuditRows(await loadPublicationAudits(selectedReview.id));
+    await onWorkspaceRefresh();
   };
 
   const handleResolveAppeal = async (appealId: number, accepted: boolean) => {
@@ -205,6 +212,7 @@ export function TeacherDashboard({
         ? { ...item, status: accepted ? 'ACCEPTED' : 'REJECTED', teacherReply: reply, resolvedAt: new Date().toISOString() }
         : item
     )));
+    await onWorkspaceRefresh();
   };
 
   const handleStartSimilarity = async () => {
@@ -213,6 +221,7 @@ export function TeacherDashboard({
       .map((submission) => submission.id);
     const job = await startSimilarityJob(selectedAssignmentId, submissionIds.length > 0 ? submissionIds : [1]);
     setSimilarityRows((current) => [job, ...current.filter((item) => item.id !== job.id)]);
+    await onWorkspaceRefresh();
   };
 
   const handleStartOcr = async () => {
@@ -221,6 +230,7 @@ export function TeacherDashboard({
     }
     const job = await createOcrJob(ocrCandidate.id, ocrCandidate.objectKey);
     setOcrRows((current) => [job, ...current.filter((item) => item.id !== job.id)]);
+    await onWorkspaceRefresh();
   };
 
   const handleRemindUnsubmitted = async () => {
@@ -229,23 +239,27 @@ export function TeacherDashboard({
       unsubmittedStudents.map((student) => student.studentId),
     );
     setReminderResult(result);
+    await onWorkspaceRefresh();
   };
 
   const handleCreateGradeExport = async () => {
     const exportJob = await createGradeExport(gradeStatistics.assignmentId, operatorName, 'CSV');
     setExportRows((current) => [exportJob, ...current.filter((item) => item.id !== exportJob.id)]);
+    await onWorkspaceRefresh();
   };
 
   const handleCreateAssignment = async (input: CreateAssignmentInput) => {
     const assignment = await createAssignment(input);
     setAssignmentRows((current) => [assignment, ...current.filter((item) => item.id !== assignment.id)]);
     setAssignmentNotice(`已创建任务：${assignment.title}`);
+    await onWorkspaceRefresh();
   };
 
   const handleCreateRubric = async (input: CreateRubricInput) => {
     const nextRubric = await createRubric(input);
     setRubricRows((current) => [nextRubric, ...current.filter((item) => item.id !== nextRubric.id)]);
     setRubricNotice(`已保存评分标准：${nextRubric.name}`);
+    await onWorkspaceRefresh();
   };
 
   return (
