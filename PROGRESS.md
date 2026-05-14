@@ -732,6 +732,19 @@
 - `apps/web/src/pages/App.tsx`
 - `PROGRESS.md`
 
+### 23.4 前端学生提交任务绑定
+
+- 已在学生端上传报告卡片加入提交任务选择，默认使用当前任务列表的第一项。
+- 已让“立即上传”按钮选中对应未提交任务，并清空旧回执与进度状态，避免继续沿用上一次提交结果。
+- 已将上传回执创建从固定作业 `1` 改为当前选中任务 ID，HTTP 模式下会提交到真实任务。
+- 本模块已通过前端 lint、生产构建和 MVP 验证脚本。
+
+主要代码：
+
+- `apps/web/src/components/StudentDashboard.tsx`
+- `apps/web/src/styles/global.css`
+- `PROGRESS.md`
+
 ### 24. Gateway 本地跨域联调
 
 - 已为 gateway 增加本地 Vite 开发端口 CORS 配置。
@@ -1699,6 +1712,14 @@ pnpm verify:mvp
 ```
 
 前端学生任务数据源联调后已通过静态检查、构建和 MVP 验证：
+
+```bash
+pnpm --filter trainmark-ai-web lint
+pnpm --filter trainmark-ai-web build
+pnpm verify:mvp
+```
+
+前端学生提交任务绑定后已通过静态检查、构建和 MVP 验证：
 
 ```bash
 pnpm --filter trainmark-ai-web lint

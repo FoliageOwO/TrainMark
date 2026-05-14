@@ -667,7 +667,8 @@ button:focus-visible {
   font-weight: 700;
 }
 
-.file-name-field input {
+.file-name-field input,
+.file-name-field select {
   width: 100%;
   padding: 12px 13px;
   color: #0f172a;

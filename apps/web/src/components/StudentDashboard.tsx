@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   CalendarClock,
   CheckCircle2,
@@ -30,10 +30,22 @@ export function StudentDashboard({ tasks, publishedResults, appeals, userId }: S
   const [uploadProgress, setUploadProgress] = useState(72);
   const [receipt, setReceipt] = useState<UploadReceipt | null>(null);
   const [appealRows, setAppealRows] = useState(appeals);
+  const [selectedTaskId, setSelectedTaskId] = useState(() => tasks[0]?.id ?? 0);
+
+  const selectedTask = tasks.find((task) => task.id === selectedTaskId) ?? tasks[0];
+
+  useEffect(() => {
+    if (tasks.length > 0 && !tasks.some((task) => task.id === selectedTaskId)) {
+      setSelectedTaskId(tasks[0].id);
+    }
+  }, [selectedTaskId, tasks]);
 
   const confirmUpload = async () => {
+    if (!selectedTask) {
+      return;
+    }
     setUploadProgress(100);
-    setReceipt(await createUploadReceipt(selectedFileName, 1, userId));
+    setReceipt(await createUploadReceipt(selectedFileName, selectedTask.id, userId));
   };
 
   const submitAppeal = async (resultId: number, rubricItemId: number | null) => {
@@ -69,7 +81,17 @@ export function StudentDashboard({ tasks, publishedResults, appeals, userId }: S
                 <span className="status-pill">{task.status}</span>
                 {task.score !== undefined && <span className="score-chip">{task.score} 分</span>}
               </div>
-              <button className="primary-button" type="button">
+              <button
+                className="primary-button"
+                type="button"
+                onClick={() => {
+                  if (task.status === '未提交') {
+                    setSelectedTaskId(task.id);
+                    setReceipt(null);
+                    setUploadProgress(36);
+                  }
+                }}
+              >
                 {task.status === '未提交' ? '立即上传' : '查看批注'}
               </button>
             </div>
@@ -151,6 +173,23 @@ export function StudentDashboard({ tasks, publishedResults, appeals, userId }: S
             <span>PDF / Word / JPG / PNG，最大 50MB</span>
           </div>
           <label className="file-name-field">
+            提交任务
+            <select
+              value={selectedTask?.id ?? ''}
+              onChange={(event) => {
+                setSelectedTaskId(Number(event.target.value));
+                setReceipt(null);
+                setUploadProgress(36);
+              }}
+            >
+              {tasks.map((task) => (
+                <option key={task.id} value={task.id}>
+                  {task.title}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="file-name-field">
             文件名
             <input
               value={selectedFileName}
@@ -177,7 +216,7 @@ export function StudentDashboard({ tasks, publishedResults, appeals, userId }: S
               </div>
             </div>
           ) : (
-            <button className="primary-button full-width" type="button" onClick={confirmUpload}>
+            <button className="primary-button full-width" type="button" onClick={confirmUpload} disabled={!selectedTask}>
               确认提交
             </button>
           )}
