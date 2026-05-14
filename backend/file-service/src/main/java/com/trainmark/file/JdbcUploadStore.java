@@ -99,7 +99,7 @@ public class JdbcUploadStore implements UploadStore {
   public Collection<SubmissionSummary> listSubmissions(Long assignmentId, Long studentId) {
     var sql = """
         SELECT s.id, s.assignment_id, s.student_id, u.name AS student_name, u.student_no,
-               COALESCE(s.file_name, '未命名报告') AS file_name, s.version, s.status, s.submitted_at
+               COALESCE(s.file_name, '未命名报告') AS file_name, s.object_key, s.version, s.status, s.submitted_at
         FROM submissions s
         LEFT JOIN users u ON u.id = s.student_id
         """;
@@ -137,6 +137,7 @@ public class JdbcUploadStore implements UploadStore {
               results.getString("student_name"),
               results.getString("student_no"),
               results.getString("file_name"),
+              results.getString("object_key"),
               results.getInt("version"),
               SubmissionStatus.valueOf(results.getString("status")),
               results.getObject("submitted_at", OffsetDateTime.class)

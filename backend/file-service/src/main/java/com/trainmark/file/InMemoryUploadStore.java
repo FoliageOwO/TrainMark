@@ -30,6 +30,7 @@ public class InMemoryUploadStore implements UploadStore {
         "张三",
         "2024010101",
         "数据库设计报告.pdf",
+        "assignments/1/students/2/database-report.pdf",
         1,
         SubmissionStatus.PUBLISHED,
         OffsetDateTime.now().minusDays(4)
@@ -59,6 +60,7 @@ public class InMemoryUploadStore implements UploadStore {
         "张三",
         "2024010101",
         upload.request().fileName(),
+        upload.objectKey(),
         version,
         SubmissionStatus.SUBMITTED,
         submittedAt

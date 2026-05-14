@@ -281,6 +281,26 @@ export async function createGradingJob(assignmentId: number, rubricId: number, s
   );
 }
 
+export async function createOcrJob(submissionId: number, objectKey: string): Promise<OcrJobSummary> {
+  return mutateOr(
+    'POST',
+    '/api/ocr/jobs',
+    { submissionId, objectKey, mode: 'STRUCTURE' },
+    () => ({
+      id: Date.now(),
+      submissionId,
+      objectKey,
+      status: 'COMPLETED',
+      pageCount: 1,
+      textBlockCount: 0,
+      tableCount: 0,
+      confidence: 80,
+      blocks: [],
+    }),
+    normalizeOcrJob,
+  );
+}
+
 export async function updateReviewItem(
   resultId: number,
   rubricItemId: number,
@@ -483,11 +503,17 @@ async function request<T>(path: string, method: 'POST' | 'PATCH', body: unknown)
   return payload.data;
 }
 
-function normalizeOcrJobs(value: Array<Omit<OcrJobSummary, 'blocks'> & { blocks?: OcrJobSummary['blocks'] }>): OcrJobSummary[] {
-  return value.map((item) => ({
-    ...item,
-    blocks: item.blocks ?? [],
-  }));
+type BackendOcrJobSummary = Omit<OcrJobSummary, 'blocks'> & { blocks?: OcrJobSummary['blocks'] };
+
+function normalizeOcrJob(value: BackendOcrJobSummary): OcrJobSummary {
+  return {
+    ...value,
+    blocks: value.blocks ?? [],
+  };
+}
+
+function normalizeOcrJobs(value: BackendOcrJobSummary[]): OcrJobSummary[] {
+  return value.map(normalizeOcrJob);
 }
 
 async function loadOcrJobs(): Promise<OcrJobSummary[]> {

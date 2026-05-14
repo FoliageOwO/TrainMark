@@ -93,6 +93,10 @@ inconsistent.
 | `GET` | `/api/submissions?assignmentId=1&studentId=2` | optional `assignmentId`, `studentId` query | `SubmissionSummary[]` |
 | `GET` | `/api/submissions/{submissionId}/file` | none | original submitted report bytes |
 
+`SubmissionSummary` includes `objectKey` so teacher workflows can start OCR or
+other AI jobs against the same stored report object returned by upload
+initialization.
+
 ## Collection And Reminders
 
 | Method | Path | Request | Response data |

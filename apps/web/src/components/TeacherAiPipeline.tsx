@@ -29,8 +29,10 @@ type TeacherAiPipelineProps = {
   rubricNotice: string;
   gradingJobs: GradingJobSummary[];
   ocrJobs: OcrJobSummary[];
+  canStartOcr: boolean;
   onCreateRubric: (input: CreateRubricInput) => Promise<void>;
   onStartGrading: () => void;
+  onStartOcr: () => void;
 };
 
 export function TeacherAiPipeline({
@@ -39,8 +41,10 @@ export function TeacherAiPipeline({
   rubricNotice,
   gradingJobs,
   ocrJobs,
+  canStartOcr,
   onCreateRubric,
   onStartGrading,
+  onStartOcr,
 }: TeacherAiPipelineProps) {
   const [showRubricForm, setShowRubricForm] = useState(false);
   const [isCreatingRubric, setIsCreatingRubric] = useState(false);
@@ -211,7 +215,9 @@ export function TeacherAiPipeline({
               <p className="eyebrow">OCR Pipeline</p>
               <h3>文档识别与结构化</h3>
             </div>
-            <span className="status-pill">PaddleOCR</span>
+            <button className="ghost-button" type="button" onClick={onStartOcr} disabled={!canStartOcr}>
+              <FileText size={15} /> 启动 OCR
+            </button>
           </div>
           <div className="ocr-job-list">
             {ocrJobs.map((job) => (

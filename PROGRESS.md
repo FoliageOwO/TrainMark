@@ -1778,6 +1778,28 @@
 - `README.md`
 - `PROGRESS.md`
 
+### 61.4 教师端真实提交 OCR 启动
+
+- 已在 `SubmissionSummary` 中暴露提交报告 `objectKey`，让提交列表不再只包含展示文件名。
+- 已让内存和 JDBC 上传存储在提交摘要中返回同一个对象键，保持默认演示和数据库模式一致。
+- 已新增前端 HTTP `createOcrJob` 调用，向 `/api/ocr/jobs` 发送真实 `submissionId` 与 `objectKey`。
+- 已在教师端 OCR 面板加入“启动 OCR”动作，优先使用当前课程任务下最近的已交报告。
+- 已更新 README 当前进度和 API 文档中的 `SubmissionSummary` 说明。
+- 本模块已通过前端 lint、前端构建、后端打包、写接口 smoke dry-run 和 MVP 主验证。
+
+主要代码：
+
+- `backend/shared/src/main/java/com/trainmark/shared/dto/SubmissionSummary.java`
+- `backend/file-service/src/main/java/com/trainmark/file/InMemoryUploadStore.java`
+- `backend/file-service/src/main/java/com/trainmark/file/JdbcUploadStore.java`
+- `apps/web/src/api/httpApi.ts`
+- `apps/web/src/api/types.ts`
+- `apps/web/src/components/TeacherAiPipeline.tsx`
+- `apps/web/src/components/TeacherDashboard.tsx`
+- `README.md`
+- `docs/API.md`
+- `PROGRESS.md`
+
 ### 62. 数据库迁移版本修复
 
 - 已修复 demo 数据和上传会话迁移文件与既有迁移版本号重复的问题。
@@ -2761,6 +2783,16 @@ cmp -s uploaded.pdf downloaded.pdf
 ```bash
 pnpm --filter trainmark-ai-web lint
 pnpm --filter trainmark-ai-web build
+pnpm verify:mvp
+```
+
+教师端真实提交 OCR 启动已通过前端静态检查、构建、后端打包、写接口 smoke dry-run 和 MVP 主验证：
+
+```bash
+pnpm --filter trainmark-ai-web lint
+pnpm --filter trainmark-ai-web build
+mvn -f backend/pom.xml package -DskipTests
+SMOKE_DRY_RUN=1 SMOKE_INCLUDE_WRITES=1 pnpm smoke:api
 pnpm verify:mvp
 ```
 

@@ -5,6 +5,7 @@ import {
   approveGradingResult,
   createGradeExport,
   createGradingJob,
+  createOcrJob,
   createRubric,
   loadPublicationAudits,
   publishGradingResult,
@@ -90,6 +91,7 @@ export function TeacherDashboard({
   const [appealRows, setAppealRows] = useState(appeals);
   const [similarityRows, setSimilarityRows] = useState(similarityJobs);
   const [exportRows, setExportRows] = useState(gradeExports);
+  const [ocrRows, setOcrRows] = useState(ocrJobs);
   const [assignmentRows, setAssignmentRows] = useState(assignments);
   const [rubricRows, setRubricRows] = useState<RubricSummary[]>(rubrics);
   const [assignmentNotice, setAssignmentNotice] = useState('');
@@ -100,6 +102,9 @@ export function TeacherDashboard({
   const rubric = rubricRows.find((item) => item.assignmentId === selectedAssignmentId) ?? rubricRows[0] ?? null;
   const visibleJobs = startedJob ? [startedJob, ...gradingJobs] : gradingJobs;
   const selectedReview = reviewResults.find((item) => item.id === selectedReviewId) ?? reviewResults[0] ?? null;
+  const ocrCandidate = submissions.find((submission) => (
+    submission.assignmentId === selectedAssignmentId && Boolean(submission.objectKey)
+  )) ?? null;
 
   useEffect(() => {
     setAssignmentRows(assignments);
@@ -128,6 +133,10 @@ export function TeacherDashboard({
   useEffect(() => {
     setSimilarityRows(similarityJobs);
   }, [similarityJobs]);
+
+  useEffect(() => {
+    setOcrRows(ocrJobs);
+  }, [ocrJobs]);
 
   useEffect(() => {
     setExportRows(gradeExports);
@@ -206,6 +215,14 @@ export function TeacherDashboard({
     setSimilarityRows((current) => [job, ...current.filter((item) => item.id !== job.id)]);
   };
 
+  const handleStartOcr = async () => {
+    if (!ocrCandidate) {
+      return;
+    }
+    const job = await createOcrJob(ocrCandidate.id, ocrCandidate.objectKey);
+    setOcrRows((current) => [job, ...current.filter((item) => item.id !== job.id)]);
+  };
+
   const handleRemindUnsubmitted = async () => {
     const result = await remindUnsubmitted(
       collectionOverview.assignmentId,
@@ -250,9 +267,11 @@ export function TeacherDashboard({
         rubric={rubric}
         rubricNotice={rubricNotice}
         gradingJobs={visibleJobs}
-        ocrJobs={ocrJobs}
+        ocrJobs={ocrRows}
+        canStartOcr={Boolean(ocrCandidate)}
         onCreateRubric={handleCreateRubric}
         onStartGrading={handleStartGrading}
+        onStartOcr={handleStartOcr}
       />
 
       <TeacherSimilarityPanel similarityJobs={similarityRows} onStartSimilarity={handleStartSimilarity} />

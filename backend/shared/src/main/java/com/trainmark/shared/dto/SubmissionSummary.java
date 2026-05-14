@@ -10,6 +10,7 @@ public record SubmissionSummary(
     String studentName,
     String studentNo,
     String fileName,
+    String objectKey,
     int version,
     SubmissionStatus status,
     OffsetDateTime submittedAt

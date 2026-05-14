@@ -107,6 +107,7 @@ export type SubmissionSummary = {
   studentName: string;
   studentNo: string;
   fileName: string;
+  objectKey: string;
   version: number;
   status: SubmissionStatus;
   submittedAt: string;
