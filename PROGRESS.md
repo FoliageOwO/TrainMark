@@ -872,6 +872,19 @@
 - `README.md`
 - `PROGRESS.md`
 
+### 53. API 冒烟等待重试
+
+- 已为 `scripts/smoke-api.sh` 增加可配置重试能力。
+- 已支持 `SMOKE_RETRIES` 控制每个端点最大尝试次数，默认 1 次，保持原有快速失败行为。
+- 已支持 `SMOKE_RETRY_DELAY_SECONDS` 控制重试间隔，便于 `pnpm dev:backend` 后等待服务逐步 ready。
+- 已在 README 补充等待式 API 冒烟检查示例。
+
+主要代码：
+
+- `scripts/smoke-api.sh`
+- `README.md`
+- `PROGRESS.md`
+
 ## 已验证
 
 前端构建已通过：
@@ -1139,6 +1152,13 @@ mvn -f backend/pom.xml -pl grading-service,gateway-service -am package -DskipTes
 SMOKE_DRY_RUN=1 pnpm smoke:api
 ```
 
+API 冒烟等待重试已通过脚本语法检查和 dry-run：
+
+```bash
+bash -n scripts/smoke-api.sh
+SMOKE_DRY_RUN=1 SMOKE_RETRIES=2 SMOKE_RETRY_DELAY_SECONDS=1 pnpm smoke:api
+```
+
 全部后端模块已通过编译：
 
 ```bash
@@ -1202,6 +1222,7 @@ Docker Compose 已完成配置展开校验，暂未拉起 PostgreSQL、Redis、R
 - `fix: resolve api asset urls`
 - `feat: link grade exports`
 - `feat: serve grading assets`
+- `chore: add smoke retries`
 
 ## 接下来需要做
 

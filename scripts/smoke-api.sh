@@ -3,18 +3,30 @@ set -euo pipefail
 
 GATEWAY_URL="${GATEWAY_URL:-http://localhost:8080}"
 SMOKE_DRY_RUN="${SMOKE_DRY_RUN:-0}"
+SMOKE_RETRIES="${SMOKE_RETRIES:-1}"
+SMOKE_RETRY_DELAY_SECONDS="${SMOKE_RETRY_DELAY_SECONDS:-2}"
 
 check_url() {
   local label="$1"
   local url="$2"
+  local attempt=1
 
   if [[ "$SMOKE_DRY_RUN" == "1" ]]; then
     echo "[smoke:dry-run] $label -> $url"
     return
   fi
 
-  echo "[smoke] $label"
-  curl --fail --silent --show-error --max-time 5 "$url" >/dev/null
+  while true; do
+    echo "[smoke] $label (attempt $attempt/$SMOKE_RETRIES)"
+    if curl --fail --silent --show-error --max-time 5 "$url" >/dev/null; then
+      return
+    fi
+    if ((attempt >= SMOKE_RETRIES)); then
+      return 1
+    fi
+    attempt=$((attempt + 1))
+    sleep "$SMOKE_RETRY_DELAY_SECONDS"
+  done
 }
 
 check_url "gateway health" "$GATEWAY_URL/actuator/health"

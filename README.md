@@ -188,6 +188,12 @@ mvn -f backend/pom.xml package -DskipTests
 pnpm smoke:api
 ```
 
+如果服务仍在启动，可以让冒烟检查等待重试：
+
+```bash
+SMOKE_RETRIES=30 SMOKE_RETRY_DELAY_SECONDS=2 pnpm smoke:api
+```
+
 仅查看将要检查的端点：
 
 ```bash
