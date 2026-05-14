@@ -1822,6 +1822,20 @@ curl --noproxy '*' 'http://localhost:8085/api/grading/results/3/publication-audi
 curl --noproxy '*' -H 'Content-Type: application/json' -d '{...}' http://localhost:8085/api/grading/results/appeals
 ```
 
+项目级 MVP 验证脚本已通过：
+
+```bash
+pnpm verify:mvp
+```
+
+覆盖内容：
+
+- 前端 `pnpm lint:web`
+- 前端 `pnpm build:web`
+- 后端 `mvn -f backend/pom.xml package -DskipTests`
+- AI provider 语法和本地 OCR/评分/批注 provider 验证
+- API smoke dry-run 端点清单和后端路由面检查
+
 ## 已提交记录
 
 主要提交：
