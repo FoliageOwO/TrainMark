@@ -652,6 +652,18 @@
 - `apps/web/src/pages/App.tsx`
 - `PROGRESS.md`
 
+### 22.11 教师端运维能力组件拆分
+
+- 已从教师端工作台中拆出 `TeacherOperationsPanel`，AI 批改流水线步骤和生产运维能力说明集中维护。
+- 固定流水线步骤和底部能力图标随组件下沉，`App.tsx` 不再保留纯展示常量和底部静态 JSX。
+- `App.tsx` 继续负责老师端数据装配、写操作和各业务面板组合。
+
+主要代码：
+
+- `apps/web/src/components/TeacherOperationsPanel.tsx`
+- `apps/web/src/pages/App.tsx`
+- `PROGRESS.md`
+
 ### 23. 前端 HTTP 写操作联调
 
 - 已扩展前端 HTTP API 层，支持在 `VITE_API_MODE=http` 下调用后端写接口。
@@ -1585,6 +1597,14 @@ pnpm verify:mvp
 ```
 
 教师端名单组织组件拆分后已通过静态检查和构建：
+
+```bash
+pnpm --filter trainmark-ai-web lint
+pnpm --filter trainmark-ai-web build
+pnpm verify:mvp
+```
+
+教师端运维能力组件拆分后已通过静态检查和构建：
 
 ```bash
 pnpm --filter trainmark-ai-web lint
