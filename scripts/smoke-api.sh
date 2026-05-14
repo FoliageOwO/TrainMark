@@ -54,6 +54,33 @@ check_api() {
   done
 }
 
+check_api_auth() {
+  local label="$1"
+  local url="$2"
+  local token="$3"
+  local attempt=1
+  local response
+
+  if [[ "$SMOKE_DRY_RUN" == "1" ]]; then
+    echo "[smoke:dry-run] API $label -> $url"
+    return
+  fi
+
+  while true; do
+    echo "[smoke] API $label (attempt $attempt/$SMOKE_RETRIES)"
+    if response="$(curl --noproxy '*' --fail --silent --show-error --max-time 5 \
+      -H "Authorization: Bearer $token" \
+      "$url")" && api_success "$response"; then
+      return
+    fi
+    if ((attempt >= SMOKE_RETRIES)); then
+      return 1
+    fi
+    attempt=$((attempt + 1))
+    sleep "$SMOKE_RETRY_DELAY_SECONDS"
+  done
+}
+
 post_json() {
   local label="$1"
   local url="$2"
@@ -168,8 +195,14 @@ check_url "notification-service health" "${NOTIFICATION_SERVICE_URL:-http://loca
 check_url "admin-service health" "${ADMIN_SERVICE_URL:-http://localhost:8090}/actuator/health"
 check_url "analytics-service health" "${ANALYTICS_SERVICE_URL:-http://localhost:8091}/actuator/health"
 
-post_json "gateway auth login" "$GATEWAY_URL/api/auth/login" '{"username":"admin","password":"trainmark"}'
-check_api "gateway auth profile" "$GATEWAY_URL/api/auth/me"
+if [[ "$SMOKE_DRY_RUN" == "1" ]]; then
+  post_json "gateway auth login" "$GATEWAY_URL/api/auth/login" '{"username":"admin","password":"trainmark"}'
+  check_api_auth "gateway auth profile" "$GATEWAY_URL/api/auth/me" "<from auth login>"
+else
+  auth_login_response="$(post_json "gateway auth login" "$GATEWAY_URL/api/auth/login" '{"username":"admin","password":"trainmark"}')"
+  auth_access_token="$(json_field accessToken <<< "$auth_login_response")"
+  check_api_auth "gateway auth profile" "$GATEWAY_URL/api/auth/me" "$auth_access_token"
+fi
 check_api "gateway organizations" "$GATEWAY_URL/api/organizations"
 check_api "gateway users" "$GATEWAY_URL/api/users"
 check_api "gateway courses" "$GATEWAY_URL/api/courses"

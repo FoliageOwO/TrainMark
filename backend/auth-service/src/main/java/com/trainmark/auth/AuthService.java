@@ -7,12 +7,28 @@ import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.util.Base64;
 import java.util.List;
+import java.util.Optional;
 import org.springframework.stereotype.Service;
 
 @Service
 public class AuthService {
+  private final AuthUserStore authUserStore;
+
+  public AuthService(AuthUserStore authUserStore) {
+    this.authUserStore = authUserStore;
+  }
+
   public LoginResponse login(LoginRequest request) {
-    return mockUser(request.username());
+    return authUserStore.findByLogin(request.username())
+        .map(this::loginUser)
+        .orElseGet(() -> mockUser(request.username()));
+  }
+
+  public LoginResponse.UserProfile currentUser(String authorizationHeader) {
+    return usernameFromBearer(authorizationHeader)
+        .flatMap(authUserStore::findByLogin)
+        .map(this::profile)
+        .orElseGet(() -> mockUser("teacher").user());
   }
 
   public LoginResponse mockUser(String username) {
@@ -23,9 +39,39 @@ public class AuthService {
     return new LoginResponse(token("access", username, issuedAt), token("refresh", username, issuedAt), user);
   }
 
+  private LoginResponse loginUser(AuthUserStore.AuthUser authUser) {
+    var issuedAt = Instant.now().toString();
+    var username = authUser.username();
+    return new LoginResponse(token("access", username, issuedAt), token("refresh", username, issuedAt), profile(authUser));
+  }
+
+  private LoginResponse.UserProfile profile(AuthUserStore.AuthUser authUser) {
+    return new LoginResponse.UserProfile(authUser.id(), authUser.name(), authUser.username(), authUser.roles());
+  }
+
+  private Optional<String> usernameFromBearer(String authorizationHeader) {
+    if (authorizationHeader == null || !authorizationHeader.startsWith("Bearer ")) {
+      return Optional.empty();
+    }
+    try {
+      var token = authorizationHeader.substring("Bearer ".length());
+      var decoded = new String(Base64.getUrlDecoder().decode(token), StandardCharsets.UTF_8);
+      var parts = decoded.split(":", 3);
+      if (parts.length < 3 || !"access".equals(parts[0]) || parts[1].isBlank()) {
+        return Optional.empty();
+      }
+      return Optional.of(parts[1]);
+    } catch (IllegalArgumentException error) {
+      return Optional.empty();
+    }
+  }
+
   private RoleCode roleFor(String username) {
     var normalized = username.toLowerCase();
     if (normalized.contains("student")) {
+      return RoleCode.STUDENT;
+    }
+    if (isStudentNumber(normalized)) {
       return RoleCode.STUDENT;
     }
     if (normalized.contains("admin")) {
@@ -38,6 +84,10 @@ public class AuthService {
       return RoleCode.SUPERVISOR;
     }
     return RoleCode.TEACHER;
+  }
+
+  private boolean isStudentNumber(String username) {
+    return username.length() >= 6 && username.chars().allMatch(Character::isDigit);
   }
 
   private String nameFor(RoleCode role) {

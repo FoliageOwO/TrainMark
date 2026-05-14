@@ -1,11 +1,10 @@
 package com.trainmark.auth;
 
 import com.trainmark.shared.ApiResponse;
-import com.trainmark.shared.RoleCode;
 import com.trainmark.shared.dto.LoginRequest;
 import com.trainmark.shared.dto.LoginResponse;
 import jakarta.validation.Valid;
-import java.util.List;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -36,7 +35,9 @@ public class AuthController {
   }
 
   @RequestMapping("/me")
-  public ApiResponse<LoginResponse.UserProfile> me() {
-    return ApiResponse.ok(new LoginResponse.UserProfile(1L, "王老师", "teacher", List.of(RoleCode.TEACHER)));
+  public ApiResponse<LoginResponse.UserProfile> me(
+      @RequestHeader(value = "Authorization", required = false) String authorizationHeader
+  ) {
+    return ApiResponse.ok(authService.currentUser(authorizationHeader));
   }
 }

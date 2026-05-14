@@ -1987,6 +1987,31 @@
 - `infra/README.md`
 - `PROGRESS.md`
 
+### 64. 认证服务 PostgreSQL 用户读取
+
+- 已为 auth-service 增加 `AuthUserStore`，默认内存模式继续保留演示身份映射，避免无数据库环境影响本地 MVP 演示。
+- 已新增 `JdbcAuthUserStore`，设置 `TRAINMARK_AUTH_STORE=jdbc` 后可从 PostgreSQL 的 `users`、`user_roles`、`roles` 读取登录用户与角色。
+- JDBC 模式支持按 `username`、`student_no`、`teacher_no` 精确登录，并兼容前端角色切换使用的 `student` / `teacher` / `admin` 等演示别名。
+- `/api/auth/me` 已支持解析登录返回的 bearer access token 并回查当前用户，无 token 时继续回退教师演示身份。
+- API smoke 已改为登录后携带 access token 检查 `/api/auth/me`。
+- 已在 API 文档、README 和 `.env.example` 补充认证 JDBC 模式配置。
+- 本模块已通过 auth-service 打包、写接口 smoke dry-run 和 MVP 主验证。
+
+主要代码：
+
+- `backend/auth-service/src/main/java/com/trainmark/auth/AuthUserStore.java`
+- `backend/auth-service/src/main/java/com/trainmark/auth/InMemoryAuthUserStore.java`
+- `backend/auth-service/src/main/java/com/trainmark/auth/JdbcAuthUserStore.java`
+- `backend/auth-service/src/main/java/com/trainmark/auth/AuthService.java`
+- `backend/auth-service/src/main/java/com/trainmark/auth/AuthController.java`
+- `backend/auth-service/src/main/resources/application.yml`
+- `backend/auth-service/pom.xml`
+- `scripts/smoke-api.sh`
+- `docs/API.md`
+- `.env.example`
+- `README.md`
+- `PROGRESS.md`
+
 ## 已验证
 
 前端构建已通过：
