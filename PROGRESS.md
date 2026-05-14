@@ -840,6 +840,20 @@
 - `README.md`
 - `PROGRESS.md`
 
+### 51. 成绩导出下载入口
+
+- 已将老师端成绩统计区的导出记录从纯文本下载路径改为可点击下载入口。
+- 导出下载链接复用 `resolveApiAssetUrl`，HTTP 模式下指向 gateway 资源地址，Mock 模式保持本地相对路径。
+- 已补充导出记录链接样式，保留审计列表的紧凑信息密度。
+- 已更新 README 状态表和进度记录。
+
+主要代码：
+
+- `apps/web/src/pages/App.tsx`
+- `apps/web/src/styles/global.css`
+- `README.md`
+- `PROGRESS.md`
+
 ## 已验证
 
 前端构建已通过：
@@ -1093,6 +1107,13 @@ pnpm lint:web
 pnpm build:web
 ```
 
+成绩导出下载入口已通过前端静态检查和构建：
+
+```bash
+pnpm lint:web
+pnpm build:web
+```
+
 全部后端模块已通过编译：
 
 ```bash
@@ -1154,6 +1175,7 @@ Docker Compose 已完成配置展开校验，暂未拉起 PostgreSQL、Redis、R
 - `feat: add annotation provider switch`
 - `feat: link annotation pdfs`
 - `fix: resolve api asset urls`
+- `feat: link grade exports`
 
 ## 接下来需要做
 

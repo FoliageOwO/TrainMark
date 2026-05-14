@@ -763,7 +763,10 @@ function TeacherDashboard({
             {exportRows.map((item) => (
               <div className="audit-row" key={item.id}>
                 <span>{item.fileName} · {item.rowCount} 行</span>
-                <small>{item.status} · {formatDate(item.createdAt)} · {item.downloadUrl}</small>
+                <small>
+                  {item.status} · {formatDate(item.createdAt)} ·{' '}
+                  <a href={resolveApiAssetUrl(item.downloadUrl)} rel="noreferrer" target="_blank">下载文件</a>
+                </small>
               </div>
             ))}
           </div>
