@@ -1032,6 +1032,28 @@
 - `infra/postgres/init.sql`
 - `PROGRESS.md`
 
+### 63. 催交通知 PostgreSQL 存储
+
+- 已将通知服务拆成 `NotificationStore` 存储接口，默认仍使用内存实现，保证无数据库环境下的开发和 smoke 不受影响。
+- 已新增 `JdbcNotificationStore`，设置 `TRAINMARK_NOTIFICATION_STORE=jdbc` 后可从 PostgreSQL 计算提交收集概览和未交学生名单。
+- JDBC 模式下，一键催交会按学生和渠道写入 `notification_events` 表，并返回实际消息数。
+- 已为 `notification-service` 增加 PostgreSQL JDBC runtime 驱动，并通过环境变量配置 JDBC URL、用户名和密码。
+- 已补充迁移 `V9__notification_events.sql`，并纳入 Docker PostgreSQL 首次初始化流程。
+- 已在 README、infra README 和 `.env.example` 中补充通知 JDBC 模式说明。
+
+主要代码：
+
+- `backend/notification-service/src/main/java/com/trainmark/notification/NotificationStore.java`
+- `backend/notification-service/src/main/java/com/trainmark/notification/InMemoryNotificationStore.java`
+- `backend/notification-service/src/main/java/com/trainmark/notification/JdbcNotificationStore.java`
+- `backend/notification-service/src/main/java/com/trainmark/notification/ReminderService.java`
+- `backend/db/migration/V9__notification_events.sql`
+- `infra/postgres/init.sql`
+- `.env.example`
+- `README.md`
+- `infra/README.md`
+- `PROGRESS.md`
+
 ## 已验证
 
 前端构建已通过：
@@ -1402,6 +1424,21 @@ ls -1 backend/db/migration
 docker compose -f infra/docker-compose.yml config
 ```
 
+催交通知 PostgreSQL 存储已通过后端模块编译：
+
+```bash
+mvn -f backend/pom.xml -pl notification-service -am package -DskipTests
+```
+
+通知服务默认内存模式已通过单服务启动和收集/未交/催交接口验证：
+
+```bash
+timeout 75s bash scripts/dev-service.sh notification-service
+curl --noproxy '*' http://localhost:8089/api/notifications/assignments/1/collection
+curl --noproxy '*' http://localhost:8089/api/notifications/assignments/1/unsubmitted
+curl --noproxy '*' -H 'Content-Type: application/json' -d '{...}' http://localhost:8089/api/notifications/remind-unsubmitted
+```
+
 全部后端模块已通过编译：
 
 ```bash
@@ -1475,6 +1512,7 @@ Docker Compose 已完成配置展开校验，暂未拉起 PostgreSQL、Redis、R
 - `feat: add course jdbc store`
 - `feat: add file jdbc store`
 - `fix: renumber db migrations`
+- `feat: add notification jdbc store`
 
 ## 接下来需要做
 
