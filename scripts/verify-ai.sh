@@ -11,6 +11,7 @@ echo "[verify:ai] Python syntax"
 python3 -m py_compile \
   ai/document/local_converter.py \
   ai/ocr/local_provider.py \
+  ai/ocr/paddleocr_provider.py \
   ai/scoring/local_provider.py \
   ai/annotation/local_provider.py
 
@@ -35,6 +36,13 @@ python3 ai/ocr/local_provider.py \
   --submission-id 1 \
   --object-key assignments/1/students/2/database-report.pdf > "$TMP_DIR/ocr-result.json"
 python3 -m json.tool "$TMP_DIR/ocr-result.json" >/dev/null
+python3 ai/ocr/paddleocr_provider.py \
+  --job-id 1002 \
+  --submission-id 2 \
+  --object-key assignments/1/students/3/screenshot.png \
+  --normalized-object-key converted/assignments/1/students/3/screenshot.png > "$TMP_DIR/paddleocr-result.json"
+python3 -m json.tool "$TMP_DIR/paddleocr-result.json" >/dev/null
+grep -q 'PaddleOCR fallback' "$TMP_DIR/paddleocr-result.json"
 
 echo "[verify:ai] Scoring provider"
 python3 ai/scoring/local_provider.py \

@@ -1201,6 +1201,24 @@
 - `README.md`
 - `PROGRESS.md`
 
+### 37.1.1 PaddleOCR Provider 适配器
+
+- 已新增 `ai/ocr/paddleocr_provider.py`，按 PaddleOCR 3.x `PaddleOCR(...).predict(...)` 形态读取本地归一化文件并输出后端兼容的 `OcrResultSummary` JSON。
+- 已让 OCR 服务支持 `OCR_PROVIDER=paddleocr`，默认调用内置 PaddleOCR 适配器，同时保留 `OCR_COMMAND` 覆盖能力。
+- 已让 PaddleOCR 未安装或归一化文件不存在时回退确定性结果，并在 JSON 中标记 `PaddleOCR fallback`，保证本地 MVP 验证不依赖外部模型下载。
+- 已将 PaddleOCR 适配器纳入 AI provider 验证脚本。
+- 本模块已通过 AI provider 验证、后端打包和 MVP 验证脚本。
+
+主要代码：
+
+- `ai/ocr/paddleocr_provider.py`
+- `ai/ocr/README.md`
+- `backend/ocr-service/src/main/java/com/trainmark/ocr/OcrProviderConfig.java`
+- `scripts/verify-ai.sh`
+- `.env.example`
+- `README.md`
+- `PROGRESS.md`
+
 ### 37.2 文档预处理后端 Provider 切换
 
 - 已新增 `CommandDocumentPreprocessor`，支持通过外部命令执行 Word/PDF/图片预处理并读取 stdout JSON manifest。
@@ -2578,6 +2596,14 @@ HTTP 空课程首屏兜底后已通过静态检查、构建和 MVP 验证：
 ```bash
 pnpm --filter trainmark-ai-web lint
 pnpm --filter trainmark-ai-web build
+pnpm verify:mvp
+```
+
+PaddleOCR Provider 适配器已通过 AI provider 验证、后端打包和 MVP 验证：
+
+```bash
+pnpm verify:ai
+mvn -f backend/pom.xml package -DskipTests
 pnpm verify:mvp
 ```
 

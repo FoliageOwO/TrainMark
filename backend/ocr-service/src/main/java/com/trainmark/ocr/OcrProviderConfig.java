@@ -8,6 +8,13 @@ import org.springframework.context.annotation.Configuration;
 
 @Configuration
 public class OcrProviderConfig {
+  private static final String DEFAULT_PADDLEOCR_COMMAND = String.join(" ",
+      "python3 ai/ocr/paddleocr_provider.py",
+      "--job-id {jobId}",
+      "--submission-id {submissionId}",
+      "--object-key {objectKey}",
+      "--normalized-object-key {normalizedObjectKey}");
+
   @Bean
   OcrProvider ocrProvider(
       @Value("${trainmark.ocr.provider:local}") String provider,
@@ -20,6 +27,10 @@ public class OcrProviderConfig {
         throw new IllegalStateException("trainmark.ocr.command is required when trainmark.ocr.provider=command");
       }
       return new CommandOcrProvider(command, Duration.ofSeconds(timeoutSeconds), objectMapper);
+    }
+    if ("paddleocr".equalsIgnoreCase(provider)) {
+      var paddleCommand = command == null || command.isBlank() ? DEFAULT_PADDLEOCR_COMMAND : command;
+      return new CommandOcrProvider(paddleCommand, Duration.ofSeconds(timeoutSeconds), objectMapper);
     }
     return new LocalOcrProvider();
   }
