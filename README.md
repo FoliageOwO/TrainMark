@@ -171,6 +171,12 @@ mvn -f backend/pom.xml package -DskipTests
 pnpm backup
 ```
 
+恢复脚本需要显式确认，避免误覆盖本地数据：
+
+```bash
+BACKUP_DIR=backups/20260514-120000 CONFIRM_RESTORE=trainmark-ai-restore pnpm restore
+```
+
 常用环境变量：
 
 | 变量 | 说明 |
@@ -178,6 +184,7 @@ pnpm backup
 | `ENV_FILE` | 指定环境变量文件，默认 `.env` |
 | `BACKUP_ROOT` | 指定备份根目录，默认 `backups` |
 | `REQUIRE_OBJECT_BACKUP=1` | 缺少 `mc` / `aws` 时让对象存储备份失败退出 |
+| `REQUIRE_OBJECT_RESTORE=1` | 缺少对象备份或对象存储 CLI 时让恢复失败退出 |
 
 ## 环境说明
 

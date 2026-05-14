@@ -8,6 +8,7 @@
     "lint:web": "pnpm --filter trainmark-ai-web lint",
     "verify:mvp": "bash scripts/verify-mvp.sh",
     "backup": "bash scripts/backup.sh",
+    "restore": "bash scripts/restore.sh",
     "dev:infra": "docker compose -f infra/docker-compose.yml up -d",
     "stop:infra": "docker compose -f infra/docker-compose.yml down",
     "dev:backend": "bash scripts/dev-backend.sh",

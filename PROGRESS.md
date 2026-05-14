@@ -553,6 +553,21 @@
 - `README.md`
 - `PROGRESS.md`
 
+### 34. 本地恢复脚本
+
+- 已新增 `pnpm restore` 脚本入口。
+- 已新增 `scripts/restore.sh`，支持从 `scripts/backup.sh` 生成的备份目录恢复 PostgreSQL custom dump。
+- 已支持用 `mc` 或 `aws` 将本地对象备份同步回 MinIO / S3 兼容桶。
+- 已要求 `CONFIRM_RESTORE=trainmark-ai-restore` 显式确认，避免误覆盖本地数据。
+- 已在 README 补充恢复命令和对象存储恢复严格模式。
+
+主要代码：
+
+- `scripts/restore.sh`
+- `package.json`
+- `README.md`
+- `PROGRESS.md`
+
 ## 已验证
 
 前端构建已通过：
@@ -692,6 +707,12 @@ bash -n scripts/verify-mvp.sh
 docker compose -f infra/docker-compose.yml config
 ```
 
+本地恢复脚本已通过脚本语法检查：
+
+```bash
+bash -n scripts/restore.sh
+```
+
 全部后端模块已通过编译：
 
 ```bash
@@ -736,6 +757,7 @@ Docker Compose 暂未本地验证，因为当前机器没有 Docker。
 - `feat: add pwa shell`
 - `feat: add role deep links`
 - `chore: add backup script`
+- `chore: add restore script`
 
 ## 接下来需要做
 
