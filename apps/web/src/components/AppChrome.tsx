@@ -6,6 +6,7 @@ import {
   FileCheck2,
   FileText,
   LayoutDashboard,
+  LogOut,
   Plus,
   ShieldCheck,
   Sparkles,
@@ -44,6 +45,7 @@ type AppChromeProps = {
   children: ReactNode;
   primaryRole: RoleCode;
   user: UserProfile;
+  onLogout: () => void | Promise<void>;
   onNavChange: (label: string) => void;
   onRoleChange: (role: RoleCode) => void | Promise<void>;
 };
@@ -54,6 +56,7 @@ export function AppChrome({
   children,
   primaryRole,
   user,
+  onLogout,
   onNavChange,
   onRoleChange,
 }: AppChromeProps) {
@@ -107,6 +110,9 @@ export function AppChrome({
             </div>
             <button className="icon-button" type="button" aria-label="通知">
               <Bell size={18} />
+            </button>
+            <button className="icon-button" type="button" aria-label="退出登录" title="退出登录" onClick={() => onLogout()}>
+              <LogOut size={18} />
             </button>
             <div className="avatar">{user.name.slice(0, 1)}</div>
           </div>

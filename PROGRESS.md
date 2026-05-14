@@ -2187,6 +2187,22 @@
 - `README.md`
 - `PROGRESS.md`
 
+### 76. 前端 Auth Refresh/Logout 联调
+
+- 已让前端 HTTP 模式启动时优先使用本地 access token 调用 `/api/auth/refresh` 恢复当前身份，token 对应角色与 URL 角色一致时直接复用刷新后的用户。
+- 已新增前端 `/api/auth/logout` 调用，顶部操作区提供退出登录图标按钮，退出后清理本地 token 并按当前 URL 角色重新进入演示登录态。
+- 已让无请求体的 auth POST 请求不再发送 JSON body，适配 refresh/logout 这类只依赖 bearer token 的后端接口。
+- Mock 模式继续保留本地演示行为，不依赖后端认证接口。
+- 本模块已通过前端 lint、前端生产构建和 MVP 主验证。
+
+主要代码：
+
+- `apps/web/src/api/httpApi.ts`
+- `apps/web/src/pages/App.tsx`
+- `apps/web/src/components/AppChrome.tsx`
+- `README.md`
+- `PROGRESS.md`
+
 ## 已验证
 
 前端构建已通过：
@@ -3312,6 +3328,7 @@ pnpm verify:mvp
 - `fix: reject unknown jdbc auth`
 - `fix: refresh current auth user`
 - `fix: validate auth logout`
+- `feat: connect frontend auth session`
 
 ## 接下来需要做
 

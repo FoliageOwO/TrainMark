@@ -48,6 +48,7 @@ TrainMark AI，中文名“智训批”，是面向高校实训教学场景的�
 | JDBC 认证禁用未知账号 mock 回退 | 已实现 |
 | Auth refresh 保持当前身份 | 已实现 |
 | Auth logout 校验当前身份 | 已实现 |
+| 前端 Auth refresh/logout 联调 | 已实现 |
 | 用户与组织 PostgreSQL 存储 | 已支持 |
 | 课程与任务 PostgreSQL 存储 | 已支持 |
 | 上传与提交 PostgreSQL 存储 | 已支持 |

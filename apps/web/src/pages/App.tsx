@@ -2,7 +2,9 @@ import { useEffect, useMemo, useState } from 'react';
 import { mockApi } from '../api/mockApi';
 import {
   loginAsRole,
+  logoutCurrentSession,
   loadWorkspaceData,
+  refreshCurrentSession,
   shouldUseHttpApi,
   shouldUseStrictHttpApi,
   type WorkspaceData,
@@ -96,7 +98,8 @@ export function App() {
     const syncRoleFromLocation = async () => {
       const role = getRoleFromLocation();
       try {
-        const nextUser = await loginAsRole(role);
+        const refreshedUser = await refreshCurrentSession();
+        const nextUser = refreshedUser?.roles[0] === role ? refreshedUser : await loginAsRole(role);
         if (!cancelled) {
           setUser(nextUser);
           setApiError(null);
@@ -120,6 +123,18 @@ export function App() {
     writeRoleToLocation(role);
     try {
       setUser(await loginAsRole(role));
+      setApiError(null);
+    } catch (error) {
+      setApiError(errorMessage(error));
+    }
+  };
+
+  const handleLogout = async () => {
+    const nextRole = getRoleFromLocation();
+    try {
+      await logoutCurrentSession();
+      setWorkspaceData(null);
+      setUser(await loginAsRole(nextRole));
       setApiError(null);
     } catch (error) {
       setApiError(errorMessage(error));
@@ -186,6 +201,7 @@ export function App() {
       primaryRole={primaryRole}
       user={user}
       onNavChange={setActiveNav}
+      onLogout={handleLogout}
       onRoleChange={handleRoleChange}
     >
       {apiError ? (

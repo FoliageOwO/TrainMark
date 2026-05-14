@@ -179,6 +179,36 @@ export async function loginAsRole(role: RoleCode): Promise<UserProfile> {
   }
 }
 
+export async function refreshCurrentSession(): Promise<UserProfile | null> {
+  if (!shouldUseHttpApi() || !hasStoredAccessToken()) {
+    return null;
+  }
+
+  try {
+    const response = await request<LoginResponse>('/api/auth/refresh', 'POST');
+    persistTokens(response);
+    return response.user;
+  } catch {
+    clearTokens();
+    return null;
+  }
+}
+
+export async function logoutCurrentSession(): Promise<void> {
+  if (!shouldUseHttpApi() || !hasStoredAccessToken()) {
+    clearTokens();
+    return;
+  }
+
+  try {
+    await request<void>('/api/auth/logout', 'POST');
+  } catch {
+    // A stale local token should not prevent the user from leaving the session.
+  } finally {
+    clearTokens();
+  }
+}
+
 export async function loadWorkspaceData(selectedCourseId: number, userId: number, role: RoleCode): Promise<WorkspaceData> {
   const isStudent = role === 'STUDENT';
   const submissionPath = role === 'STUDENT' ? `/api/submissions?studentId=${userId}` : '/api/submissions';
@@ -615,11 +645,11 @@ async function mutateOr<T, R = T>(
   }
 }
 
-async function request<T>(path: string, method: 'POST' | 'PATCH', body: unknown, includeAuth = true): Promise<T> {
+async function request<T>(path: string, method: 'POST' | 'PATCH', body?: unknown, includeAuth = true): Promise<T> {
   const response = await fetch(`${API_BASE_URL}${path}`, {
     method,
-    headers: authHeaders({ contentType: 'application/json', includeAuth }),
-    body: JSON.stringify(body),
+    headers: authHeaders({ contentType: body === undefined ? undefined : 'application/json', includeAuth }),
+    body: body === undefined ? undefined : JSON.stringify(body),
   });
   if (!response.ok) {
     throw new Error(`HTTP ${response.status} for ${path}`);
@@ -645,6 +675,10 @@ function clearTokens() {
   }
   window.localStorage.removeItem('trainmark.accessToken');
   window.localStorage.removeItem('trainmark.refreshToken');
+}
+
+function hasStoredAccessToken() {
+  return typeof window !== 'undefined' && Boolean(window.localStorage.getItem('trainmark.accessToken'));
 }
 
 function authHeaders(options?: { contentType?: string; includeAuth?: boolean }): Record<string, string> {
