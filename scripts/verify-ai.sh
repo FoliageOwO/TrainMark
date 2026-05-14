@@ -13,6 +13,7 @@ python3 -m py_compile \
   ai/ocr/local_provider.py \
   ai/ocr/paddleocr_provider.py \
   ai/scoring/local_provider.py \
+  ai/scoring/semantic_provider.py \
   ai/annotation/local_provider.py
 
 echo "[verify:ai] Document preprocessing"
@@ -57,6 +58,18 @@ python3 ai/scoring/local_provider.py \
 python3 -m json.tool "$TMP_DIR/grading-result.json" >/dev/null
 grep -q '关键词/同义词命中' "$TMP_DIR/grading-result.json"
 grep -q '数据库设计合理：命中' "$TMP_DIR/grading-result.json"
+python3 ai/scoring/semantic_provider.py \
+  --result-id 2002 \
+  --assignment-id 1 \
+  --submission-id 8 \
+  --student-id 3 \
+  --student-name 李四 \
+  --student-no 2024010102 \
+  --file-name database-report.pdf \
+  --rubric-file ai/scoring/sample-rubric.json > "$TMP_DIR/semantic-grading-result.json"
+python3 -m json.tool "$TMP_DIR/semantic-grading-result.json" >/dev/null
+grep -q '语义评分已完成初评' "$TMP_DIR/semantic-grading-result.json"
+grep -q '语义相似度' "$TMP_DIR/semantic-grading-result.json"
 
 echo "[verify:ai] Annotation provider"
 python3 ai/annotation/local_provider.py \

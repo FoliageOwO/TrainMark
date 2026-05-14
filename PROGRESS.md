@@ -1277,6 +1277,26 @@
 - `scripts/verify-ai.sh`
 - `PROGRESS.md`
 
+### 38.2 语义评分 Provider 适配器
+
+- 已新增 `ai/scoring/semantic_provider.py`，按 SentenceTransformers 语义相似度流程优先使用 embedding 相似度，并输出后端兼容的 `GradingResultSummary` JSON。
+- 已让语义 provider 在未安装模型库时回退确定性词项相似度，保证本地 MVP 验证不依赖模型下载。
+- 已让评分服务支持 `SCORING_PROVIDER=semantic`，默认调用内置语义评分适配器，同时保留 `SCORING_COMMAND` 覆盖能力。
+- 已为 `CommandScoringProvider` 增加 `{rubricJson}` 占位符，外部评分 provider 可直接接收当前评分标准。
+- 已将语义评分适配器纳入 AI provider 验证脚本。
+- 本模块已通过 AI provider 验证、后端打包和 MVP 验证脚本。
+
+主要代码：
+
+- `ai/scoring/semantic_provider.py`
+- `ai/scoring/README.md`
+- `backend/grading-service/src/main/java/com/trainmark/grading/CommandScoringProvider.java`
+- `backend/grading-service/src/main/java/com/trainmark/grading/ScoringProviderConfig.java`
+- `scripts/verify-ai.sh`
+- `.env.example`
+- `README.md`
+- `PROGRESS.md`
+
 ### 39. 批注 PDF Provider CLI 契约
 
 - 已补齐 `ai/annotation/` 目录，承接后续 PDF 批注生成能力。
@@ -2600,6 +2620,14 @@ pnpm verify:mvp
 ```
 
 PaddleOCR Provider 适配器已通过 AI provider 验证、后端打包和 MVP 验证：
+
+```bash
+pnpm verify:ai
+mvn -f backend/pom.xml package -DskipTests
+pnpm verify:mvp
+```
+
+语义评分 Provider 适配器已通过 AI provider 验证、后端打包和 MVP 验证：
 
 ```bash
 pnpm verify:ai

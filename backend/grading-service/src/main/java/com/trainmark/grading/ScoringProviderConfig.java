@@ -8,6 +8,17 @@ import org.springframework.context.annotation.Configuration;
 
 @Configuration
 public class ScoringProviderConfig {
+  private static final String DEFAULT_SEMANTIC_COMMAND = String.join(" ",
+      "python3 ai/scoring/semantic_provider.py",
+      "--result-id {resultId}",
+      "--assignment-id {assignmentId}",
+      "--submission-id {submissionId}",
+      "--student-id {studentId}",
+      "--student-name {studentName}",
+      "--student-no {studentNo}",
+      "--file-name {fileName}",
+      "--rubric-json {rubricJson}");
+
   @Bean
   ScoringProvider scoringProvider(
       @Value("${trainmark.scoring.provider:local}") String provider,
@@ -20,6 +31,10 @@ public class ScoringProviderConfig {
         throw new IllegalStateException("trainmark.scoring.command is required when trainmark.scoring.provider=command");
       }
       return new CommandScoringProvider(command, Duration.ofSeconds(timeoutSeconds), objectMapper);
+    }
+    if ("semantic".equalsIgnoreCase(provider)) {
+      var semanticCommand = command == null || command.isBlank() ? DEFAULT_SEMANTIC_COMMAND : command;
+      return new CommandScoringProvider(semanticCommand, Duration.ofSeconds(timeoutSeconds), objectMapper);
     }
     return new LocalScoringProvider();
   }

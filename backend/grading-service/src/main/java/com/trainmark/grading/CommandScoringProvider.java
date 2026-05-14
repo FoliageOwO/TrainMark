@@ -20,15 +20,16 @@ public class CommandScoringProvider implements ScoringProvider {
 
   @Override
   public GradingResultSummary score(ScoringRequest request) {
-    var command = commandTemplate
-        .replace("{resultId}", shellQuote(request.resultId().toString()))
-        .replace("{assignmentId}", shellQuote(request.assignmentId().toString()))
-        .replace("{submissionId}", shellQuote(request.submissionId().toString()))
-        .replace("{studentId}", shellQuote(request.studentId().toString()))
-        .replace("{studentName}", shellQuote(request.studentName()))
-        .replace("{studentNo}", shellQuote(request.studentNo()))
-        .replace("{fileName}", shellQuote(request.fileName()));
     try {
+      var command = commandTemplate
+          .replace("{resultId}", shellQuote(request.resultId().toString()))
+          .replace("{assignmentId}", shellQuote(request.assignmentId().toString()))
+          .replace("{submissionId}", shellQuote(request.submissionId().toString()))
+          .replace("{studentId}", shellQuote(request.studentId().toString()))
+          .replace("{studentName}", shellQuote(request.studentName()))
+          .replace("{studentNo}", shellQuote(request.studentNo()))
+          .replace("{fileName}", shellQuote(request.fileName()))
+          .replace("{rubricJson}", shellQuote(objectMapper.writeValueAsString(request.rubric())));
       var processBuilder = new ProcessBuilder(shellCommand(command));
       processBuilder.directory(workspaceRoot().toFile());
       var process = processBuilder.start();

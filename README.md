@@ -51,6 +51,7 @@ TrainMark AI，中文名“智训批”，是面向高校实训教学场景的�
 | PaddleOCR Provider 适配器 | 已支持 |
 | 评分 Provider CLI 契约 | 已创建 |
 | 评分后端 Provider 切换 | 已实现 |
+| 语义评分 Provider 适配器 | 已支持 |
 | AI Provider 错误统一响应 | 已实现 |
 | 批注 PDF Provider CLI 契约 | 已创建 |
 | 批注后端 Provider 切换 | 已实现 |
@@ -331,6 +332,14 @@ OCR_PROVIDER=paddleocr
 ```
 
 该适配器会优先调用 PaddleOCR 3.x Python API，并在本地未安装 PaddleOCR 或找不到归一化文件时回退为确定性结果，便于离线 MVP 验证。
+
+评分服务默认使用本地 Java 规则 provider。需要切换到内置语义评分适配器时，可设置：
+
+```bash
+SCORING_PROVIDER=semantic
+```
+
+该适配器会优先调用 SentenceTransformers 语义相似度模型，并在本地未安装模型库时回退为确定性相似度结果。
 
 批注 PDF 地址 `/annotations/submissions/{submissionId}/annotated.pdf` 会根据当前批改结果生成本地摘要 PDF，包含成绩、复核状态、批注和分项证据。
 
