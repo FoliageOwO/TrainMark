@@ -244,6 +244,7 @@
 - 已支持按作业和复核状态筛选批改结果，并重建评分分项、证据和批注列表。
 - 已让分项复核、批准、发布/撤回、成绩导出行数和批改任务自动生成结果统一通过结果 store。
 - 已复用 grading-service 的 PostgreSQL 连接配置，并补充独立 `TRAINMARK_GRADING_RESULT_STORE` 切换项。
+- 已修复 PostgreSQL 初始化脚本遗漏 `V3__extend_assessment_schema.sql` 和 `V4__add_grade_exports.sql` 的问题，确保新库包含批改、导出、申诉、查重和统计相关表。
 
 主要代码：
 
@@ -253,6 +254,7 @@
 - `backend/grading-service/src/main/java/com/trainmark/grading/GradingResultStoreSupport.java`
 - `backend/grading-service/src/main/java/com/trainmark/grading/GradingService.java`
 - `backend/grading-service/src/main/resources/application.yml`
+- `infra/postgres/init.sql`
 - `.env.example`
 - `README.md`
 - `PROGRESS.md`
@@ -1791,6 +1793,33 @@ curl --noproxy '*' -H 'Content-Type: application/json' -d '{...}' http://localho
 curl --noproxy '*' -H 'Content-Type: application/json' -d '{...}' http://localhost:8085/api/grading/results/1/publish
 curl --noproxy '*' -H 'Content-Type: application/json' -d '{...}' http://localhost:8085/api/grading/exports
 curl --noproxy '*' -H 'Content-Type: application/json' -d '{...}' http://localhost:8085/api/grading/jobs
+```
+
+评分服务 JDBC 模式已通过临时 PostgreSQL 初始化和真实数据库接口验证：
+
+```bash
+docker run --name trainmark-postgres-init-check -p 55432:5432 ...
+docker exec trainmark-postgres-init-check psql -U trainmark -d trainmark_ai -Atc '...'
+TRAINMARK_GRADING_RUBRIC_STORE=jdbc \
+TRAINMARK_GRADING_EXPORT_STORE=jdbc \
+TRAINMARK_GRADING_PUBLICATION_AUDIT_STORE=jdbc \
+TRAINMARK_GRADING_APPEAL_STORE=jdbc \
+TRAINMARK_GRADING_JOB_STORE=jdbc \
+TRAINMARK_GRADING_RESULT_STORE=jdbc \
+TRAINMARK_GRADING_JDBC_URL=jdbc:postgresql://localhost:55432/trainmark_ai \
+TRAINMARK_GRADING_JDBC_USERNAME=trainmark \
+TRAINMARK_GRADING_JDBC_PASSWORD=trainmark_dev \
+timeout 120s bash scripts/dev-service.sh grading-service
+curl --noproxy '*' 'http://localhost:8085/api/rubrics?assignmentId=1'
+curl --noproxy '*' -H 'Content-Type: application/json' -d '{...}' http://localhost:8085/api/rubrics
+curl --noproxy '*' -H 'Content-Type: application/json' -d '{...}' http://localhost:8085/api/grading/jobs
+curl --noproxy '*' 'http://localhost:8085/api/grading/results?assignmentId=1'
+curl --noproxy '*' -X PATCH -H 'Content-Type: application/json' -d '{...}' http://localhost:8085/api/grading/results/3/items
+curl --noproxy '*' -H 'Content-Type: application/json' -d '{...}' http://localhost:8085/api/grading/results/3/approve
+curl --noproxy '*' -H 'Content-Type: application/json' -d '{...}' http://localhost:8085/api/grading/results/3/publish
+curl --noproxy '*' -H 'Content-Type: application/json' -d '{...}' http://localhost:8085/api/grading/exports
+curl --noproxy '*' 'http://localhost:8085/api/grading/results/3/publication-audits'
+curl --noproxy '*' -H 'Content-Type: application/json' -d '{...}' http://localhost:8085/api/grading/results/appeals
 ```
 
 ## 已提交记录

@@ -2,6 +2,8 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
 \i /docker-entrypoint-initdb.d/migration/V1__init_core_schema.sql
 \i /docker-entrypoint-initdb.d/migration/V2__seed_roles_permissions.sql
+\i /docker-entrypoint-initdb.d/migration/V3__extend_assessment_schema.sql
+\i /docker-entrypoint-initdb.d/migration/V4__add_grade_exports.sql
 \i /docker-entrypoint-initdb.d/migration/V6__seed_demo_directory.sql
 \i /docker-entrypoint-initdb.d/migration/V7__seed_demo_courses.sql
 \i /docker-entrypoint-initdb.d/migration/V8__upload_sessions.sql
