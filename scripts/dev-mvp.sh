@@ -38,4 +38,5 @@ echo "[dev:mvp] Starting web app in HTTP mode"
 
 VITE_API_MODE="${VITE_API_MODE:-http}" \
 VITE_API_BASE_URL="${VITE_API_BASE_URL:-http://localhost:8080}" \
+VITE_API_STRICT_HTTP="${VITE_API_STRICT_HTTP:-1}" \
 pnpm dev:web

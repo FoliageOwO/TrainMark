@@ -4,6 +4,7 @@ import {
   loginAsRole,
   loadWorkspaceData,
   shouldUseHttpApi,
+  shouldUseStrictHttpApi,
   type WorkspaceData,
 } from '../api/httpApi';
 import type {
@@ -54,6 +55,7 @@ export function App() {
   const [selectedCourseId, setSelectedCourseId] = useState(1);
   const [workspaceData, setWorkspaceData] = useState<WorkspaceData | null>(null);
   const [apiModeLabel, setApiModeLabel] = useState(shouldUseHttpApi() ? 'HTTP API' : 'Mock 数据');
+  const [apiError, setApiError] = useState<string | null>(null);
 
   const primaryRole = user.roles[0];
   const courses = workspaceData?.courses ?? mockApi.listCourses();
@@ -93,9 +95,16 @@ export function App() {
     let cancelled = false;
     const syncRoleFromLocation = async () => {
       const role = getRoleFromLocation();
-      const nextUser = await loginAsRole(role);
-      if (!cancelled) {
-        setUser(nextUser);
+      try {
+        const nextUser = await loginAsRole(role);
+        if (!cancelled) {
+          setUser(nextUser);
+          setApiError(null);
+        }
+      } catch (error) {
+        if (!cancelled) {
+          setApiError(errorMessage(error));
+        }
       }
     };
 
@@ -109,23 +118,38 @@ export function App() {
 
   const handleRoleChange = async (role: RoleCode) => {
     writeRoleToLocation(role);
-    setUser(await loginAsRole(role));
+    try {
+      setUser(await loginAsRole(role));
+      setApiError(null);
+    } catch (error) {
+      setApiError(errorMessage(error));
+    }
   };
 
   useEffect(() => {
     if (!shouldUseHttpApi()) {
       setWorkspaceData(null);
       setApiModeLabel('Mock 数据');
+      setApiError(null);
       return;
     }
 
     let cancelled = false;
-    loadWorkspaceData(selectedCourseId, user.id, primaryRole).then((data) => {
-      if (!cancelled) {
-        setWorkspaceData(data);
-        setApiModeLabel('HTTP API / Mock 兜底');
-      }
-    });
+    loadWorkspaceData(selectedCourseId, user.id, primaryRole)
+      .then((data) => {
+        if (!cancelled) {
+          setWorkspaceData(data);
+          setApiModeLabel(shouldUseStrictHttpApi() ? 'HTTP API' : 'HTTP API / Mock 兜底');
+          setApiError(null);
+        }
+      })
+      .catch((error) => {
+        if (!cancelled) {
+          setWorkspaceData(null);
+          setApiModeLabel('HTTP API 异常');
+          setApiError(errorMessage(error));
+        }
+      });
     return () => {
       cancelled = true;
     };
@@ -135,9 +159,17 @@ export function App() {
     if (!shouldUseHttpApi()) {
       return;
     }
-    const data = await loadWorkspaceData(selectedCourseId, user.id, primaryRole);
-    setWorkspaceData(data);
-    setApiModeLabel('HTTP API / Mock 兜底');
+    try {
+      const data = await loadWorkspaceData(selectedCourseId, user.id, primaryRole);
+      setWorkspaceData(data);
+      setApiModeLabel(shouldUseStrictHttpApi() ? 'HTTP API' : 'HTTP API / Mock 兜底');
+      setApiError(null);
+    } catch (error) {
+      setWorkspaceData(null);
+      setApiModeLabel('HTTP API 异常');
+      setApiError(errorMessage(error));
+      throw error;
+    }
   };
 
   const teacherStats = [
@@ -156,6 +188,12 @@ export function App() {
       onNavChange={setActiveNav}
       onRoleChange={handleRoleChange}
     >
+      {apiError ? (
+        <section className="empty-result">
+          <strong>HTTP API 联调失败</strong>
+          <span>{apiError}</span>
+        </section>
+      ) : null}
       {primaryRole === 'STUDENT' ? (
         <StudentDashboard
           tasks={studentTasks}
@@ -230,4 +268,8 @@ function deriveTeacherMetrics(
     )).length,
     unsubmitted: collectionOverview.unsubmitted,
   };
+}
+
+function errorMessage(error: unknown) {
+  return error instanceof Error ? error.message : '未知接口错误';
 }

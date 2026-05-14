@@ -2106,6 +2106,23 @@
 - `README.md`
 - `PROGRESS.md`
 
+### 71. 前端 HTTP 严格联调模式
+
+- 已新增 `VITE_API_STRICT_HTTP=1` 前端开关；HTTP 模式下开启后，登录、查询、上传和写操作失败会抛出真实接口错误，不再静默回退 mock 数据。
+- 已在应用外壳中展示 HTTP API 联调失败提示，并在恢复成功后清除错误状态，便于一键 MVP 联调时快速定位后端或网关问题。
+- 已让 `pnpm dev:mvp` 默认以 `VITE_API_MODE=http` 和 `VITE_API_STRICT_HTTP=1` 启动前端，保留手动 `VITE_API_STRICT_HTTP=0` 的分服务开发兜底能力。
+- 已同步 `.env.example` 和 `README.md`，明确普通 HTTP 模式的 mock 兜底与严格联调模式边界。
+- 本模块已通过前端 lint、前端生产构建和 MVP launcher 脚本语法检查。
+
+主要代码：
+
+- `apps/web/src/api/httpApi.ts`
+- `apps/web/src/pages/App.tsx`
+- `scripts/dev-mvp.sh`
+- `.env.example`
+- `README.md`
+- `PROGRESS.md`
+
 ## 已验证
 
 前端构建已通过：
@@ -3226,6 +3243,7 @@ pnpm verify:mvp
 - `feat: add grading job jdbc store`
 - `feat: add grading result jdbc store`
 - `fix: verify jdbc mvp launcher`
+- `feat: add strict http mode`
 
 ## 接下来需要做
 

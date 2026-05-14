@@ -123,9 +123,14 @@ export type ImportStudentsInput = {
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8080';
 const API_MODE = import.meta.env.VITE_API_MODE ?? 'mock';
+const API_STRICT_HTTP = import.meta.env.VITE_API_STRICT_HTTP === '1';
 
 export function shouldUseHttpApi() {
   return API_MODE === 'http';
+}
+
+export function shouldUseStrictHttpApi() {
+  return shouldUseHttpApi() && API_STRICT_HTTP;
 }
 
 export function resolveApiAssetUrl(path: string) {
@@ -165,8 +170,11 @@ export async function loginAsRole(role: RoleCode): Promise<UserProfile> {
     );
     persistTokens(response);
     return response.user;
-  } catch {
+  } catch (error) {
     clearTokens();
+    if (shouldUseStrictHttpApi()) {
+      throw error;
+    }
     return mockApi.login(role);
   }
 }
@@ -328,14 +336,23 @@ async function getOr<T, R = T>(path: string, fallback: T, normalize?: (value: R)
       headers: authHeaders(),
     });
     if (!response.ok) {
+      if (shouldUseStrictHttpApi()) {
+        throw new Error(`HTTP ${response.status} for ${path}`);
+      }
       return fallback;
     }
     const payload = (await response.json()) as ApiResponse<R>;
     if (!payload.success) {
+      if (shouldUseStrictHttpApi()) {
+        throw new Error(payload.message || `API request failed for ${path}`);
+      }
       return fallback;
     }
     return normalize ? normalize(payload.data) : (payload.data as unknown as T);
-  } catch {
+  } catch (error) {
+    if (shouldUseStrictHttpApi()) {
+      throw error;
+    }
     return fallback;
   }
 }
@@ -549,7 +566,10 @@ export async function createUploadReceipt(fileName: string, assignmentId: number
       checksum: null,
     });
     return normalizeUploadReceipt(receipt);
-  } catch {
+  } catch (error) {
+    if (shouldUseStrictHttpApi()) {
+      throw error;
+    }
     return mockApi.createUploadReceipt(fileName);
   }
 }
@@ -587,7 +607,10 @@ async function mutateOr<T, R = T>(
   try {
     const value = await request<R>(path, method, body);
     return normalize ? normalize(value) : (value as unknown as T);
-  } catch {
+  } catch (error) {
+    if (shouldUseStrictHttpApi()) {
+      throw error;
+    }
     return fallback();
   }
 }

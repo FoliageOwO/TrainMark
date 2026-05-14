@@ -16,6 +16,7 @@ TrainMark AI，中文名“智训批”，是面向高校实训教学场景的�
 | 老师端/学生端/管理端角色切换与 HTTP 登录 | 已实现 |
 | 课程负责人/督导角色切换 | 已实现 |
 | 前端 HTTP Authorization 请求头 | 已接入 |
+| 前端 HTTP 严格联调模式 | 已支持 |
 | 教师端真实工作区指标 | 已实现 |
 | 教师端写操作后工作区刷新 | 已实现 |
 | 课程、班级、任务、名单导入 | 已支持展示与写入 |
@@ -105,6 +106,7 @@ VITE_API_MODE=http pnpm dev:web
 ```
 
 HTTP 模式会从 `VITE_API_BASE_URL` 读取课程、名单、复核、发布、申诉、统计和查重数据；单个接口不可用时会自动回退到本地 mock 数据，便于分服务联调。
+如需真实联调时禁止静默回退，可额外设置 `VITE_API_STRICT_HTTP=1`，前端会在接口失败时展示 HTTP API 联调错误。
 Gateway 已允许本地 Vite 开发端口 `5173` / `5174` 的跨域请求。
 
 ### 3. 启动前端
@@ -306,7 +308,7 @@ pnpm dev:backend:gateway
 pnpm dev:mvp
 ```
 
-该脚本会先启动所有后端服务，等待 `pnpm smoke:api` 通过后，再以 `VITE_API_MODE=http` 启动前端。后端总控日志写入 `.logs/dev-mvp-backend.log`，各服务日志仍写入 `.logs/backend/`。
+该脚本会先启动所有后端服务，等待 `pnpm smoke:api` 通过后，再以 `VITE_API_MODE=http` 和 `VITE_API_STRICT_HTTP=1` 启动前端。后端总控日志写入 `.logs/dev-mvp-backend.log`，各服务日志仍写入 `.logs/backend/`。
 
 如果需要同时启动 Docker Compose 基础设施，并让认证、用户、课程、文件、OCR、批改、通知、查重、统计和管理端服务切换到 PostgreSQL/JDBC 模式：
 
