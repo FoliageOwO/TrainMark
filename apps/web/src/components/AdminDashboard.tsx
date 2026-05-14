@@ -3,6 +3,7 @@ import { Plus, ShieldCheck } from 'lucide-react';
 import {
   createOrganization,
   createUser,
+  updateSystemSetting,
   type CreateOrganizationInput,
   type CreateUserInput,
 } from '../api/httpApi';
@@ -34,10 +35,12 @@ const roleText: Record<RoleCode, string> = {
 export function AdminDashboard({ organizations, users, auditLogs, systemSettings, onWorkspaceRefresh }: AdminDashboardProps) {
   const [organizationRows, setOrganizationRows] = useState(organizations);
   const [userRows, setUserRows] = useState(users);
+  const [settingRows, setSettingRows] = useState(systemSettings);
   const [directoryNotice, setDirectoryNotice] = useState('');
+  const [settingNotice, setSettingNotice] = useState('');
   const activeUsers = userRows.filter((user) => user.status === 'ACTIVE').length;
   const resourceTypes = Array.from(new Set(auditLogs.map((item) => item.resourceType)));
-  const aiSettings = systemSettings.filter((item) => item.category === 'AI');
+  const aiSettings = settingRows.filter((item) => item.category === 'AI');
 
   useEffect(() => {
     setOrganizationRows(organizations);
@@ -46,6 +49,10 @@ export function AdminDashboard({ organizations, users, auditLogs, systemSettings
   useEffect(() => {
     setUserRows(users);
   }, [users]);
+
+  useEffect(() => {
+    setSettingRows(systemSettings);
+  }, [systemSettings]);
 
   const handleCreateOrganization = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -61,6 +68,21 @@ export function AdminDashboard({ organizations, users, auditLogs, systemSettings
     const organization = await createOrganization(input);
     setOrganizationRows((current) => [organization, ...current.filter((item) => item.id !== organization.id)]);
     setDirectoryNotice(`已创建组织：${organization.name}`);
+    event.currentTarget.reset();
+    await onWorkspaceRefresh();
+  };
+
+  const handleUpdateSetting = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const formData = new FormData(event.currentTarget);
+    const key = String(formData.get('key') ?? '').trim();
+    const value = String(formData.get('value') ?? '').trim();
+    if (!key || !value) {
+      return;
+    }
+    const setting = await updateSystemSetting({ key, value });
+    setSettingRows((current) => current.map((item) => (item.key === setting.key ? setting : item)));
+    setSettingNotice(`已更新配置：${setting.name}`);
     event.currentTarget.reset();
     await onWorkspaceRefresh();
   };
@@ -241,15 +263,28 @@ export function AdminDashboard({ organizations, users, auditLogs, systemSettings
             </div>
             <span className="status-pill">{aiSettings.length} 项 AI 配置</span>
           </div>
+          {settingNotice && <div className="inline-success">{settingNotice}</div>}
           <div className="student-list">
-            {systemSettings.map((setting) => (
-              <div className="student-row" key={setting.key}>
+            {settingRows.map((setting) => (
+              <form className="student-row setting-row" key={setting.key} onSubmit={handleUpdateSetting}>
                 <div>
                   <strong>{setting.name}</strong>
                   <span>{setting.key} · {setting.category}</span>
                 </div>
+                <input type="hidden" name="key" value={setting.key} />
+                <label>
+                  配置值
+                  <input
+                    name="value"
+                    type={setting.sensitive ? 'password' : 'text'}
+                    defaultValue={setting.sensitive ? '' : setting.value}
+                    placeholder={setting.sensitive ? '输入新敏感值' : '输入配置值'}
+                    required
+                  />
+                </label>
+                <button className="primary-button" type="submit">保存</button>
                 <span className="status-pill">{setting.sensitive ? '敏感配置' : setting.value}</span>
-              </div>
+              </form>
             ))}
           </div>
         </article>

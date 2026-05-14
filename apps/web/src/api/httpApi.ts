@@ -107,6 +107,11 @@ export type CreateUserInput = {
   roles: RoleCode[];
 };
 
+export type UpdateSystemSettingInput = {
+  key: string;
+  value: string;
+};
+
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8080';
 const API_MODE = import.meta.env.VITE_API_MODE ?? 'mock';
 
@@ -458,6 +463,15 @@ export async function createUser(input: CreateUserInput): Promise<UserSummary> {
     '/api/users',
     input,
     () => mockApi.createUser(input),
+  );
+}
+
+export async function updateSystemSetting(input: UpdateSystemSettingInput): Promise<SystemSettingSummary> {
+  return mutateOr(
+    'PATCH',
+    `/api/admin/settings/${encodeURIComponent(input.key)}`,
+    { value: input.value },
+    () => mockApi.updateSystemSetting(input.key, input.value),
   );
 }
 

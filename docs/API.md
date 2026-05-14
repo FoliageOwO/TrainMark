@@ -174,6 +174,7 @@ Generated MVP assets are exposed through the gateway for local demonstration:
 |---|---|---|---|
 | `GET` | `/api/admin/audit-logs?action=GRADE_EXPORT&resourceType=GRADE_EXPORT` | optional `action`, `resourceType` query | `AuditLogSummary[]` |
 | `GET` | `/api/admin/settings?category=AI` | optional `category` query | `SystemSettingSummary[]` |
+| `PATCH` | `/api/admin/settings/{key}` | `UpdateSystemSettingRequest` | `SystemSettingSummary` |
 
 ## Frontend HTTP Mode
 

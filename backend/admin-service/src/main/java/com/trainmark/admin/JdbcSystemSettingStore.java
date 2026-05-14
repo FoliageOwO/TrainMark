@@ -64,6 +64,53 @@ public class JdbcSystemSettingStore implements SystemSettingStore {
     }
   }
 
+  @Override
+  public SystemSettingSummary update(String key, String value) {
+    var sql = """
+        UPDATE system_settings
+        SET setting_value = ?, updated_at = now()
+        WHERE setting_key = ?
+        """;
+    try (var connection = connect();
+        var statement = connection.prepareStatement(sql)) {
+      statement.setString(1, value);
+      statement.setString(2, key);
+      if (statement.executeUpdate() == 0) {
+        throw new IllegalArgumentException("System setting not found: " + key);
+      }
+    } catch (SQLException error) {
+      throw new IllegalStateException("Failed to update system setting", error);
+    }
+    return find(key);
+  }
+
+  private SystemSettingSummary find(String key) {
+    var sql = """
+        SELECT setting_key, display_name, setting_value, category, sensitive
+        FROM system_settings
+        WHERE setting_key = ?
+        """;
+    try (var connection = connect();
+        var statement = connection.prepareStatement(sql)) {
+      statement.setString(1, key);
+      try (var results = statement.executeQuery()) {
+        if (!results.next()) {
+          throw new IllegalArgumentException("System setting not found: " + key);
+        }
+        var sensitive = results.getBoolean("sensitive");
+        return new SystemSettingSummary(
+            results.getString("setting_key"),
+            results.getString("display_name"),
+            sensitive ? "******" : results.getString("setting_value"),
+            results.getString("category"),
+            sensitive
+        );
+      }
+    } catch (SQLException error) {
+      throw new IllegalStateException("Failed to load system setting", error);
+    }
+  }
+
   private java.sql.Connection connect() throws SQLException {
     if (username == null || username.isBlank()) {
       return DriverManager.getConnection(url);

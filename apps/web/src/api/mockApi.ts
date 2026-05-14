@@ -592,6 +592,19 @@ export const mockApi = {
   listSystemSettings(): SystemSettingSummary[] {
     return systemSettings;
   },
+  updateSystemSetting(key: string, value: string): SystemSettingSummary {
+    const index = systemSettings.findIndex((item) => item.key === key);
+    if (index < 0) {
+      throw new Error(`System setting not found: ${key}`);
+    }
+    const current = systemSettings[index];
+    const updated = {
+      ...current,
+      value: current.sensitive ? '******' : value,
+    };
+    systemSettings[index] = updated;
+    return updated;
+  },
   listAppeals(resultId?: number, studentId?: number): AppealSummary[] {
     return appeals.filter((item) => (
       (resultId === undefined || item.resultId === resultId) &&

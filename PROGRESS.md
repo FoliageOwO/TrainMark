@@ -1879,6 +1879,34 @@
 - `README.md`
 - `PROGRESS.md`
 
+### 61.10 管理端系统配置写入
+
+- 已为管理端系统配置增加 `PATCH /api/admin/settings/{key}` 接口，支持更新 AI、文件、导出、通知和敏感配置项，并同步补充 API 文档。
+- 已扩展系统配置 store，内存模式会保留敏感配置真实值并在返回时脱敏，JDBC 模式会写入 `system_settings.setting_value` 并继续对敏感配置脱敏返回。
+- 已新增 admin-service 异常处理器，覆盖请求校验、请求体解析、业务参数错误和存储异常。
+- 已扩展前端 HTTP/mock API，管理端系统配置面板可直接编辑配置值并刷新工作区。
+- 已将系统配置更新纳入 `SMOKE_INCLUDE_WRITES=1` 的 API smoke 清单。
+- 已更新 README 当前进度。
+- 本模块已通过前端 lint、前端构建、admin-service 打包、写接口 smoke dry-run 和 MVP 主验证。
+
+主要代码：
+
+- `backend/shared/src/main/java/com/trainmark/shared/dto/UpdateSystemSettingRequest.java`
+- `backend/admin-service/src/main/java/com/trainmark/admin/SystemSettingController.java`
+- `backend/admin-service/src/main/java/com/trainmark/admin/SystemSettingService.java`
+- `backend/admin-service/src/main/java/com/trainmark/admin/SystemSettingStore.java`
+- `backend/admin-service/src/main/java/com/trainmark/admin/InMemorySystemSettingStore.java`
+- `backend/admin-service/src/main/java/com/trainmark/admin/JdbcSystemSettingStore.java`
+- `backend/admin-service/src/main/java/com/trainmark/admin/AdminExceptionHandler.java`
+- `apps/web/src/api/httpApi.ts`
+- `apps/web/src/api/mockApi.ts`
+- `apps/web/src/components/AdminDashboard.tsx`
+- `apps/web/src/styles/global.css`
+- `scripts/smoke-api.sh`
+- `docs/API.md`
+- `README.md`
+- `PROGRESS.md`
+
 ### 62. 数据库迁移版本修复
 
 - 已修复 demo 数据和上传会话迁移文件与既有迁移版本号重复的问题。
@@ -2912,6 +2940,16 @@ pnpm verify:mvp
 ```bash
 pnpm --filter trainmark-ai-web lint
 pnpm --filter trainmark-ai-web build
+SMOKE_DRY_RUN=1 SMOKE_INCLUDE_WRITES=1 pnpm smoke:api
+pnpm verify:mvp
+```
+
+管理端系统配置写入已通过前端静态检查、构建、admin-service 打包、写接口 smoke dry-run 和 MVP 主验证：
+
+```bash
+pnpm --filter trainmark-ai-web lint
+pnpm --filter trainmark-ai-web build
+mvn -f backend/pom.xml -pl admin-service -am package -DskipTests
 SMOKE_DRY_RUN=1 SMOKE_INCLUDE_WRITES=1 pnpm smoke:api
 pnpm verify:mvp
 ```

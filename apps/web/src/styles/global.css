@@ -520,6 +520,33 @@ button:focus-visible {
   font-size: 13px;
 }
 
+.setting-row {
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.setting-row label {
+  display: grid;
+  flex: 1 1 240px;
+  gap: 6px;
+  color: #475569;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.setting-row input:not([type='hidden']) {
+  width: 100%;
+  padding: 9px 10px;
+  color: #0f172a;
+  border: 1px solid #cbd5e1;
+  border-radius: 12px;
+  background: #fff;
+}
+
+.setting-row .primary-button {
+  flex: 0 0 auto;
+}
+
 .assignment-card,
 .student-task-card {
   display: grid;
