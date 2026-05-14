@@ -9,9 +9,20 @@ cd "$ROOT_DIR"
 
 echo "[verify:ai] Python syntax"
 python3 -m py_compile \
+  ai/document/local_converter.py \
   ai/ocr/local_provider.py \
   ai/scoring/local_provider.py \
   ai/annotation/local_provider.py
+
+echo "[verify:ai] Document preprocessing"
+python3 ai/document/local_converter.py \
+  --submission-id 1 \
+  --object-key assignments/1/students/2/database-report.docx > "$TMP_DIR/document-docx.json"
+python3 -m json.tool "$TMP_DIR/document-docx.json" >/dev/null
+python3 ai/document/local_converter.py \
+  --submission-id 2 \
+  --object-key assignments/1/students/3/screenshot.png > "$TMP_DIR/document-image.json"
+python3 -m json.tool "$TMP_DIR/document-image.json" >/dev/null
 
 echo "[verify:ai] OCR provider"
 python3 ai/ocr/local_provider.py \

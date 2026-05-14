@@ -19,11 +19,15 @@ public class CommandOcrProvider implements OcrProvider {
   }
 
   @Override
-  public OcrResultSummary recognize(Long jobId, CreateOcrJobRequest request) {
+  public OcrResultSummary recognize(Long jobId, CreateOcrJobRequest request, DocumentPreprocessResult document) {
     var command = commandTemplate
         .replace("{jobId}", shellQuote(jobId.toString()))
         .replace("{submissionId}", shellQuote(request.submissionId().toString()))
-        .replace("{objectKey}", shellQuote(request.objectKey()));
+        .replace("{objectKey}", shellQuote(request.objectKey()))
+        .replace("{normalizedObjectKey}", shellQuote(document.normalizedObjectKey()))
+        .replace("{sourceFormat}", shellQuote(document.sourceFormat()))
+        .replace("{targetFormat}", shellQuote(document.targetFormat()))
+        .replace("{pageCount}", shellQuote(Integer.toString(document.pageCount())));
     try {
       var process = new ProcessBuilder(shellCommand(command)).start();
       var completed = process.waitFor(timeout.toMillis(), java.util.concurrent.TimeUnit.MILLISECONDS);

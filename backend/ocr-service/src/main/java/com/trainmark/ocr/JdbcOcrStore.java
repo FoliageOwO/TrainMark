@@ -21,12 +21,14 @@ import org.springframework.stereotype.Component;
 @ConditionalOnProperty(name = "trainmark.ocr.store", havingValue = "jdbc")
 public class JdbcOcrStore implements OcrStore {
   private final OcrProvider ocrProvider;
+  private final DocumentPreprocessor documentPreprocessor;
   private final String url;
   private final String username;
   private final String password;
 
   public JdbcOcrStore(
       OcrProvider ocrProvider,
+      DocumentPreprocessor documentPreprocessor,
       @Value("${trainmark.ocr.jdbc.url:}") String url,
       @Value("${trainmark.ocr.jdbc.username:}") String username,
       @Value("${trainmark.ocr.jdbc.password:}") String password
@@ -35,6 +37,7 @@ public class JdbcOcrStore implements OcrStore {
       throw new IllegalStateException("trainmark.ocr.jdbc.url is required when trainmark.ocr.store=jdbc");
     }
     this.ocrProvider = ocrProvider;
+    this.documentPreprocessor = documentPreprocessor;
     this.url = url;
     this.username = username;
     this.password = password;
@@ -75,7 +78,8 @@ public class JdbcOcrStore implements OcrStore {
       connection.setAutoCommit(false);
       try {
         var jobId = insertPendingJob(connection, request);
-        var result = ocrProvider.recognize(jobId, request);
+        var document = documentPreprocessor.preprocess(request);
+        var result = ocrProvider.recognize(jobId, request, document);
         var blocks = result.blocks();
         updateCompletedJob(connection, jobId, blocks);
         insertBlocks(connection, jobId, blocks);

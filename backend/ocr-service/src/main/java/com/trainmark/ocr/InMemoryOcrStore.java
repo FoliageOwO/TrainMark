@@ -18,12 +18,14 @@ import org.springframework.stereotype.Component;
 @ConditionalOnProperty(name = "trainmark.ocr.store", havingValue = "memory", matchIfMissing = true)
 public class InMemoryOcrStore implements OcrStore {
   private final OcrProvider ocrProvider;
+  private final DocumentPreprocessor documentPreprocessor;
   private final AtomicLong jobIds = new AtomicLong(2);
   private final Map<Long, OcrJobSummary> jobs = new LinkedHashMap<>();
   private final Map<Long, OcrResultSummary> results = new LinkedHashMap<>();
 
-  public InMemoryOcrStore(OcrProvider ocrProvider) {
+  public InMemoryOcrStore(OcrProvider ocrProvider, DocumentPreprocessor documentPreprocessor) {
     this.ocrProvider = ocrProvider;
+    this.documentPreprocessor = documentPreprocessor;
     jobs.put(1L, new OcrJobSummary(
         1L,
         1L,
@@ -57,7 +59,8 @@ public class InMemoryOcrStore implements OcrStore {
   @Override
   public OcrJobSummary createJob(CreateOcrJobRequest request) {
     var id = jobIds.getAndIncrement();
-    var result = ocrProvider.recognize(id, request);
+    var document = documentPreprocessor.preprocess(request);
+    var result = ocrProvider.recognize(id, request, document);
     var blocks = result.blocks();
     var job = new OcrJobSummary(
         id,

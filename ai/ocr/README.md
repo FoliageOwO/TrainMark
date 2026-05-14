@@ -2,10 +2,12 @@
 
 This folder contains the OCR-side provider contract used by TrainMark AI.
 
-The current MVP keeps the backend service self-contained, but this CLI mirrors the
-same deterministic local OCR behavior so the backend can later switch from an
-in-process provider to a PaddleOCR-backed process without changing the API
-surface.
+The current MVP keeps the backend service self-contained, but this CLI mirrors
+the same deterministic local OCR behavior so the backend can later switch from
+an in-process provider to a PaddleOCR-backed process without changing the API
+surface. OCR jobs now run after the document preprocessing contract in
+`ai/document/`, which normalizes PDF, Word and image submissions into OCR-ready
+metadata.
 
 ## Local Provider
 

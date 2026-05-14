@@ -810,6 +810,34 @@
 - `README.md`
 - `PROGRESS.md`
 
+### 37.1 文档预处理 Provider CLI 契约
+
+- 已补齐 `ai/document/` 目录，承接 PDF / Word / 图片进入 OCR 前的预处理契约。
+- 已新增无第三方依赖的 `local_converter.py`，输出包含源对象、规范化对象、源格式、目标格式、页数、图片数和表格提示数的 JSON manifest。
+- 已让本地转换 CLI 覆盖 Word 转 PDF、PDF 直通和图片直通三类 MVP 场景，为后续 LibreOffice / PDFBox / 图片转换实现留出稳定边界。
+- 已在 OCR 服务中新增 `DocumentPreprocessor`，创建 OCR 任务时会先执行本地文档预处理，再把预处理结果传给 OCR provider。
+- 已扩展 command OCR provider 占位符，支持 `{normalizedObjectKey}`、`{sourceFormat}`、`{targetFormat}` 和 `{pageCount}`。
+- 已将文档预处理纳入 `pnpm verify:ai` 和 `pnpm verify:mvp`。
+- 已更新 README 状态表、OCR provider README、环境变量说明和进度记录。
+
+主要代码：
+
+- `ai/document/README.md`
+- `ai/document/local_converter.py`
+- `backend/ocr-service/src/main/java/com/trainmark/ocr/DocumentPreprocessor.java`
+- `backend/ocr-service/src/main/java/com/trainmark/ocr/DocumentPreprocessResult.java`
+- `backend/ocr-service/src/main/java/com/trainmark/ocr/LocalDocumentPreprocessor.java`
+- `backend/ocr-service/src/main/java/com/trainmark/ocr/DocumentPreprocessorConfig.java`
+- `backend/ocr-service/src/main/java/com/trainmark/ocr/OcrProvider.java`
+- `backend/ocr-service/src/main/java/com/trainmark/ocr/LocalOcrProvider.java`
+- `backend/ocr-service/src/main/java/com/trainmark/ocr/CommandOcrProvider.java`
+- `backend/ocr-service/src/main/java/com/trainmark/ocr/InMemoryOcrStore.java`
+- `backend/ocr-service/src/main/java/com/trainmark/ocr/JdbcOcrStore.java`
+- `scripts/verify-ai.sh`
+- `.env.example`
+- `README.md`
+- `PROGRESS.md`
+
 ### 38. 评分 Provider CLI 契约
 
 - 已补齐 `ai/scoring/` 目录，承接后续规则评分、语义评分和 LLM 评语生成能力。
@@ -850,7 +878,7 @@
 
 - 已新增 `pnpm verify:ai` 脚本入口。
 - 已新增 `scripts/verify-ai.sh`，统一验证 OCR、评分和批注 provider。
-- 验证脚本会执行 Python 编译检查、运行 OCR 样例、运行评分样例、运行批注 PDF 样例，并校验 JSON 输出和 PDF 文件头。
+- 验证脚本会执行 Python 编译检查、运行文档预处理样例、运行 OCR 样例、运行评分样例、运行批注 PDF 样例，并校验 JSON 输出和 PDF 文件头。
 - 已在 README 补充 AI provider 契约验证命令。
 
 主要代码：
@@ -1434,6 +1462,17 @@ AI Provider 验证脚本已通过：
 
 ```bash
 pnpm verify:ai
+```
+
+文档预处理 Provider 和 OCR 后端接入已通过 CLI、模块编译和单服务接口验证：
+
+```bash
+pnpm verify:ai
+mvn -f backend/pom.xml -pl ocr-service -am package -DskipTests
+curl --noproxy '*' --fail --silent --show-error -H 'Content-Type: application/json' \
+  -d '{"submissionId":77,"objectKey":"assignments/1/students/2/database-report.docx","mode":"STRUCTURE"}' \
+  http://localhost:8086/api/ocr/jobs
+curl --noproxy '*' --fail --silent --show-error http://localhost:8086/api/ocr/jobs/2/result
 ```
 
 MVP 主验证已覆盖 AI Provider 验证：
