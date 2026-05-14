@@ -68,6 +68,10 @@ Most services still use in-memory data for local MVP demonstration. The gateway 
 
 ## Submissions And Uploads
 
+Upload initialization validates file extension, content type and file size. The
+default accepted formats are PDF, Word, PNG and JPG/JPEG. The default max file
+size is 50MB and can be overridden with `UPLOAD_MAX_FILE_SIZE_MB`.
+
 | Method | Path | Request | Response data |
 |---|---|---|---|
 | `POST` | `/api/submissions/upload/init` | `InitializeUploadRequest` | `InitializeUploadResponse` |

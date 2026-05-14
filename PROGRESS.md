@@ -725,6 +725,25 @@
 - `README.md`
 - `PROGRESS.md`
 
+### 44. 上传格式与完成校验
+
+- 已为 `file-service` 上传初始化增加文件大小校验，默认上限 50MB。
+- 已限制上传内容类型为 PDF、Word、PNG 和 JPEG，并同步校验文件扩展名。
+- 已为上传完成增加 objectKey 与初始化会话匹配校验。
+- 已为上传完成增加 checksum 一致性校验；初始化和完成都提供 checksum 时必须一致。
+- 已按同一学生、同一任务的历史提交计算下一版本号，不再固定为 1。
+- 已为 `file-service` 增加上传大小和内容类型环境配置。
+- 已更新 `.env.example`、API 文档、README 状态表和进度记录。
+
+主要代码：
+
+- `backend/file-service/src/main/java/com/trainmark/file/UploadService.java`
+- `backend/file-service/src/main/resources/application.yml`
+- `.env.example`
+- `docs/API.md`
+- `README.md`
+- `PROGRESS.md`
+
 ## 已验证
 
 前端构建已通过：
@@ -932,6 +951,12 @@ mvn -f backend/pom.xml -pl ocr-service -am package -DskipTests
 mvn -f backend/pom.xml -pl grading-service -am package -DskipTests
 ```
 
+上传格式与完成校验已通过后端模块编译：
+
+```bash
+mvn -f backend/pom.xml -pl file-service -am package -DskipTests
+```
+
 全部后端模块已通过编译：
 
 ```bash
@@ -986,6 +1011,7 @@ Docker Compose 已完成配置展开校验，暂未拉起 PostgreSQL、Redis、R
 - `chore: verify ai in mvp`
 - `feat: add ocr provider switch`
 - `feat: add scoring provider switch`
+- `feat: validate uploads`
 
 ## 接下来需要做
 
