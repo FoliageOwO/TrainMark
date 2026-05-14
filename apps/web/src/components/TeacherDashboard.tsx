@@ -16,7 +16,7 @@ import {
   type CreateAssignmentInput,
   type CreateRubricInput,
 } from '../api/httpApi';
-import type { CourseSummary, RubricSummary } from '../api/types';
+import type { CourseSummary, RubricSummary, SubmissionSummary } from '../api/types';
 import { TeacherAnalyticsPanel } from './TeacherAnalyticsPanel';
 import { TeacherAiPipeline } from './TeacherAiPipeline';
 import { TeacherAppealPanel } from './TeacherAppealPanel';
@@ -42,6 +42,7 @@ type TeacherDashboardProps = {
   unsubmittedStudents: ReturnType<typeof mockApi.listUnsubmittedStudents>;
   rubrics: ReturnType<typeof mockApi.listRubrics>;
   gradingJobs: ReturnType<typeof mockApi.listGradingJobs>;
+  submissions: SubmissionSummary[];
   ocrJobs: ReturnType<typeof mockApi.listOcrJobs>;
   gradingResults: ReturnType<typeof mockApi.listGradingResults>;
   operatorName: string;
@@ -68,6 +69,7 @@ export function TeacherDashboard({
   unsubmittedStudents,
   rubrics,
   gradingJobs,
+  submissions,
   ocrJobs,
   gradingResults,
   operatorName,
@@ -111,7 +113,10 @@ export function TeacherDashboard({
     if (!rubric) {
       return;
     }
-    setStartedJob(await createGradingJob(rubric.assignmentId, rubric.id));
+    const submissionIds = submissions
+      .filter((submission) => submission.assignmentId === rubric.assignmentId)
+      .map((submission) => submission.id);
+    setStartedJob(await createGradingJob(rubric.assignmentId, rubric.id, submissionIds.length > 0 ? submissionIds : [1]));
   };
 
   const handleReviewItemSubmit = async (event: FormEvent<HTMLFormElement>, rubricItemId: number) => {

@@ -23,6 +23,7 @@ import type {
   UploadReceipt,
   UnsubmittedStudent,
   UserSummary,
+  RoleCode,
 } from './types';
 
 type ApiResponse<T> = {
@@ -105,8 +106,9 @@ export function resolveApiAssetUrl(path: string) {
   return path;
 }
 
-export async function loadWorkspaceData(selectedCourseId: number, studentId: number): Promise<WorkspaceData> {
+export async function loadWorkspaceData(selectedCourseId: number, userId: number, role: RoleCode): Promise<WorkspaceData> {
   const fallbackGradingResults = mockApi.listGradingResults();
+  const submissionPath = role === 'STUDENT' ? `/api/submissions?studentId=${userId}` : '/api/submissions';
   const [
     courses,
     classes,
@@ -140,7 +142,7 @@ export async function loadWorkspaceData(selectedCourseId: number, studentId: num
     getOr('/api/grading/jobs', mockApi.listGradingJobs()),
     loadOcrJobs(),
     getOr('/api/grading/results', fallbackGradingResults),
-    getOr(`/api/submissions?studentId=${studentId}`, [] as SubmissionSummary[]),
+    getOr(submissionPath, [] as SubmissionSummary[]),
     getOr('/api/grading/exports?assignmentId=1', mockApi.listGradeExports(1)),
     getOr('/api/analytics/grade-statistics?assignmentId=1', mockApi.getGradeStatistics()),
     getOr('/api/analytics/loss-points?assignmentId=1', mockApi.listLossPoints()),
@@ -150,7 +152,7 @@ export async function loadWorkspaceData(selectedCourseId: number, studentId: num
     getOr('/api/admin/audit-logs', mockApi.listAuditLogs()),
     getOr('/api/admin/settings', mockApi.listSystemSettings()),
   ]);
-  const publishedResults = gradingResults.filter((item) => item.publicationStatus === 'PUBLISHED' && item.studentId === studentId);
+  const publishedResults = gradingResults.filter((item) => item.publicationStatus === 'PUBLISHED' && item.studentId === userId);
 
   return {
     courses,
@@ -166,7 +168,7 @@ export async function loadWorkspaceData(selectedCourseId: number, studentId: num
     gradingResults,
     publishedResults,
     submissions,
-    studentTasks: deriveStudentTasks(assignments, courses, submissions, publishedResults, studentId),
+    studentTasks: deriveStudentTasks(assignments, courses, submissions, publishedResults, userId),
     gradeExports,
     gradeStatistics,
     lossPoints,
@@ -249,11 +251,11 @@ async function getOr<T, R = T>(path: string, fallback: T, normalize?: (value: R)
   }
 }
 
-export async function createGradingJob(assignmentId: number, rubricId: number): Promise<GradingJobSummary> {
+export async function createGradingJob(assignmentId: number, rubricId: number, submissionIds: number[] = [1]): Promise<GradingJobSummary> {
   return mutateOr(
     'POST',
     '/api/grading/jobs',
-    { assignmentId, rubricId, submissionIds: [1] },
+    { assignmentId, rubricId, submissionIds },
     () => mockApi.startGradingJob(),
   );
 }

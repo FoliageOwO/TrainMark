@@ -95,7 +95,7 @@ export function App() {
     }
 
     let cancelled = false;
-    loadWorkspaceData(selectedCourseId, user.id).then((data) => {
+    loadWorkspaceData(selectedCourseId, user.id, primaryRole).then((data) => {
       if (!cancelled) {
         setWorkspaceData(data);
         setApiModeLabel('HTTP API / Mock 兜底');
@@ -104,7 +104,7 @@ export function App() {
     return () => {
       cancelled = true;
     };
-  }, [selectedCourseId, user.id]);
+  }, [primaryRole, selectedCourseId, user.id]);
 
   const teacherStats = [
     { label: '进行中任务', value: String(metrics.activeAssignments), trend: '+2 本周', tone: 'blue' },
@@ -147,6 +147,7 @@ export function App() {
           unsubmittedStudents={unsubmittedStudents}
           rubrics={rubrics}
           gradingJobs={gradingJobs}
+          submissions={workspaceData?.submissions ?? []}
           ocrJobs={ocrJobs}
           gradingResults={gradingResults}
           operatorName={user.name}

@@ -789,6 +789,20 @@
 - `scripts/smoke-api.sh`
 - `PROGRESS.md`
 
+### 23.8 前端批改提交数据联调
+
+- 已将前端 HTTP 工作区提交列表按角色加载：学生只读取自己的提交，教师读取全量提交用于批改任务。
+- 已把老师端工作区接入 `workspaceData.submissions`，启动 AI 批改时优先使用当前评分标准所属任务的真实提交 ID。
+- 已将 `createGradingJob` 的提交 ID 从固定 `[1]` 改为调用方传入，避免新任务/真实提交联调时仍固定批改演示提交。
+- 本模块已通过前端 lint、生产构建和 MVP 验证脚本。
+
+主要代码：
+
+- `apps/web/src/api/httpApi.ts`
+- `apps/web/src/pages/App.tsx`
+- `apps/web/src/components/TeacherDashboard.tsx`
+- `PROGRESS.md`
+
 ### 24. Gateway 本地跨域联调
 
 - 已为 gateway 增加本地 Vite 开发端口 CORS 配置。
@@ -1788,6 +1802,14 @@ pnpm verify:mvp
 ```
 
 前端评分标准创建联调后已通过静态检查、构建和 MVP 验证：
+
+```bash
+pnpm --filter trainmark-ai-web lint
+pnpm --filter trainmark-ai-web build
+pnpm verify:mvp
+```
+
+前端批改提交数据联调后已通过静态检查、构建和 MVP 验证：
 
 ```bash
 pnpm --filter trainmark-ai-web lint
