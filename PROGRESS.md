@@ -2203,6 +2203,21 @@
 - `README.md`
 - `PROGRESS.md`
 
+### 77. JDBC 严格认证 Smoke 脚本
+
+- 已新增 `scripts/smoke-auth-strict.sh`，用于单独验证 JDBC/严格认证模式下的 auth-service token 行为。
+- 脚本覆盖 owner 登录、`/api/auth/me`、`/api/auth/refresh`、`/api/auth/logout` 正向链路，并校验缺 token refresh/logout 与未知用户 token refresh 的失败响应。
+- 已新增 `pnpm smoke:auth:strict` 命令，避免把严格认证负向断言混入默认内存模式 API smoke。
+- 已在 README 验证命令中补充严格认证 smoke 的使用入口。
+- 本模块已通过脚本语法检查、`package.json` 解析、strict auth smoke dry-run，以及单独启动 JDBC auth-service 后的 strict auth smoke live 验证。
+
+主要代码：
+
+- `scripts/smoke-auth-strict.sh`
+- `package.json`
+- `README.md`
+- `PROGRESS.md`
+
 ## 已验证
 
 前端构建已通过：
@@ -3329,6 +3344,7 @@ pnpm verify:mvp
 - `fix: refresh current auth user`
 - `fix: validate auth logout`
 - `feat: connect frontend auth session`
+- `chore: add strict auth smoke`
 
 ## 接下来需要做
 

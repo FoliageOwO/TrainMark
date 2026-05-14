@@ -11,6 +11,7 @@
     "backup": "bash scripts/backup.sh",
     "restore": "bash scripts/restore.sh",
     "smoke:api": "bash scripts/smoke-api.sh",
+    "smoke:auth:strict": "bash scripts/smoke-auth-strict.sh",
     "dev:infra": "docker compose -f infra/docker-compose.yml up -d",
     "stop:infra": "docker compose -f infra/docker-compose.yml down",
     "db:migrate:local": "bash scripts/apply-db-migrations.sh",

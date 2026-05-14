@@ -357,6 +357,12 @@ SMOKE_RETRIES=30 SMOKE_RETRY_DELAY_SECONDS=2 pnpm smoke:api
 SMOKE_INCLUDE_WRITES=1 SMOKE_RETRIES=30 SMOKE_RETRY_DELAY_SECONDS=2 pnpm smoke:api
 ```
 
+需要单独验证 JDBC 严格认证的 token 正负路径时，先以 JDBC 模式启动 auth-service，再运行：
+
+```bash
+pnpm smoke:auth:strict
+```
+
 OCR 服务默认使用本地文档预处理实现。需要把 Word/PDF/图片预处理切换到外部命令时，可设置：
 
 ```bash
