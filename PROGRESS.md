@@ -974,6 +974,27 @@
 - `infra/README.md`
 - `PROGRESS.md`
 
+### 60. 课程与任务 PostgreSQL 存储
+
+- 已将课程服务拆成 `CourseStore` 存储接口，默认仍使用内存实现，保证现有本地开发和 smoke 不受数据库影响。
+- 已新增 `JdbcCourseStore`，设置 `TRAINMARK_COURSE_STORE=jdbc` 后可将课程、教学班、任务和任务-班级关联写入 PostgreSQL。
+- 已为 `course-service` 增加 PostgreSQL JDBC runtime 驱动，并通过环境变量配置 JDBC URL、用户名和密码。
+- 已补充 demo 课程班级和任务种子迁移 `V4__seed_demo_courses.sql`，并纳入 Docker PostgreSQL 首次初始化流程。
+- 已在 README、infra README 和 `.env.example` 中补充课程 JDBC 模式说明。
+
+主要代码：
+
+- `backend/course-service/src/main/java/com/trainmark/course/CourseStore.java`
+- `backend/course-service/src/main/java/com/trainmark/course/InMemoryCourseStore.java`
+- `backend/course-service/src/main/java/com/trainmark/course/JdbcCourseStore.java`
+- `backend/course-service/src/main/java/com/trainmark/course/CourseService.java`
+- `backend/db/migration/V4__seed_demo_courses.sql`
+- `infra/postgres/init.sql`
+- `.env.example`
+- `README.md`
+- `infra/README.md`
+- `PROGRESS.md`
+
 ## 已验证
 
 前端构建已通过：
@@ -1307,6 +1328,21 @@ PostgreSQL 迁移挂载已通过 Docker Compose 配置展开：
 docker compose -f infra/docker-compose.yml config
 ```
 
+课程与任务 PostgreSQL 存储已通过后端模块编译：
+
+```bash
+mvn -f backend/pom.xml -pl course-service -am package -DskipTests
+```
+
+课程服务默认内存模式已通过单服务启动和课程/班级/任务接口验证：
+
+```bash
+timeout 75s bash scripts/dev-service.sh course-service
+curl --noproxy '*' http://localhost:8083/api/courses
+curl --noproxy '*' http://localhost:8083/api/courses/1/classes
+curl --noproxy '*' http://localhost:8083/api/assignments
+```
+
 全部后端模块已通过编译：
 
 ```bash
@@ -1377,6 +1413,7 @@ Docker Compose 已完成配置展开校验，暂未拉起 PostgreSQL、Redis、R
 - `fix: bypass proxy in smoke`
 - `fix: retain spring parameter names`
 - `feat: add user jdbc store`
+- `feat: add course jdbc store`
 
 ## 接下来需要做
 

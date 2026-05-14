@@ -3,6 +3,13 @@ server:
 spring:
   application:
     name: course-service
+trainmark:
+  course:
+    store: ${TRAINMARK_COURSE_STORE:memory}
+    jdbc:
+      url: ${TRAINMARK_COURSE_JDBC_URL:}
+      username: ${TRAINMARK_COURSE_JDBC_USERNAME:}
+      password: ${TRAINMARK_COURSE_JDBC_PASSWORD:}
 management:
   endpoints:
     web:

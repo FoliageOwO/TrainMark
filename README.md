@@ -34,6 +34,7 @@ TrainMark AI，中文名“智训批”，是面向高校实训教学场景的�
 | Gateway 基础路由 | 已创建 |
 | 后端运行参数绑定 | 已修复 |
 | 用户与组织 PostgreSQL 存储 | 已支持 |
+| 课程与任务 PostgreSQL 存储 | 已支持 |
 | 管理端审计日志 | 已实现 |
 | 管理端系统配置 | 已实现 |
 | PWA 安装、离线外壳与角色快捷入口 | 已实现 |
@@ -153,6 +154,16 @@ pnpm dev:backend:user
 ```
 
 Docker 初始化会执行 `backend/db/migration/` 下的核心表、角色权限和 demo 用户组织种子 SQL。
+
+课程服务同样默认使用内存数据。需要让课程、教学班、任务和任务班级关联写入 PostgreSQL 时，设置：
+
+```bash
+TRAINMARK_COURSE_STORE=jdbc \
+TRAINMARK_COURSE_JDBC_URL=jdbc:postgresql://localhost:5432/trainmark_ai \
+TRAINMARK_COURSE_JDBC_USERNAME=trainmark \
+TRAINMARK_COURSE_JDBC_PASSWORD=trainmark_dev \
+pnpm dev:backend:course
+```
 
 也可以只启动单个服务：
 
