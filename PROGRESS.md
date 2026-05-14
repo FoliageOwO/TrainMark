@@ -854,6 +854,24 @@
 - `README.md`
 - `PROGRESS.md`
 
+### 52. 批注与导出资源下载
+
+- 已为 `grading-service` 新增资源下载控制器。
+- 已提供 `/annotations/submissions/{submissionId}/annotated.pdf`，返回可下载的本地批注 PDF 占位文件。
+- 已提供 `/exports/assignments/{assignmentId}/{fileName}`，按文件扩展名返回 CSV、PDF 或 ZIP 导出占位文件。
+- 已将 gateway 的 grading-service 路由扩展到 `/annotations/**` 和 `/exports/**`，让前端 HTTP 模式资源链接可直接通过 gateway 打开。
+- 已将批注 PDF 和成绩导出资源端点加入 API 冒烟 dry-run 清单。
+- 已更新 API 文档、README 状态表和进度记录。
+
+主要代码：
+
+- `backend/grading-service/src/main/java/com/trainmark/grading/GradingAssetController.java`
+- `backend/gateway-service/src/main/resources/application.yml`
+- `scripts/smoke-api.sh`
+- `docs/API.md`
+- `README.md`
+- `PROGRESS.md`
+
 ## 已验证
 
 前端构建已通过：
@@ -1114,6 +1132,13 @@ pnpm lint:web
 pnpm build:web
 ```
 
+批注与导出资源下载已通过后端模块编译和 API 冒烟 dry-run：
+
+```bash
+mvn -f backend/pom.xml -pl grading-service,gateway-service -am package -DskipTests
+SMOKE_DRY_RUN=1 pnpm smoke:api
+```
+
 全部后端模块已通过编译：
 
 ```bash
@@ -1176,6 +1201,7 @@ Docker Compose 已完成配置展开校验，暂未拉起 PostgreSQL、Redis、R
 - `feat: link annotation pdfs`
 - `fix: resolve api asset urls`
 - `feat: link grade exports`
+- `feat: serve grading assets`
 
 ## 接下来需要做
 

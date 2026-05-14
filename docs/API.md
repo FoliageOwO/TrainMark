@@ -129,6 +129,13 @@ missing, the object key does not match, or the checksum is inconsistent.
 | `GET` | `/api/grading/exports?assignmentId=1` | optional `assignmentId` query | `GradeExportSummary[]` |
 | `POST` | `/api/grading/exports` | `CreateGradeExportRequest` | `GradeExportSummary` |
 
+Generated MVP assets are exposed through the gateway for local demonstration:
+
+| Method | Path | Response |
+|---|---|---|
+| `GET` | `/annotations/submissions/{submissionId}/annotated.pdf` | annotated PDF placeholder |
+| `GET` | `/exports/assignments/{assignmentId}/{fileName}` | CSV, PDF or ZIP grade export placeholder |
+
 ## Appeals
 
 | Method | Path | Request | Response data |

@@ -40,6 +40,8 @@ check_url "gateway collection overview" "$GATEWAY_URL/api/notifications/assignme
 check_url "gateway rubrics" "$GATEWAY_URL/api/rubrics"
 check_url "gateway grading jobs" "$GATEWAY_URL/api/grading/jobs"
 check_url "gateway grading results" "$GATEWAY_URL/api/grading/results"
+check_url "gateway annotation PDF" "$GATEWAY_URL/annotations/submissions/1/annotated.pdf"
+check_url "gateway grade export" "$GATEWAY_URL/exports/assignments/1/grades.csv"
 check_url "gateway OCR jobs" "$GATEWAY_URL/api/ocr/jobs"
 check_url "gateway similarity jobs" "$GATEWAY_URL/api/similarity/jobs"
 check_url "gateway analytics" "$GATEWAY_URL/api/analytics/grade-statistics?assignmentId=1"

@@ -43,7 +43,7 @@ spring:
         - id: grading-service
           uri: http://localhost:8085
           predicates:
-            - Path=/api/rubrics/**,/api/grading/**
+            - Path=/api/rubrics/**,/api/grading/**,/annotations/**,/exports/**
         - id: ocr-service
           uri: http://localhost:8086
           predicates:
