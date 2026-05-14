@@ -640,6 +640,18 @@
 - `apps/web/src/pages/App.tsx`
 - `PROGRESS.md`
 
+### 22.10 教师端名单组织组件拆分
+
+- 已从教师端工作台中拆出 `TeacherRosterPanel`，学生名单导入、导入预览统计、组织链和学生列表集中维护。
+- 名单导入图标和组织/学生展示逻辑随组件下沉，减少 `App.tsx` 末端管理面板展示职责。
+- `App.tsx` 继续负责名单、组织和导入预览数据装配。
+
+主要代码：
+
+- `apps/web/src/components/TeacherRosterPanel.tsx`
+- `apps/web/src/pages/App.tsx`
+- `PROGRESS.md`
+
 ### 23. 前端 HTTP 写操作联调
 
 - 已扩展前端 HTTP API 层，支持在 `VITE_API_MODE=http` 下调用后端写接口。
@@ -1565,6 +1577,14 @@ pnpm verify:mvp
 ```
 
 教师端课程任务组件拆分后已通过静态检查和构建：
+
+```bash
+pnpm --filter trainmark-ai-web lint
+pnpm --filter trainmark-ai-web build
+pnpm verify:mvp
+```
+
+教师端名单组织组件拆分后已通过静态检查和构建：
 
 ```bash
 pnpm --filter trainmark-ai-web lint
