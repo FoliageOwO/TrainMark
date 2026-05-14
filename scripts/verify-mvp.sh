@@ -14,6 +14,9 @@ pnpm build:web
 echo "[verify] Backend package"
 mvn -f backend/pom.xml package -DskipTests
 
+echo "[verify] AI providers"
+pnpm verify:ai
+
 echo "[verify] API route surface"
 rg -n "@(GetMapping|PostMapping|PatchMapping|RequestMapping)" backend/*-service/src/main/java -g "*.java" >/dev/null
 

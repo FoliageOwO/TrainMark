@@ -669,6 +669,17 @@
 - `README.md`
 - `PROGRESS.md`
 
+### 41. MVP 验证覆盖 AI Provider
+
+- 已将 `pnpm verify:mvp` 串接 `pnpm verify:ai`。
+- 当前 MVP 主验证会覆盖前端静态检查、前端构建、后端全模块打包、AI provider 契约验证和 API 路由扫描。
+- 已更新进度记录。
+
+主要代码：
+
+- `scripts/verify-mvp.sh`
+- `PROGRESS.md`
+
 ## 已验证
 
 前端构建已通过：
@@ -858,6 +869,12 @@ AI Provider 验证脚本已通过：
 pnpm verify:ai
 ```
 
+MVP 主验证已覆盖 AI Provider 验证：
+
+```bash
+pnpm verify:mvp
+```
+
 全部后端模块已通过编译：
 
 ```bash
@@ -909,6 +926,7 @@ Docker Compose 已完成配置展开校验，暂未拉起 PostgreSQL、Redis、R
 - `feat: add scoring provider cli`
 - `feat: add annotation provider cli`
 - `chore: add ai verifier`
+- `chore: verify ai in mvp`
 
 ## 接下来需要做
 
