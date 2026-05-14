@@ -85,7 +85,7 @@ export async function loadWorkspaceData(selectedCourseId: number, studentId: num
     getOr('/api/notifications/assignments/1/unsubmitted', mockApi.listUnsubmittedStudents()),
     getOr('/api/rubrics', mockApi.listRubrics()),
     getOr('/api/grading/jobs', mockApi.listGradingJobs()),
-    getOr('/api/ocr/jobs', mockApi.listOcrJobs(), normalizeOcrJobs),
+    loadOcrJobs(),
     getOr('/api/grading/results', fallbackGradingResults),
     getOr('/api/grading/exports?assignmentId=1', mockApi.listGradeExports(1)),
     getOr('/api/analytics/grade-statistics?assignmentId=1', mockApi.getGradeStatistics()),
@@ -312,6 +312,24 @@ function normalizeOcrJobs(value: Array<Omit<OcrJobSummary, 'blocks'> & { blocks?
   return value.map((item) => ({
     ...item,
     blocks: item.blocks ?? [],
+  }));
+}
+
+async function loadOcrJobs(): Promise<OcrJobSummary[]> {
+  const jobs = await getOr('/api/ocr/jobs', mockApi.listOcrJobs(), normalizeOcrJobs);
+  if (!shouldUseHttpApi()) {
+    return jobs;
+  }
+
+  return Promise.all(jobs.map(async (job) => {
+    if (job.blocks.length > 0) {
+      return job;
+    }
+    const result = await getOr(`/api/ocr/jobs/${job.id}/result`, { blocks: [] as OcrJobSummary['blocks'] });
+    return {
+      ...job,
+      blocks: result.blocks,
+    };
   }));
 }
 

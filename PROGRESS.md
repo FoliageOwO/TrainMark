@@ -425,6 +425,20 @@
 - `README.md`
 - `PROGRESS.md`
 
+### 27. 本地 OCR 结构化 Provider
+
+- 已扩展 OCR 服务内存实现，创建 OCR 任务时会根据文件名生成确定性的结构化识别结果。
+- 新建 OCR 任务会直接进入 `COMPLETED` 状态，并生成页数、文本块数、表格数和平均置信度。
+- OCR 服务会保存每个任务的结构化结果，`GET /api/ocr/jobs/{jobId}/result` 返回对应任务结果，不再只返回固定样例。
+- 前端 HTTP 模式读取 OCR 列表后会按任务拉取 OCR 结果，补齐结构块展示。
+- 该模块为后续 PaddleOCR 接入前的本地 provider 契约，便于端到端联调。
+
+主要代码：
+
+- `backend/ocr-service/src/main/java/com/trainmark/ocr/OcrService.java`
+- `apps/web/src/api/httpApi.ts`
+- `PROGRESS.md`
+
 ## 已验证
 
 前端构建已通过：
@@ -509,6 +523,14 @@ MVP 回归验证脚本已通过：
 pnpm verify:mvp
 ```
 
+本地 OCR 结构化 Provider 已通过后端模块编译、前端静态检查和构建：
+
+```bash
+mvn -f backend/pom.xml -pl ocr-service -am package -DskipTests
+pnpm lint:web
+pnpm build:web
+```
+
 全部后端模块已通过编译：
 
 ```bash
@@ -546,6 +568,7 @@ Docker Compose 暂未本地验证，因为当前机器没有 Docker。
 - `feat: add gateway cors`
 - `feat: add grade exports`
 - `chore: add mvp verifier`
+- `feat: add local ocr provider`
 
 ## 接下来需要做
 
@@ -553,7 +576,7 @@ Docker Compose 暂未本地验证，因为当前机器没有 Docker。
 
 - 接入 PaddleOCR。
 - 增加 PDF / Word / 图片转换流程。
-- 实现 OCR 结果入库和结构化文本存储。
+- 将本地 OCR provider 替换为 PaddleOCR provider，并持久化 OCR 结果。
 - 实现规则评分、关键词匹配和语义相似度评分。
 - 实现批注 PDF 生成。
 
