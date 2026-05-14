@@ -2012,6 +2012,18 @@
 - `README.md`
 - `PROGRESS.md`
 
+### 65. 认证接口统一错误响应
+
+- 已为 auth-service 增加 `AuthExceptionHandler`，统一处理请求校验失败、非法参数、请求体解析失败和认证存储异常。
+- 登录请求字段缺失时会返回 `ApiResponse` 包装的字段错误，避免真实联调时暴露默认 Spring 错误体。
+- JDBC 认证存储异常会返回统一失败响应，保持 auth-service 与 grading、file、ocr、admin 等服务的错误响应风格一致。
+- 本模块已通过 auth-service 打包、API smoke dry-run 和 MVP 主验证。
+
+主要代码：
+
+- `backend/auth-service/src/main/java/com/trainmark/auth/AuthExceptionHandler.java`
+- `PROGRESS.md`
+
 ## 已验证
 
 前端构建已通过：
