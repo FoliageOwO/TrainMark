@@ -803,6 +803,18 @@
 - `apps/web/src/components/TeacherDashboard.tsx`
 - `PROGRESS.md`
 
+### 23.9 教师端 HTTP 工作区异步数据同步
+
+- 已让教师端复核结果在 HTTP 工作区数据加载后同步刷新，并在当前选中结果不存在时自动切回第一条可用结果。
+- 已让教师端申诉处理、查重任务和成绩导出列表跟随工作区数据刷新，避免首次渲染 mock 后长期停留在旧数据。
+- 已保留本地操作后的即时反馈，只有上游 props 更新时才同步覆盖对应列表。
+- 本模块已通过前端 lint、生产构建和 MVP 验证脚本。
+
+主要代码：
+
+- `apps/web/src/components/TeacherDashboard.tsx`
+- `PROGRESS.md`
+
 ### 24. Gateway 本地跨域联调
 
 - 已为 gateway 增加本地 Vite 开发端口 CORS 配置。
@@ -2411,6 +2423,14 @@ curl --noproxy '*' -H 'Content-Type: application/json' -d '{...}' http://localho
 项目级 MVP 验证脚本已通过：
 
 ```bash
+pnpm verify:mvp
+```
+
+教师端 HTTP 工作区异步数据同步后已通过静态检查、构建和 MVP 验证：
+
+```bash
+pnpm --filter trainmark-ai-web lint
+pnpm --filter trainmark-ai-web build
 pnpm verify:mvp
 ```
 

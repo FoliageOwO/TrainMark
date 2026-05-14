@@ -104,6 +104,28 @@ export function TeacherDashboard({
     setRubricRows(rubrics);
   }, [rubrics]);
 
+  useEffect(() => {
+    if (gradingResults.length === 0) {
+      return;
+    }
+    setReviewResults(gradingResults);
+    setSelectedReviewId((current) => (
+      gradingResults.some((item) => item.id === current) ? current : gradingResults[0].id
+    ));
+  }, [gradingResults]);
+
+  useEffect(() => {
+    setAppealRows(appeals);
+  }, [appeals]);
+
+  useEffect(() => {
+    setSimilarityRows(similarityJobs);
+  }, [similarityJobs]);
+
+  useEffect(() => {
+    setExportRows(gradeExports);
+  }, [gradeExports]);
+
   const syncReviewResult = (updated: NonNullable<typeof selectedReview>) => {
     setReviewResults((current) => current.map((item) => (item.id === updated.id ? { ...updated } : item)));
     setSelectedReviewId(updated.id);
