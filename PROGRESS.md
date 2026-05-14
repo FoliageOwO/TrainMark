@@ -882,6 +882,18 @@
 - `apps/web/src/api/httpApi.ts`
 - `PROGRESS.md`
 
+### 23.15 学生端 HTTP 跨课程任务加载
+
+- 已让学生角色在 HTTP 工作区加载时读取全量实训任务，而不是只读取默认选中课程的任务。
+- 已让学生角色读取全量批改结果后再按本人已发布结果派生成绩，避免跨课程成绩在学生端缺失。
+- 已保留教师端按当前课程/作业收敛的数据加载策略，避免影响教师端工作区的作业维度隔离。
+- 本模块已通过前端 lint、生产构建和 MVP 验证脚本。
+
+主要代码：
+
+- `apps/web/src/api/httpApi.ts`
+- `PROGRESS.md`
+
 ### 24. Gateway 本地跨域联调
 
 - 已为 gateway 增加本地 Vite 开发端口 CORS 配置。
@@ -2534,6 +2546,14 @@ pnpm verify:mvp
 ```
 
 HTTP 局部失败作业维度兜底后已通过静态检查、构建和 MVP 验证：
+
+```bash
+pnpm --filter trainmark-ai-web lint
+pnpm --filter trainmark-ai-web build
+pnpm verify:mvp
+```
+
+学生端 HTTP 跨课程任务加载后已通过静态检查、构建和 MVP 验证：
 
 ```bash
 pnpm --filter trainmark-ai-web lint

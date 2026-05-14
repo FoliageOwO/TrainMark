@@ -109,10 +109,14 @@ export function resolveApiAssetUrl(path: string) {
 }
 
 export async function loadWorkspaceData(selectedCourseId: number, userId: number, role: RoleCode): Promise<WorkspaceData> {
+  const isStudent = role === 'STUDENT';
   const submissionPath = role === 'STUDENT' ? `/api/submissions?studentId=${userId}` : '/api/submissions';
-  const assignments = await getOr(`/api/assignments?courseId=${selectedCourseId}`, mockApi.listAssignments(selectedCourseId));
+  const assignmentPath = isStudent ? '/api/assignments' : `/api/assignments?courseId=${selectedCourseId}`;
+  const assignmentFallback = isStudent ? mockApi.listAssignments() : mockApi.listAssignments(selectedCourseId);
+  const assignments = await getOr(assignmentPath, assignmentFallback);
   const selectedAssignmentId = resolveWorkspaceAssignmentId(assignments, selectedCourseId);
-  const fallbackGradingResults = mockApi.listGradingResults(selectedAssignmentId);
+  const gradingResultsPath = isStudent ? '/api/grading/results' : `/api/grading/results?assignmentId=${selectedAssignmentId}`;
+  const fallbackGradingResults = isStudent ? mockApi.listGradingResults() : mockApi.listGradingResults(selectedAssignmentId);
   const [
     courses,
     classes,
@@ -143,7 +147,7 @@ export async function loadWorkspaceData(selectedCourseId: number, userId: number
     getOr(`/api/rubrics?assignmentId=${selectedAssignmentId}`, mockApi.listRubrics(selectedAssignmentId)),
     getOr(`/api/grading/jobs?assignmentId=${selectedAssignmentId}`, mockApi.listGradingJobs(selectedAssignmentId)),
     loadOcrJobs(),
-    getOr(`/api/grading/results?assignmentId=${selectedAssignmentId}`, fallbackGradingResults),
+    getOr(gradingResultsPath, fallbackGradingResults),
     getOr(submissionPath, [] as SubmissionSummary[]),
     getOr(`/api/grading/exports?assignmentId=${selectedAssignmentId}`, mockApi.listGradeExports(selectedAssignmentId)),
     getOr(`/api/analytics/grade-statistics?assignmentId=${selectedAssignmentId}`, mockApi.getGradeStatistics(selectedAssignmentId)),
