@@ -35,3 +35,16 @@ Use `paddleocr.example.yml` as the first production configuration shape. The
 PaddleOCR implementation should keep stdout compatible with the local provider
 JSON contract and write operational logs to stderr.
 
+## Backend Command Provider
+
+`ocr-service` defaults to the in-process local provider. To call an external OCR
+CLI, start the service with:
+
+```bash
+OCR_PROVIDER=command \
+OCR_COMMAND='python3 ai/ocr/local_provider.py --job-id {jobId} --submission-id {submissionId} --object-key {objectKey}' \
+pnpm dev:backend:ocr
+```
+
+The placeholders `{jobId}`, `{submissionId}` and `{objectKey}` are replaced by
+the backend before the command is executed.

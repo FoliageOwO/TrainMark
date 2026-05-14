@@ -680,6 +680,28 @@
 - `scripts/verify-mvp.sh`
 - `PROGRESS.md`
 
+### 42. OCR 后端 Provider 切换
+
+- 已为 `ocr-service` 抽象 `OcrProvider` 接口。
+- 已将原本写在 `OcrService` 内部的 deterministic OCR 逻辑迁移到 `LocalOcrProvider`。
+- 已新增 `CommandOcrProvider`，支持通过 `OCR_PROVIDER=command` 和 `OCR_COMMAND` 调用外部 OCR CLI。
+- 已新增 `OcrProviderConfig`，默认使用本地 provider，配置为 command 时校验命令模板。
+- 已为 `ocr-service` 增加 `trainmark.ocr.provider`、`trainmark.ocr.command` 和超时配置。
+- 已更新 `.env.example`、OCR provider README、README 状态表和进度记录。
+
+主要代码：
+
+- `backend/ocr-service/src/main/java/com/trainmark/ocr/OcrProvider.java`
+- `backend/ocr-service/src/main/java/com/trainmark/ocr/LocalOcrProvider.java`
+- `backend/ocr-service/src/main/java/com/trainmark/ocr/CommandOcrProvider.java`
+- `backend/ocr-service/src/main/java/com/trainmark/ocr/OcrProviderConfig.java`
+- `backend/ocr-service/src/main/java/com/trainmark/ocr/OcrService.java`
+- `backend/ocr-service/src/main/resources/application.yml`
+- `.env.example`
+- `ai/ocr/README.md`
+- `README.md`
+- `PROGRESS.md`
+
 ## 已验证
 
 前端构建已通过：
@@ -875,6 +897,12 @@ MVP 主验证已覆盖 AI Provider 验证：
 pnpm verify:mvp
 ```
 
+OCR 后端 Provider 切换已通过后端模块编译：
+
+```bash
+mvn -f backend/pom.xml -pl ocr-service -am package -DskipTests
+```
+
 全部后端模块已通过编译：
 
 ```bash
@@ -927,6 +955,7 @@ Docker Compose 已完成配置展开校验，暂未拉起 PostgreSQL、Redis、R
 - `feat: add annotation provider cli`
 - `chore: add ai verifier`
 - `chore: verify ai in mvp`
+- `feat: add ocr provider switch`
 
 ## 接下来需要做
 
