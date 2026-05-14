@@ -498,6 +498,27 @@
 - `README.md`
 - `PROGRESS.md`
 
+### 31. PWA 安装与离线外壳
+
+- 已为前端补充 Web App Manifest，包含应用名称、主题色、显示模式、快捷入口和图标声明。
+- 已新增 PWA 图标资源，覆盖普通图标和 maskable 图标。
+- 已新增生产环境 Service Worker，缓存应用壳资源并为前端路由提供离线回退。
+- 已在 React 入口按生产环境注册 Service Worker，避免开发模式缓存影响 Vite 热更新。
+- 已补充移动端 Web App meta 信息，支持手机浏览器安装入口。
+- 已更新 README 状态表和进度记录。
+
+主要代码：
+
+- `apps/web/public/manifest.webmanifest`
+- `apps/web/public/icons/icon.svg`
+- `apps/web/public/icons/maskable.svg`
+- `apps/web/public/sw.js`
+- `apps/web/src/pwa.ts`
+- `apps/web/index.html`
+- `apps/web/src/main.tsx`
+- `README.md`
+- `PROGRESS.md`
+
 ## 已验证
 
 前端构建已通过：
@@ -614,6 +635,14 @@ pnpm lint:web
 pnpm build:web
 ```
 
+PWA 安装与离线外壳已通过前端静态检查和构建，构建产物包含 manifest、service worker 和图标资源：
+
+```bash
+pnpm lint:web
+pnpm build:web
+find apps/web/dist -maxdepth 3 -type f | sort
+```
+
 全部后端模块已通过编译：
 
 ```bash
@@ -655,6 +684,7 @@ Docker Compose 暂未本地验证，因为当前机器没有 Docker。
 - `feat: add local scoring provider`
 - `feat: add admin audit logs`
 - `feat: add admin settings`
+- `feat: add pwa shell`
 
 ## 接下来需要做
 

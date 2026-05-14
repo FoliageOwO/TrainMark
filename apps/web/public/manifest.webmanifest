@@ -1,0 +1,42 @@
+{
+  "name": "智训批 TrainMark AI",
+  "short_name": "智训批",
+  "description": "面向高校实训教学的报告提交、智能批改、成绩查看与复核系统。",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "display_override": ["window-controls-overlay", "standalone", "browser"],
+  "background_color": "#f8fafc",
+  "theme_color": "#2563eb",
+  "orientation": "portrait-primary",
+  "lang": "zh-CN",
+  "categories": ["education", "productivity"],
+  "icons": [
+    {
+      "src": "/icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/maskable.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "提交报告",
+      "short_name": "提交",
+      "url": "/?role=student",
+      "description": "进入学生端提交实训报告。"
+    },
+    {
+      "name": "教师复核",
+      "short_name": "复核",
+      "url": "/?role=teacher",
+      "description": "进入教师端查看批改与复核任务。"
+    }
+  ]
+}
