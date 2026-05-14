@@ -664,6 +664,18 @@
 - `apps/web/src/pages/App.tsx`
 - `PROGRESS.md`
 
+### 22.12 教师端工作台容器组件拆分
+
+- 已从 `App.tsx` 拆出 `TeacherDashboard` 容器，老师端局部交互状态、写操作 handler 和各业务面板组合集中维护。
+- `App.tsx` 不再直接依赖老师端子面板、写操作 API 或表单事件类型，职责收敛为角色路由、顶层数据装配和页面外壳。
+- 课程选择状态仍保留在 `App.tsx`，保证 HTTP 工作区数据加载依赖关系不变。
+
+主要代码：
+
+- `apps/web/src/components/TeacherDashboard.tsx`
+- `apps/web/src/pages/App.tsx`
+- `PROGRESS.md`
+
 ### 23. 前端 HTTP 写操作联调
 
 - 已扩展前端 HTTP API 层，支持在 `VITE_API_MODE=http` 下调用后端写接口。
@@ -1605,6 +1617,14 @@ pnpm verify:mvp
 ```
 
 教师端运维能力组件拆分后已通过静态检查和构建：
+
+```bash
+pnpm --filter trainmark-ai-web lint
+pnpm --filter trainmark-ai-web build
+pnpm verify:mvp
+```
+
+教师端工作台容器组件拆分后已通过静态检查和构建：
 
 ```bash
 pnpm --filter trainmark-ai-web lint
