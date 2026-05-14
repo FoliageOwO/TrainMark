@@ -1761,6 +1761,23 @@
 - `docs/API.md`
 - `PROGRESS.md`
 
+### 61.3 教师已交报告列表与原文件下载
+
+- 已在教师端报告收集面板新增“已交报告”列表，按当前作业展示最近提交的报告文件。
+- 已展示学生姓名、学号、版本和提交状态，便于教师快速核对报告收集情况。
+- HTTP 模式下已交报告提供“原文件”下载入口，指向 `/api/submissions/{submissionId}/file`。
+- Mock 模式下保留列表展示但隐藏原文件下载链接，避免单前端演示访问不存在的后端资源。
+- 已更新 README 当前进度。
+- 本模块已通过前端 lint、前端构建和 MVP 验证脚本。
+
+主要代码：
+
+- `apps/web/src/components/TeacherCollectionPanel.tsx`
+- `apps/web/src/components/TeacherDashboard.tsx`
+- `apps/web/src/styles/global.css`
+- `README.md`
+- `PROGRESS.md`
+
 ### 62. 数据库迁移版本修复
 
 - 已修复 demo 数据和上传会话迁移文件与既有迁移版本号重复的问题。
@@ -2737,6 +2754,14 @@ curl --noproxy '*' -X PUT -F 'uploadId=...' -F 'objectKey=...' -F 'file=@...;typ
 curl --noproxy '*' -H 'Content-Type: application/json' -d '{...}' http://localhost:8084/api/submissions/upload/complete
 curl --noproxy '*' http://localhost:8084/api/submissions/{submissionId}/file -o downloaded.pdf
 cmp -s uploaded.pdf downloaded.pdf
+```
+
+教师已交报告列表与原文件下载已通过前端静态检查、构建和 MVP 主验证：
+
+```bash
+pnpm --filter trainmark-ai-web lint
+pnpm --filter trainmark-ai-web build
+pnpm verify:mvp
 ```
 
 覆盖内容：

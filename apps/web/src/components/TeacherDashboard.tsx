@@ -298,6 +298,8 @@ export function TeacherDashboard({
 
       <TeacherCollectionPanel
         collectionOverview={collectionOverview}
+        submissions={submissions}
+        selectedAssignmentId={selectedAssignmentId}
         unsubmittedStudents={unsubmittedStudents}
         reminderResult={reminderResult}
         onRemindUnsubmitted={handleRemindUnsubmitted}

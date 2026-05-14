@@ -873,6 +873,12 @@ button:focus-visible {
   margin-top: 18px;
 }
 
+.submitted-report-list {
+  display: grid;
+  gap: 10px;
+  margin-top: 18px;
+}
+
 .unsubmitted-row {
   display: flex;
   justify-content: space-between;
@@ -880,11 +886,35 @@ button:focus-visible {
   padding: 14px;
 }
 
+.submitted-report-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px;
+}
+
 .unsubmitted-row span,
-.unsubmitted-row small {
+.unsubmitted-row small,
+.submitted-report-row span,
+.submitted-report-row small {
   display: block;
   margin-top: 4px;
   color: #64748b;
+}
+
+.submitted-report-actions {
+  display: grid;
+  justify-items: end;
+  gap: 6px;
+}
+
+.submitted-report-actions a {
+  display: inline-flex;
+  gap: 5px;
+  align-items: center;
+  color: #2563eb;
+  font-size: 13px;
+  font-weight: 700;
 }
 
 .rubric-summary {
