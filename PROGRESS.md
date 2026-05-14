@@ -534,6 +534,27 @@
 - `README.md`
 - `PROGRESS.md`
 
+### 30.1 管理端 PostgreSQL 存储
+
+- 已为审计日志抽象 `AuditLogStore`，默认保留内存实现，JDBC 模式读取 `audit_logs` 并关联用户姓名。
+- 已为系统配置抽象 `SystemSettingStore`，默认保留内存实现，JDBC 模式读取 `system_settings`。
+- 已新增 `system_settings` 迁移和本地默认配置种子，敏感配置在接口返回时保持脱敏。
+- 已补充 PostgreSQL 切换环境变量和 README 启动说明。
+
+主要代码：
+
+- `backend/admin-service/src/main/java/com/trainmark/admin/AuditLogStore.java`
+- `backend/admin-service/src/main/java/com/trainmark/admin/InMemoryAuditLogStore.java`
+- `backend/admin-service/src/main/java/com/trainmark/admin/JdbcAuditLogStore.java`
+- `backend/admin-service/src/main/java/com/trainmark/admin/SystemSettingStore.java`
+- `backend/admin-service/src/main/java/com/trainmark/admin/InMemorySystemSettingStore.java`
+- `backend/admin-service/src/main/java/com/trainmark/admin/JdbcSystemSettingStore.java`
+- `backend/db/migration/V10__system_settings.sql`
+- `backend/admin-service/src/main/resources/application.yml`
+- `.env.example`
+- `README.md`
+- `PROGRESS.md`
+
 ### 31. PWA 安装与离线外壳
 
 - 已为前端补充 Web App Manifest，包含应用名称、主题色、显示模式、快捷入口和图标声明。
@@ -1513,6 +1534,21 @@ curl --noproxy '*' 'http://localhost:8091/api/analytics/loss-points?assignmentId
 curl --noproxy '*' 'http://localhost:8091/api/analytics/course-outcomes?assignmentId=1'
 ```
 
+管理端 PostgreSQL 存储已通过后端模块编译：
+
+```bash
+mvn -f backend/pom.xml -pl admin-service -am package -DskipTests
+```
+
+管理端默认内存模式已通过单服务启动和审计日志/筛选/系统配置接口验证：
+
+```bash
+timeout 90s bash scripts/dev-service.sh admin-service
+curl --noproxy '*' 'http://localhost:8090/api/admin/audit-logs'
+curl --noproxy '*' 'http://localhost:8090/api/admin/audit-logs?action=GRADE_EXPORT'
+curl --noproxy '*' 'http://localhost:8090/api/admin/settings?category=AI'
+```
+
 ## 已提交记录
 
 主要提交：
@@ -1581,6 +1617,7 @@ curl --noproxy '*' 'http://localhost:8091/api/analytics/course-outcomes?assignme
 - `feat: add notification jdbc store`
 - `feat: add similarity jdbc store`
 - `feat: add analytics jdbc store`
+- `feat: add admin jdbc store`
 
 ## 接下来需要做
 
