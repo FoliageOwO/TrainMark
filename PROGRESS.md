@@ -2052,6 +2052,22 @@
 - `README.md`
 - `PROGRESS.md`
 
+### 68. MVP 服务统一错误响应补齐
+
+- 已为用户、课程、通知、查重和统计服务补齐 `@RestControllerAdvice`，使参数校验失败、非法参数、非法请求体和存储异常都返回统一 `ApiResponse`。
+- 用户、课程、通知和查重服务与既有 auth/file/grading/ocr/admin 异常处理器保持一致；统计服务额外覆盖缺失查询参数和查询参数类型错误。
+- 已保留正常业务接口行为不变，API smoke dry-run 的读写端点清单保持通过。
+- 本模块已通过多服务后端编译、写接口 smoke dry-run 和 MVP 主验证。
+
+主要代码：
+
+- `backend/user-service/src/main/java/com/trainmark/user/UserExceptionHandler.java`
+- `backend/course-service/src/main/java/com/trainmark/course/CourseExceptionHandler.java`
+- `backend/notification-service/src/main/java/com/trainmark/notification/NotificationExceptionHandler.java`
+- `backend/similarity-service/src/main/java/com/trainmark/similarity/SimilarityExceptionHandler.java`
+- `backend/analytics-service/src/main/java/com/trainmark/analytics/AnalyticsExceptionHandler.java`
+- `PROGRESS.md`
+
 ## 已验证
 
 前端构建已通过：
@@ -3066,6 +3082,14 @@ pnpm verify:mvp
 ```bash
 pnpm --filter trainmark-ai-web lint
 pnpm --filter trainmark-ai-web build
+SMOKE_DRY_RUN=1 SMOKE_INCLUDE_WRITES=1 pnpm smoke:api
+pnpm verify:mvp
+```
+
+MVP 服务统一错误响应补齐已通过多服务后端编译、写接口 smoke dry-run 和 MVP 主验证：
+
+```bash
+mvn -f backend/pom.xml -pl user-service,course-service,notification-service,similarity-service,analytics-service -am package -DskipTests
 SMOKE_DRY_RUN=1 SMOKE_INCLUDE_WRITES=1 pnpm smoke:api
 pnpm verify:mvp
 ```
