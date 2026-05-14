@@ -2084,6 +2084,28 @@
 - `README.md`
 - `PROGRESS.md`
 
+### 70. JDBC MVP 联调实跑修复
+
+- 已新增 `scripts/apply-db-migrations.sh`，在复用已有 PostgreSQL volume 且缺少核心表时按版本顺序应用本地 SQL 迁移；检测到 `users` 表存在时会幂等跳过。
+- 已将本地 TrainMark PostgreSQL 默认宿主机端口调整为 `55432`，并同步 Docker Compose、环境示例、备份/恢复脚本、JDBC launcher 和文档，避免误连宿主机已有的 `5432` PostgreSQL。
+- 已在 `dev:mvp:jdbc` 启动链路中自动执行数据库迁移检查，并保留 `TRAINMARK_SKIP_DB_MIGRATIONS=1` 跳过开关。
+- 已为后端控制器补齐显式 `@RequestParam(name = ...)` 和 `@PathVariable("...")` 绑定，避免 `spring-boot:run` 实跑时依赖 Java 参数名反射。
+- 本模块已通过 Docker Compose PostgreSQL 55432 配置检查、迁移脚本幂等检查、宿主机 psql 演示用户查询、注解绑定扫描、MVP 主验证，以及 `TRAINMARK_SKIP_INFRA=1 SMOKE_RETRIES=90 SMOKE_RETRY_DELAY_SECONDS=2 timeout 300s pnpm dev:mvp:jdbc` 实跑 smoke。
+
+主要代码：
+
+- `scripts/apply-db-migrations.sh`
+- `scripts/dev-mvp-jdbc.sh`
+- `infra/docker-compose.yml`
+- `.env.example`
+- `scripts/backup.sh`
+- `scripts/restore.sh`
+- `scripts/verify-mvp.sh`
+- `package.json`
+- `backend/*-service/src/main/java/com/trainmark/**/*`
+- `README.md`
+- `PROGRESS.md`
+
 ## 已验证
 
 前端构建已通过：
@@ -3203,6 +3225,7 @@ pnpm verify:mvp
 - `feat: add appeal jdbc store`
 - `feat: add grading job jdbc store`
 - `feat: add grading result jdbc store`
+- `fix: verify jdbc mvp launcher`
 
 ## 接下来需要做
 

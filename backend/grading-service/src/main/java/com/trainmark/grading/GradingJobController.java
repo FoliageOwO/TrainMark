@@ -22,7 +22,9 @@ public class GradingJobController {
   }
 
   @GetMapping
-  public ApiResponse<Collection<GradingJobSummary>> list(@RequestParam(required = false) Long assignmentId) {
+  public ApiResponse<Collection<GradingJobSummary>> list(
+      @RequestParam(name = "assignmentId", required = false) Long assignmentId
+  ) {
     return ApiResponse.ok(gradingService.listJobs(assignmentId));
   }
 

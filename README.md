@@ -143,7 +143,7 @@ pnpm dev:infra
 
 | 服务 | 地址 |
 |---|---|
-| PostgreSQL | `localhost:5432` |
+| PostgreSQL | `localhost:55432` |
 | Redis | `localhost:6379` |
 | RabbitMQ Management | `http://localhost:15672` |
 | MinIO Console | `http://localhost:9001` |
@@ -169,7 +169,7 @@ pnpm dev:backend
 
 ```bash
 TRAINMARK_AUTH_STORE=jdbc \
-TRAINMARK_AUTH_JDBC_URL=jdbc:postgresql://localhost:5432/trainmark_ai \
+TRAINMARK_AUTH_JDBC_URL=jdbc:postgresql://localhost:55432/trainmark_ai \
 TRAINMARK_AUTH_JDBC_USERNAME=trainmark \
 TRAINMARK_AUTH_JDBC_PASSWORD=trainmark_dev \
 pnpm dev:backend:auth
@@ -179,7 +179,7 @@ pnpm dev:backend:auth
 
 ```bash
 TRAINMARK_USER_STORE=jdbc \
-TRAINMARK_USER_JDBC_URL=jdbc:postgresql://localhost:5432/trainmark_ai \
+TRAINMARK_USER_JDBC_URL=jdbc:postgresql://localhost:55432/trainmark_ai \
 TRAINMARK_USER_JDBC_USERNAME=trainmark \
 TRAINMARK_USER_JDBC_PASSWORD=trainmark_dev \
 pnpm dev:backend:user
@@ -191,7 +191,7 @@ Docker 初始化会执行 `backend/db/migration/` 下的核心表、角色权限
 
 ```bash
 TRAINMARK_COURSE_STORE=jdbc \
-TRAINMARK_COURSE_JDBC_URL=jdbc:postgresql://localhost:5432/trainmark_ai \
+TRAINMARK_COURSE_JDBC_URL=jdbc:postgresql://localhost:55432/trainmark_ai \
 TRAINMARK_COURSE_JDBC_USERNAME=trainmark \
 TRAINMARK_COURSE_JDBC_PASSWORD=trainmark_dev \
 pnpm dev:backend:course
@@ -201,7 +201,7 @@ pnpm dev:backend:course
 
 ```bash
 TRAINMARK_FILE_STORE=jdbc \
-TRAINMARK_FILE_JDBC_URL=jdbc:postgresql://localhost:5432/trainmark_ai \
+TRAINMARK_FILE_JDBC_URL=jdbc:postgresql://localhost:55432/trainmark_ai \
 TRAINMARK_FILE_JDBC_USERNAME=trainmark \
 TRAINMARK_FILE_JDBC_PASSWORD=trainmark_dev \
 pnpm dev:backend:file
@@ -213,7 +213,7 @@ OCR 服务默认使用内存任务结果。需要让 OCR 任务和结构化块�
 
 ```bash
 TRAINMARK_OCR_STORE=jdbc \
-TRAINMARK_OCR_JDBC_URL=jdbc:postgresql://localhost:5432/trainmark_ai \
+TRAINMARK_OCR_JDBC_URL=jdbc:postgresql://localhost:55432/trainmark_ai \
 TRAINMARK_OCR_JDBC_USERNAME=trainmark \
 TRAINMARK_OCR_JDBC_PASSWORD=trainmark_dev \
 pnpm dev:backend:ocr
@@ -228,7 +228,7 @@ TRAINMARK_GRADING_PUBLICATION_AUDIT_STORE=jdbc \
 TRAINMARK_GRADING_APPEAL_STORE=jdbc \
 TRAINMARK_GRADING_JOB_STORE=jdbc \
 TRAINMARK_GRADING_RESULT_STORE=jdbc \
-TRAINMARK_GRADING_JDBC_URL=jdbc:postgresql://localhost:5432/trainmark_ai \
+TRAINMARK_GRADING_JDBC_URL=jdbc:postgresql://localhost:55432/trainmark_ai \
 TRAINMARK_GRADING_JDBC_USERNAME=trainmark \
 TRAINMARK_GRADING_JDBC_PASSWORD=trainmark_dev \
 pnpm dev:backend:grading
@@ -238,7 +238,7 @@ pnpm dev:backend:grading
 
 ```bash
 TRAINMARK_NOTIFICATION_STORE=jdbc \
-TRAINMARK_NOTIFICATION_JDBC_URL=jdbc:postgresql://localhost:5432/trainmark_ai \
+TRAINMARK_NOTIFICATION_JDBC_URL=jdbc:postgresql://localhost:55432/trainmark_ai \
 TRAINMARK_NOTIFICATION_JDBC_USERNAME=trainmark \
 TRAINMARK_NOTIFICATION_JDBC_PASSWORD=trainmark_dev \
 pnpm dev:backend:notification
@@ -248,7 +248,7 @@ pnpm dev:backend:notification
 
 ```bash
 TRAINMARK_SIMILARITY_STORE=jdbc \
-TRAINMARK_SIMILARITY_JDBC_URL=jdbc:postgresql://localhost:5432/trainmark_ai \
+TRAINMARK_SIMILARITY_JDBC_URL=jdbc:postgresql://localhost:55432/trainmark_ai \
 TRAINMARK_SIMILARITY_JDBC_USERNAME=trainmark \
 TRAINMARK_SIMILARITY_JDBC_PASSWORD=trainmark_dev \
 pnpm dev:backend:similarity
@@ -258,7 +258,7 @@ pnpm dev:backend:similarity
 
 ```bash
 TRAINMARK_ANALYTICS_STORE=jdbc \
-TRAINMARK_ANALYTICS_JDBC_URL=jdbc:postgresql://localhost:5432/trainmark_ai \
+TRAINMARK_ANALYTICS_JDBC_URL=jdbc:postgresql://localhost:55432/trainmark_ai \
 TRAINMARK_ANALYTICS_JDBC_USERNAME=trainmark \
 TRAINMARK_ANALYTICS_JDBC_PASSWORD=trainmark_dev \
 pnpm dev:backend:analytics
@@ -268,7 +268,7 @@ pnpm dev:backend:analytics
 
 ```bash
 TRAINMARK_ADMIN_STORE=jdbc \
-TRAINMARK_ADMIN_JDBC_URL=jdbc:postgresql://localhost:5432/trainmark_ai \
+TRAINMARK_ADMIN_JDBC_URL=jdbc:postgresql://localhost:55432/trainmark_ai \
 TRAINMARK_ADMIN_JDBC_USERNAME=trainmark \
 TRAINMARK_ADMIN_JDBC_PASSWORD=trainmark_dev \
 pnpm dev:backend:admin

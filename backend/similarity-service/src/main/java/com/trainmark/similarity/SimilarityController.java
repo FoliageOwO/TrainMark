@@ -23,7 +23,9 @@ public class SimilarityController {
   }
 
   @GetMapping
-  public ApiResponse<Collection<SimilarityJobSummary>> list(@RequestParam(required = false) Long assignmentId) {
+  public ApiResponse<Collection<SimilarityJobSummary>> list(
+      @RequestParam(name = "assignmentId", required = false) Long assignmentId
+  ) {
     return ApiResponse.ok(similarityService.listJobs(assignmentId));
   }
 
@@ -33,7 +35,7 @@ public class SimilarityController {
   }
 
   @GetMapping("/{jobId}")
-  public ApiResponse<SimilarityJobSummary> get(@PathVariable Long jobId) {
+  public ApiResponse<SimilarityJobSummary> get(@PathVariable("jobId") Long jobId) {
     return ApiResponse.ok(similarityService.getJob(jobId));
   }
 }

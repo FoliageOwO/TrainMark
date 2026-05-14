@@ -26,8 +26,8 @@ public class UserController {
 
   @GetMapping
   public ApiResponse<Collection<UserSummary>> list(
-      @RequestParam(required = false) Long organizationId,
-      @RequestParam(required = false) RoleCode role
+      @RequestParam(name = "organizationId", required = false) Long organizationId,
+      @RequestParam(name = "role", required = false) RoleCode role
   ) {
     return ApiResponse.ok(userDirectoryService.listUsers(organizationId, role));
   }

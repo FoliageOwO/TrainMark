@@ -7,19 +7,27 @@ COMPOSE_FILE="${TRAINMARK_COMPOSE_FILE:-$ROOT_DIR/infra/docker-compose.yml}"
 POSTGRES_DB="${POSTGRES_DB:-trainmark_ai}"
 POSTGRES_USER="${POSTGRES_USER:-trainmark}"
 POSTGRES_PASSWORD="${POSTGRES_PASSWORD:-trainmark_dev}"
-TRAINMARK_JDBC_URL="${TRAINMARK_JDBC_URL:-jdbc:postgresql://localhost:5432/$POSTGRES_DB}"
+POSTGRES_PORT="${POSTGRES_PORT:-55432}"
+TRAINMARK_JDBC_URL="${TRAINMARK_JDBC_URL:-jdbc:postgresql://localhost:$POSTGRES_PORT/$POSTGRES_DB}"
 TRAINMARK_JDBC_USERNAME="${TRAINMARK_JDBC_USERNAME:-$POSTGRES_USER}"
 TRAINMARK_JDBC_PASSWORD="${TRAINMARK_JDBC_PASSWORD:-$POSTGRES_PASSWORD}"
 
 export POSTGRES_DB
 export POSTGRES_USER
 export POSTGRES_PASSWORD
+export POSTGRES_PORT
 
 if [[ "${TRAINMARK_SKIP_INFRA:-0}" != "1" ]]; then
   echo "[dev:mvp:jdbc] Starting local infrastructure"
   docker compose -f "$COMPOSE_FILE" up -d
 else
   echo "[dev:mvp:jdbc] Skipping infrastructure startup"
+fi
+
+if [[ "${TRAINMARK_SKIP_DB_MIGRATIONS:-0}" != "1" ]]; then
+  bash "$ROOT_DIR/scripts/apply-db-migrations.sh"
+else
+  echo "[dev:mvp:jdbc] Skipping database migration check"
 fi
 
 export TRAINMARK_AUTH_STORE="${TRAINMARK_AUTH_STORE:-jdbc}"

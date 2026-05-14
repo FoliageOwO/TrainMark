@@ -38,9 +38,9 @@ public class UploadController {
 
   @PutMapping(value = "/content", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
   public ApiResponse<UploadObjectSummary> uploadContent(
-      @RequestParam String uploadId,
-      @RequestParam String objectKey,
-      @RequestParam MultipartFile file
+      @RequestParam(name = "uploadId") String uploadId,
+      @RequestParam(name = "objectKey") String objectKey,
+      @RequestParam(name = "file") MultipartFile file
   ) throws IOException {
     return ApiResponse.ok(uploadService.storeContent(
         uploadId,

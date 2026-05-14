@@ -23,13 +23,15 @@ public class SystemSettingController {
   }
 
   @GetMapping
-  public ApiResponse<Collection<SystemSettingSummary>> list(@RequestParam(required = false) String category) {
+  public ApiResponse<Collection<SystemSettingSummary>> list(
+      @RequestParam(name = "category", required = false) String category
+  ) {
     return ApiResponse.ok(systemSettingService.list(category));
   }
 
   @PatchMapping("/{key}")
   public ApiResponse<SystemSettingSummary> update(
-      @PathVariable String key,
+      @PathVariable("key") String key,
       @Valid @RequestBody UpdateSystemSettingRequest request
   ) {
     return ApiResponse.ok(systemSettingService.update(key, request.value()));

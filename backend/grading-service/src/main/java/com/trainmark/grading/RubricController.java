@@ -22,7 +22,9 @@ public class RubricController {
   }
 
   @GetMapping
-  public ApiResponse<Collection<RubricSummary>> list(@RequestParam(required = false) Long assignmentId) {
+  public ApiResponse<Collection<RubricSummary>> list(
+      @RequestParam(name = "assignmentId", required = false) Long assignmentId
+  ) {
     return ApiResponse.ok(gradingService.listRubrics(assignmentId));
   }
 

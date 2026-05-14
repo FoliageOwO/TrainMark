@@ -20,17 +20,19 @@ public class AnalyticsController {
   }
 
   @GetMapping("/grade-statistics")
-  public ApiResponse<GradeStatisticsSummary> getGradeStatistics(@RequestParam Long assignmentId) {
+  public ApiResponse<GradeStatisticsSummary> getGradeStatistics(@RequestParam(name = "assignmentId") Long assignmentId) {
     return ApiResponse.ok(analyticsService.getGradeStatistics(assignmentId));
   }
 
   @GetMapping("/loss-points")
-  public ApiResponse<Collection<LossPointSummary>> listLossPoints(@RequestParam Long assignmentId) {
+  public ApiResponse<Collection<LossPointSummary>> listLossPoints(@RequestParam(name = "assignmentId") Long assignmentId) {
     return ApiResponse.ok(analyticsService.listLossPoints(assignmentId));
   }
 
   @GetMapping("/course-outcomes")
-  public ApiResponse<Collection<CourseOutcomeAchievementSummary>> listCourseOutcomes(@RequestParam Long assignmentId) {
+  public ApiResponse<Collection<CourseOutcomeAchievementSummary>> listCourseOutcomes(
+      @RequestParam(name = "assignmentId") Long assignmentId
+  ) {
     return ApiResponse.ok(analyticsService.listCourseOutcomeAchievements(assignmentId));
   }
 }

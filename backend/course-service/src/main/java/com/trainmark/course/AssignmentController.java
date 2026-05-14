@@ -22,7 +22,9 @@ public class AssignmentController {
   }
 
   @GetMapping
-  public ApiResponse<Collection<AssignmentSummary>> list(@RequestParam(required = false) Long courseId) {
+  public ApiResponse<Collection<AssignmentSummary>> list(
+      @RequestParam(name = "courseId", required = false) Long courseId
+  ) {
     return ApiResponse.ok(courseService.listAssignments(courseId));
   }
 

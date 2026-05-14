@@ -36,20 +36,20 @@ public class GradingReviewController {
 
   @GetMapping
   public ApiResponse<Collection<GradingResultSummary>> list(
-      @RequestParam(required = false) Long assignmentId,
-      @RequestParam(required = false) ReviewStatus reviewStatus
+      @RequestParam(name = "assignmentId", required = false) Long assignmentId,
+      @RequestParam(name = "reviewStatus", required = false) ReviewStatus reviewStatus
   ) {
     return ApiResponse.ok(gradingService.listResults(assignmentId, reviewStatus));
   }
 
   @GetMapping("/{resultId}")
-  public ApiResponse<GradingResultSummary> get(@PathVariable Long resultId) {
+  public ApiResponse<GradingResultSummary> get(@PathVariable("resultId") Long resultId) {
     return ApiResponse.ok(gradingService.getResult(resultId));
   }
 
   @PatchMapping("/{resultId}/items")
   public ApiResponse<GradingResultSummary> updateItem(
-      @PathVariable Long resultId,
+      @PathVariable("resultId") Long resultId,
       @Valid @RequestBody UpdateReviewItemRequest request
   ) {
     return ApiResponse.ok(gradingService.updateReviewItem(resultId, request));
@@ -57,7 +57,7 @@ public class GradingReviewController {
 
   @PostMapping("/{resultId}/approve")
   public ApiResponse<GradingResultSummary> approve(
-      @PathVariable Long resultId,
+      @PathVariable("resultId") Long resultId,
       @Valid @RequestBody ReviewDecisionRequest request
   ) {
     return ApiResponse.ok(gradingService.approveResult(resultId, request));
@@ -65,15 +65,15 @@ public class GradingReviewController {
 
   @GetMapping("/publications")
   public ApiResponse<Collection<GradePublicationSummary>> listPublications(
-      @RequestParam(required = false) Long assignmentId,
-      @RequestParam(required = false) PublicationStatus publicationStatus
+      @RequestParam(name = "assignmentId", required = false) Long assignmentId,
+      @RequestParam(name = "publicationStatus", required = false) PublicationStatus publicationStatus
   ) {
     return ApiResponse.ok(gradingService.listPublications(assignmentId, publicationStatus));
   }
 
   @PostMapping("/{resultId}/publish")
   public ApiResponse<GradingResultSummary> publish(
-      @PathVariable Long resultId,
+      @PathVariable("resultId") Long resultId,
       @Valid @RequestBody PublishGradeRequest request
   ) {
     return ApiResponse.ok(gradingService.publishResult(resultId, request));
@@ -81,22 +81,22 @@ public class GradingReviewController {
 
   @PostMapping("/{resultId}/withdraw")
   public ApiResponse<GradingResultSummary> withdraw(
-      @PathVariable Long resultId,
+      @PathVariable("resultId") Long resultId,
       @Valid @RequestBody WithdrawGradeRequest request
   ) {
     return ApiResponse.ok(gradingService.withdrawResult(resultId, request));
   }
 
   @GetMapping("/{resultId}/publication-audits")
-  public ApiResponse<Collection<GradePublicationAuditEntry>> listPublicationAudits(@PathVariable Long resultId) {
+  public ApiResponse<Collection<GradePublicationAuditEntry>> listPublicationAudits(@PathVariable("resultId") Long resultId) {
     return ApiResponse.ok(gradingService.listPublicationAudits(resultId));
   }
 
   @GetMapping("/appeals")
   public ApiResponse<Collection<AppealSummary>> listAppeals(
-      @RequestParam(required = false) Long resultId,
-      @RequestParam(required = false) Long studentId,
-      @RequestParam(required = false) AppealStatus status
+      @RequestParam(name = "resultId", required = false) Long resultId,
+      @RequestParam(name = "studentId", required = false) Long studentId,
+      @RequestParam(name = "status", required = false) AppealStatus status
   ) {
     return ApiResponse.ok(gradingService.listAppeals(resultId, studentId, status));
   }
@@ -108,7 +108,7 @@ public class GradingReviewController {
 
   @PostMapping("/appeals/{appealId}/resolve")
   public ApiResponse<AppealSummary> resolveAppeal(
-      @PathVariable Long appealId,
+      @PathVariable("appealId") Long appealId,
       @Valid @RequestBody ResolveAppealRequest request
   ) {
     return ApiResponse.ok(gradingService.resolveAppeal(appealId, request));

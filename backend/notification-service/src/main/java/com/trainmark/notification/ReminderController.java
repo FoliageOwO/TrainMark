@@ -24,12 +24,12 @@ public class ReminderController {
   }
 
   @GetMapping("/assignments/{assignmentId}/collection")
-  public ApiResponse<SubmissionCollectionOverview> collection(@PathVariable Long assignmentId) {
+  public ApiResponse<SubmissionCollectionOverview> collection(@PathVariable("assignmentId") Long assignmentId) {
     return ApiResponse.ok(reminderService.collectionOverview(assignmentId));
   }
 
   @GetMapping("/assignments/{assignmentId}/unsubmitted")
-  public ApiResponse<Collection<UnsubmittedStudent>> unsubmitted(@PathVariable Long assignmentId) {
+  public ApiResponse<Collection<UnsubmittedStudent>> unsubmitted(@PathVariable("assignmentId") Long assignmentId) {
     return ApiResponse.ok(reminderService.unsubmittedStudents(assignmentId));
   }
 

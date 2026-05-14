@@ -34,13 +34,13 @@ public class CourseController {
   }
 
   @GetMapping("/{courseId}/classes")
-  public ApiResponse<Collection<TeachingClassSummary>> listClasses(@PathVariable Long courseId) {
+  public ApiResponse<Collection<TeachingClassSummary>> listClasses(@PathVariable("courseId") Long courseId) {
     return ApiResponse.ok(courseService.listClasses(courseId));
   }
 
   @PostMapping("/{courseId}/classes")
   public ApiResponse<TeachingClassSummary> createClass(
-      @PathVariable Long courseId,
+      @PathVariable("courseId") Long courseId,
       @Valid @RequestBody CreateTeachingClassRequest request
   ) {
     return ApiResponse.ok(courseService.createClass(courseId, request));

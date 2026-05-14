@@ -19,8 +19,8 @@ public class AuditLogController {
 
   @GetMapping
   public ApiResponse<Collection<AuditLogSummary>> list(
-      @RequestParam(required = false) String action,
-      @RequestParam(required = false) String resourceType
+      @RequestParam(name = "action", required = false) String action,
+      @RequestParam(name = "resourceType", required = false) String resourceType
   ) {
     return ApiResponse.ok(auditLogService.list(action, resourceType));
   }

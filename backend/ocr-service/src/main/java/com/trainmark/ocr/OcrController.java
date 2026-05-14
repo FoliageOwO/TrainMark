@@ -24,7 +24,9 @@ public class OcrController {
   }
 
   @GetMapping
-  public ApiResponse<Collection<OcrJobSummary>> list(@RequestParam(required = false) Long submissionId) {
+  public ApiResponse<Collection<OcrJobSummary>> list(
+      @RequestParam(name = "submissionId", required = false) Long submissionId
+  ) {
     return ApiResponse.ok(ocrService.listJobs(submissionId));
   }
 
@@ -34,7 +36,7 @@ public class OcrController {
   }
 
   @GetMapping("/{jobId}/result")
-  public ApiResponse<OcrResultSummary> result(@PathVariable Long jobId) {
+  public ApiResponse<OcrResultSummary> result(@PathVariable("jobId") Long jobId) {
     return ApiResponse.ok(ocrService.result(jobId));
   }
 }

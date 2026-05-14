@@ -22,7 +22,9 @@ public class OrganizationController {
   }
 
   @GetMapping
-  public ApiResponse<Collection<OrganizationSummary>> list(@RequestParam(required = false) Long parentId) {
+  public ApiResponse<Collection<OrganizationSummary>> list(
+      @RequestParam(name = "parentId", required = false) Long parentId
+  ) {
     return ApiResponse.ok(userDirectoryService.listOrganizations(parentId));
   }
 

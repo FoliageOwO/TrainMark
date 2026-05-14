@@ -22,7 +22,9 @@ public class GradeExportController {
   }
 
   @GetMapping
-  public ApiResponse<Collection<GradeExportSummary>> list(@RequestParam(required = false) Long assignmentId) {
+  public ApiResponse<Collection<GradeExportSummary>> list(
+      @RequestParam(name = "assignmentId", required = false) Long assignmentId
+  ) {
     return ApiResponse.ok(gradingService.listGradeExports(assignmentId));
   }
 

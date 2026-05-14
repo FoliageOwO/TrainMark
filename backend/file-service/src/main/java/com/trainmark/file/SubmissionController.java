@@ -24,14 +24,14 @@ public class SubmissionController {
 
   @GetMapping
   public ApiResponse<Collection<SubmissionSummary>> list(
-      @RequestParam(required = false) Long assignmentId,
-      @RequestParam(required = false) Long studentId
+      @RequestParam(name = "assignmentId", required = false) Long assignmentId,
+      @RequestParam(name = "studentId", required = false) Long studentId
   ) {
     return ApiResponse.ok(uploadService.listSubmissions(assignmentId, studentId));
   }
 
   @GetMapping("/{submissionId}/file")
-  public ResponseEntity<byte[]> downloadFile(@PathVariable Long submissionId) {
+  public ResponseEntity<byte[]> downloadFile(@PathVariable("submissionId") Long submissionId) {
     var file = uploadService.downloadSubmissionFile(submissionId);
     return ResponseEntity.ok()
         .header(HttpHeaders.CONTENT_TYPE, file.contentType())
