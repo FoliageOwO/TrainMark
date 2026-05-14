@@ -53,3 +53,15 @@ Use `semantic-scoring.example.yml` as the first production configuration shape.
 Future providers should keep stdout compatible with the local provider JSON
 contract and emit operational logs to stderr.
 
+## Backend Command Provider
+
+`grading-service` defaults to the in-process local provider. To call an external
+scoring CLI, start the service with:
+
+```bash
+SCORING_PROVIDER=command \
+SCORING_COMMAND='python3 ai/scoring/local_provider.py --result-id {resultId} --assignment-id {assignmentId} --submission-id {submissionId} --student-id {studentId} --student-name {studentName} --student-no {studentNo} --file-name {fileName}' \
+pnpm dev:backend:grading
+```
+
+The placeholders are replaced by the backend before the command is executed.

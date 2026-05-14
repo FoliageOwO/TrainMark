@@ -32,6 +32,7 @@ TrainMark AI，中文名“智训批”，是面向高校实训教学场景的�
 | OCR Provider CLI 契约 | 已创建 |
 | OCR 后端 Provider 切换 | 已实现 |
 | 评分 Provider CLI 契约 | 已创建 |
+| 评分后端 Provider 切换 | 已实现 |
 | 批注 PDF Provider CLI 契约 | 已创建 |
 | 本地 Docker Compose 基础设施 | 已创建 |
 

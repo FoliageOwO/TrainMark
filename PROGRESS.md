@@ -702,6 +702,29 @@
 - `README.md`
 - `PROGRESS.md`
 
+### 43. 评分后端 Provider 切换
+
+- 已为 `grading-service` 抽象 `ScoringProvider` 接口和 `ScoringRequest`。
+- 已将原本写在 `GradingService` 内部的 deterministic 规则评分逻辑迁移到 `LocalScoringProvider`。
+- 已新增 `CommandScoringProvider`，支持通过 `SCORING_PROVIDER=command` 和 `SCORING_COMMAND` 调用外部评分 CLI。
+- 已新增 `ScoringProviderConfig`，默认使用本地 provider，配置为 command 时校验命令模板。
+- 已为 `grading-service` 增加 `trainmark.scoring.provider`、`trainmark.scoring.command` 和超时配置。
+- 已更新 `.env.example`、评分 provider README、README 状态表和进度记录。
+
+主要代码：
+
+- `backend/grading-service/src/main/java/com/trainmark/grading/ScoringRequest.java`
+- `backend/grading-service/src/main/java/com/trainmark/grading/ScoringProvider.java`
+- `backend/grading-service/src/main/java/com/trainmark/grading/LocalScoringProvider.java`
+- `backend/grading-service/src/main/java/com/trainmark/grading/CommandScoringProvider.java`
+- `backend/grading-service/src/main/java/com/trainmark/grading/ScoringProviderConfig.java`
+- `backend/grading-service/src/main/java/com/trainmark/grading/GradingService.java`
+- `backend/grading-service/src/main/resources/application.yml`
+- `.env.example`
+- `ai/scoring/README.md`
+- `README.md`
+- `PROGRESS.md`
+
 ## 已验证
 
 前端构建已通过：
@@ -903,6 +926,12 @@ OCR 后端 Provider 切换已通过后端模块编译：
 mvn -f backend/pom.xml -pl ocr-service -am package -DskipTests
 ```
 
+评分后端 Provider 切换已通过后端模块编译：
+
+```bash
+mvn -f backend/pom.xml -pl grading-service -am package -DskipTests
+```
+
 全部后端模块已通过编译：
 
 ```bash
@@ -956,6 +985,7 @@ Docker Compose 已完成配置展开校验，暂未拉起 PostgreSQL、Redis、R
 - `chore: add ai verifier`
 - `chore: verify ai in mvp`
 - `feat: add ocr provider switch`
+- `feat: add scoring provider switch`
 
 ## 接下来需要做
 

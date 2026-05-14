@@ -34,6 +34,7 @@ import org.springframework.stereotype.Service;
 
 @Service
 public class GradingService {
+  private final ScoringProvider scoringProvider;
   private final AtomicLong rubricIds = new AtomicLong(2);
   private final AtomicLong itemIds = new AtomicLong(10);
   private final AtomicLong pointIds = new AtomicLong(100);
@@ -49,7 +50,8 @@ public class GradingService {
   private final Map<Long, AppealSummary> appeals = new LinkedHashMap<>();
   private final Map<Long, GradeExportSummary> exports = new LinkedHashMap<>();
 
-  public GradingService() {
+  public GradingService(ScoringProvider scoringProvider) {
+    this.scoringProvider = scoringProvider;
     var points = List.of(
         new RubricPointSummary(1L, "功能模块完整", "覆盖登录、课程、任务、提交核心流程", 12, List.of("登录", "课程", "任务", "提交"), List.of("上传", "报告提交")),
         new RubricPointSummary(2L, "数据库设计合理", "实体关系清晰，字段和约束完整", 8, List.of("ER图", "表结构", "约束"), List.of("实体关系", "数据表"))
@@ -471,28 +473,8 @@ public class GradingService {
         .filter(item -> assignmentId.equals(item.assignmentId()))
         .findFirst()
         .orElse(rubrics.values().iterator().next());
-    var scoredItems = rubric.items().stream()
-        .map(item -> {
-          var confidence = item.points().isEmpty() ? 82 : Math.min(96, 82 + item.points().size() * 4);
-          var aiScore = Math.max(0, item.score() - Math.max(2, item.score() / 8));
-          return new GradingItemReview(
-              item.id(),
-              item.title(),
-              item.score(),
-              aiScore,
-              aiScore,
-              "本地规则评分根据关键词、得分点完整度和报告结构完整度自动扣分。",
-              "请教师复核该分项证据后确认。",
-              confidence,
-              item.points().stream()
-                  .map(point -> point.title() + "：" + String.join("、", point.keywords()))
-                  .toList()
-          );
-        })
-        .toList();
-    var teacherScore = scoredItems.stream().mapToInt(GradingItemReview::teacherScore).sum();
     var resultId = resultIds.getAndIncrement();
-    results.put(resultId, new GradingResultSummary(
+    results.put(resultId, scoringProvider.score(new ScoringRequest(
         resultId,
         assignmentId,
         submissionId,
@@ -500,19 +482,7 @@ public class GradingService {
         "张三",
         "2024010101",
         "自动批改报告-" + submissionId + ".pdf",
-        "/previews/submissions/" + submissionId + "/report.pdf",
-        "/annotations/submissions/" + submissionId + "/annotated.pdf",
-        rubric.totalScore(),
-        teacherScore,
-        teacherScore,
-        86,
-        ReviewStatus.NEEDS_REVIEW,
-        PublicationStatus.NOT_PUBLISHED,
-        "本地规则评分已完成初评，建议教师重点复核扣分原因和证据定位。",
-        null,
-        null,
-        scoredItems,
-        List.of(new GradingAnnotationSummary(resultId, 1, "自动评分摘要", "请复核规则评分生成的扣分证据", "info"))
-    ));
+        rubric
+    )));
   }
 }

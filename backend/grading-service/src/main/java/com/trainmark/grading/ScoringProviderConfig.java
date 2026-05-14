@@ -1,0 +1,26 @@
+package com.trainmark.grading;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
+import java.time.Duration;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+
+@Configuration
+public class ScoringProviderConfig {
+  @Bean
+  ScoringProvider scoringProvider(
+      @Value("${trainmark.scoring.provider:local}") String provider,
+      @Value("${trainmark.scoring.command:}") String command,
+      @Value("${trainmark.scoring.timeout-seconds:90}") long timeoutSeconds,
+      ObjectMapper objectMapper
+  ) {
+    if ("command".equalsIgnoreCase(provider)) {
+      if (command == null || command.isBlank()) {
+        throw new IllegalStateException("trainmark.scoring.command is required when trainmark.scoring.provider=command");
+      }
+      return new CommandScoringProvider(command, Duration.ofSeconds(timeoutSeconds), objectMapper);
+    }
+    return new LocalScoringProvider();
+  }
+}
