@@ -360,6 +360,19 @@
 - `apps/web/src/pages/App.tsx`
 - `PROGRESS.md`
 
+### 23. 前端 HTTP 写操作联调
+
+- 已扩展前端 HTTP API 层，支持在 `VITE_API_MODE=http` 下调用后端写接口。
+- 已覆盖启动批改、分项复核保存、复核通过、成绩发布、撤回发布、发布审计刷新、学生申诉、申诉处理、一键催交、启动查重和学生提交回执。
+- 写操作失败或未启用 HTTP 模式时仍回退本地 mock，保证单前端演示不受影响。
+- 老师端和学生端按钮已接入统一 HTTP/mock 兜底动作，不再只修改本地 mock 状态。
+
+主要代码：
+
+- `apps/web/src/api/httpApi.ts`
+- `apps/web/src/pages/App.tsx`
+- `PROGRESS.md`
+
 ## 已验证
 
 前端构建已通过：
@@ -417,6 +430,13 @@ pnpm lint:web
 pnpm build:web
 ```
 
+前端 HTTP 写操作联调已通过静态检查和构建：
+
+```bash
+pnpm lint:web
+pnpm build:web
+```
+
 全部后端模块已通过编译：
 
 ```bash
@@ -450,6 +470,7 @@ Docker Compose 暂未本地验证，因为当前机器没有 Docker。
 - `chore: add frontend lint config`
 - `docs: add api reference`
 - `refactor: split app chrome`
+- `feat: connect frontend actions`
 
 ## 接下来需要做
 

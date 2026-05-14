@@ -11,9 +11,11 @@ import type {
   LossPointSummary,
   OcrJobSummary,
   OrganizationSummary,
+  ReminderResult,
   RubricSummary,
   SimilarityJobSummary,
   TeachingClassSummary,
+  UploadReceipt,
   UnsubmittedStudent,
   UserSummary,
 } from './types';
@@ -111,6 +113,10 @@ export async function loadWorkspaceData(selectedCourseId: number, studentId: num
 }
 
 async function getOr<T, R = T>(path: string, fallback: T, normalize?: (value: R) => T): Promise<T> {
+  if (!shouldUseHttpApi()) {
+    return fallback;
+  }
+
   try {
     const response = await fetch(`${API_BASE_URL}${path}`);
     if (!response.ok) {
@@ -126,9 +132,217 @@ async function getOr<T, R = T>(path: string, fallback: T, normalize?: (value: R)
   }
 }
 
+export async function createGradingJob(assignmentId: number, rubricId: number): Promise<GradingJobSummary> {
+  return mutateOr(
+    'POST',
+    '/api/grading/jobs',
+    { assignmentId, rubricId, submissionIds: [1] },
+    () => mockApi.startGradingJob(),
+  );
+}
+
+export async function updateReviewItem(
+  resultId: number,
+  rubricItemId: number,
+  teacherScore: number,
+  teacherComment: string,
+): Promise<GradingResultSummary> {
+  return mutateOr(
+    'PATCH',
+    `/api/grading/results/${resultId}/items`,
+    { rubricItemId, teacherScore, teacherComment },
+    () => mockApi.updateReviewItem(resultId, rubricItemId, teacherScore, teacherComment),
+  );
+}
+
+export async function approveGradingResult(resultId: number, reviewerName: string, overallComment: string): Promise<GradingResultSummary> {
+  return mutateOr(
+    'POST',
+    `/api/grading/results/${resultId}/approve`,
+    { reviewerName, overallComment },
+    () => mockApi.approveGradingResult(resultId),
+  );
+}
+
+export async function publishGradingResult(resultId: number, operatorName: string): Promise<GradingResultSummary> {
+  return mutateOr(
+    'POST',
+    `/api/grading/results/${resultId}/publish`,
+    { operatorName, message: '发布成绩与批注' },
+    () => mockApi.publishGradingResult(resultId),
+  );
+}
+
+export async function withdrawGradingResult(resultId: number, operatorName: string, reason = '复核后重新发布'): Promise<GradingResultSummary> {
+  return mutateOr(
+    'POST',
+    `/api/grading/results/${resultId}/withdraw`,
+    { operatorName, reason },
+    () => mockApi.withdrawGradingResult(resultId, reason),
+  );
+}
+
+export async function loadPublicationAudits(resultId: number) {
+  return getOr(`/api/grading/results/${resultId}/publication-audits`, mockApi.listPublicationAudits(resultId));
+}
+
+export async function createAppeal(
+  resultId: number,
+  rubricItemId: number | null,
+  studentId: number,
+  reason: string,
+  requestedChange: string,
+) {
+  return mutateOr(
+    'POST',
+    '/api/grading/results/appeals',
+    { resultId, rubricItemId, studentId, reason, requestedChange },
+    () => mockApi.createAppeal(resultId, rubricItemId, studentId, reason, requestedChange),
+  );
+}
+
+export async function resolveAppeal(appealId: number, accepted: boolean, teacherReply: string) {
+  return mutateOr(
+    'POST',
+    `/api/grading/results/appeals/${appealId}/resolve`,
+    { status: accepted ? 'ACCEPTED' : 'REJECTED', teacherReply },
+    () => mockApi.resolveAppeal(appealId, accepted, teacherReply),
+  );
+}
+
+export async function remindUnsubmitted(assignmentId: number, studentIds: number[]): Promise<ReminderResult> {
+  return mutateOr(
+    'POST',
+    '/api/notifications/remind-unsubmitted',
+    {
+      assignmentId,
+      studentIds,
+      channels: ['IN_APP', 'EMAIL', 'WECHAT_WORK'],
+      message: '请尽快提交实训报告，逾期会影响成绩发布。',
+    },
+    () => mockApi.remindUnsubmitted(),
+    normalizeReminderResult,
+  );
+}
+
+export async function startSimilarityJob(assignmentId: number): Promise<SimilarityJobSummary> {
+  return mutateOr(
+    'POST',
+    '/api/similarity/jobs',
+    { assignmentId, submissionIds: [1, 18, 43], includeHistory: true },
+    () => mockApi.startSimilarityJob(),
+  );
+}
+
+export async function createUploadReceipt(fileName: string, assignmentId: number, studentId: number): Promise<UploadReceipt> {
+  if (!shouldUseHttpApi()) {
+    return mockApi.createUploadReceipt(fileName);
+  }
+
+  try {
+    const init = await request<{ uploadId: string; objectKey: string }>('/api/submissions/upload/init', 'POST', {
+      assignmentId,
+      studentId,
+      fileName,
+      contentType: guessContentType(fileName),
+      fileSize: 1024 * 1024,
+      checksum: null,
+    });
+    const receipt = await request<BackendSubmissionReceipt>('/api/submissions/upload/complete', 'POST', {
+      uploadId: init.uploadId,
+      objectKey: init.objectKey,
+      checksum: null,
+    });
+    return normalizeUploadReceipt(receipt);
+  } catch {
+    return mockApi.createUploadReceipt(fileName);
+  }
+}
+
+async function mutateOr<T, R = T>(
+  method: 'POST' | 'PATCH',
+  path: string,
+  body: unknown,
+  fallback: () => T,
+  normalize?: (value: R) => T,
+): Promise<T> {
+  if (!shouldUseHttpApi()) {
+    return fallback();
+  }
+
+  try {
+    const value = await request<R>(path, method, body);
+    return normalize ? normalize(value) : (value as unknown as T);
+  } catch {
+    return fallback();
+  }
+}
+
+async function request<T>(path: string, method: 'POST' | 'PATCH', body: unknown): Promise<T> {
+  const response = await fetch(`${API_BASE_URL}${path}`, {
+    method,
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+  if (!response.ok) {
+    throw new Error(`HTTP ${response.status} for ${path}`);
+  }
+  const payload = (await response.json()) as ApiResponse<T>;
+  if (!payload.success) {
+    throw new Error(payload.message || `API request failed for ${path}`);
+  }
+  return payload.data;
+}
+
 function normalizeOcrJobs(value: Array<Omit<OcrJobSummary, 'blocks'> & { blocks?: OcrJobSummary['blocks'] }>): OcrJobSummary[] {
   return value.map((item) => ({
     ...item,
     blocks: item.blocks ?? [],
   }));
+}
+
+function normalizeReminderResult(value: {
+  recipientCount: number;
+  messageCount: number;
+}): ReminderResult {
+  return {
+    recipientCount: value.recipientCount,
+    messageCount: value.messageCount,
+    channels: ['站内信', '邮件', '企业微信'],
+    status: '已发送',
+  };
+}
+
+type BackendSubmissionReceipt = {
+  submissionId: number;
+  fileName: string;
+  version: number;
+  submittedAt: string;
+};
+
+function normalizeUploadReceipt(value: BackendSubmissionReceipt): UploadReceipt {
+  return {
+    submissionId: value.submissionId,
+    fileName: value.fileName,
+    version: value.version,
+    submittedAt: value.submittedAt,
+    status: '已提交',
+  };
+}
+
+function guessContentType(fileName: string) {
+  const normalized = fileName.toLowerCase();
+  if (normalized.endsWith('.pdf')) {
+    return 'application/pdf';
+  }
+  if (normalized.endsWith('.docx')) {
+    return 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+  }
+  if (normalized.endsWith('.png')) {
+    return 'image/png';
+  }
+  if (normalized.endsWith('.jpg') || normalized.endsWith('.jpeg')) {
+    return 'image/jpeg';
+  }
+  return 'application/octet-stream';
 }

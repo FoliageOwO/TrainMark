@@ -15,7 +15,22 @@ import {
   Users,
 } from 'lucide-react';
 import { mockApi } from '../api/mockApi';
-import { loadWorkspaceData, shouldUseHttpApi, type WorkspaceData } from '../api/httpApi';
+import {
+  approveGradingResult,
+  createAppeal,
+  createGradingJob,
+  createUploadReceipt,
+  loadPublicationAudits,
+  loadWorkspaceData,
+  publishGradingResult,
+  remindUnsubmitted,
+  resolveAppeal,
+  shouldUseHttpApi,
+  startSimilarityJob,
+  updateReviewItem,
+  withdrawGradingResult,
+  type WorkspaceData,
+} from '../api/httpApi';
 import type { CourseSummary, UserProfile } from '../api/types';
 import { AppChrome } from '../components/AppChrome';
 
@@ -153,6 +168,7 @@ export function App() {
           gradingJobs={gradingJobs}
           ocrJobs={ocrJobs}
           gradingResults={gradingResults}
+          operatorName={user.name}
           gradeStatistics={gradeStatistics}
           lossPoints={lossPoints}
           courseOutcomes={courseOutcomes}
@@ -181,6 +197,7 @@ function TeacherDashboard({
   gradingJobs,
   ocrJobs,
   gradingResults,
+  operatorName,
   gradeStatistics,
   lossPoints,
   courseOutcomes,
@@ -203,6 +220,7 @@ function TeacherDashboard({
   gradingJobs: ReturnType<typeof mockApi.listGradingJobs>;
   ocrJobs: ReturnType<typeof mockApi.listOcrJobs>;
   gradingResults: ReturnType<typeof mockApi.listGradingResults>;
+  operatorName: string;
   gradeStatistics: ReturnType<typeof mockApi.getGradeStatistics>;
   lossPoints: ReturnType<typeof mockApi.listLossPoints>;
   courseOutcomes: ReturnType<typeof mockApi.listCourseOutcomes>;
@@ -226,35 +244,55 @@ function TeacherDashboard({
     setSelectedReviewId(updated.id);
   };
 
-  const handleReviewItemSubmit = (event: FormEvent<HTMLFormElement>, rubricItemId: number) => {
+  const handleStartGrading = async () => {
+    setStartedJob(await createGradingJob(rubric.assignmentId, rubric.id));
+  };
+
+  const handleReviewItemSubmit = async (event: FormEvent<HTMLFormElement>, rubricItemId: number) => {
     event.preventDefault();
     const formData = new FormData(event.currentTarget);
     const teacherScore = Number(formData.get('teacherScore'));
     const teacherComment = String(formData.get('teacherComment') ?? '');
-    syncReviewResult(mockApi.updateReviewItem(selectedReview.id, rubricItemId, teacherScore, teacherComment));
+    syncReviewResult(await updateReviewItem(selectedReview.id, rubricItemId, teacherScore, teacherComment));
   };
 
-  const handlePublishResult = () => {
-    syncReviewResult(mockApi.publishGradingResult(selectedReview.id));
-    setPublicationAudits(mockApi.listPublicationAudits());
+  const handleApproveResult = async () => {
+    syncReviewResult(await approveGradingResult(selectedReview.id, operatorName, selectedReview.overallComment));
   };
 
-  const handleWithdrawResult = () => {
-    syncReviewResult(mockApi.withdrawGradingResult(selectedReview.id));
-    setPublicationAudits(mockApi.listPublicationAudits());
+  const handlePublishResult = async () => {
+    syncReviewResult(await publishGradingResult(selectedReview.id, operatorName));
+    setPublicationAudits(await loadPublicationAudits(selectedReview.id));
   };
 
-  const handleResolveAppeal = (appealId: number, accepted: boolean) => {
+  const handleWithdrawResult = async () => {
+    syncReviewResult(await withdrawGradingResult(selectedReview.id, operatorName));
+    setPublicationAudits(await loadPublicationAudits(selectedReview.id));
+  };
+
+  const handleResolveAppeal = async (appealId: number, accepted: boolean) => {
     const reply = accepted
       ? '已采纳申诉，教师将复核对应评分项并重新发布结果。'
       : '已复核原始报告和评分依据，维持当前评分。';
-    mockApi.resolveAppeal(appealId, accepted, reply);
-    setAppealRows(mockApi.listAppeals());
+    await resolveAppeal(appealId, accepted, reply);
+    setAppealRows((current) => current.map((item) => (
+      item.id === appealId
+        ? { ...item, status: accepted ? 'ACCEPTED' : 'REJECTED', teacherReply: reply, resolvedAt: new Date().toISOString() }
+        : item
+    )));
   };
 
-  const handleStartSimilarity = () => {
-    mockApi.startSimilarityJob();
-    setSimilarityRows(mockApi.listSimilarityJobs());
+  const handleStartSimilarity = async () => {
+    const job = await startSimilarityJob(selectedCourseId);
+    setSimilarityRows((current) => [job, ...current.filter((item) => item.id !== job.id)]);
+  };
+
+  const handleRemindUnsubmitted = async () => {
+    const result = await remindUnsubmitted(
+      collectionOverview.assignmentId,
+      unsubmittedStudents.map((student) => student.studentId),
+    );
+    setReminderResult(result);
   };
 
   return (
@@ -380,7 +418,7 @@ function TeacherDashboard({
               <p className="eyebrow">AI Grading</p>
               <h3>批改队列</h3>
             </div>
-            <button className="ghost-button" type="button" onClick={() => setStartedJob(mockApi.startGradingJob())}>
+            <button className="ghost-button" type="button" onClick={handleStartGrading}>
               <Sparkles size={15} /> 启动批改
             </button>
           </div>
@@ -606,7 +644,7 @@ function TeacherDashboard({
               </form>
             ))}
           </div>
-          <button className="primary-button full-width" type="button" onClick={() => syncReviewResult(mockApi.approveGradingResult(selectedReview.id))}>
+          <button className="primary-button full-width" type="button" onClick={handleApproveResult}>
             <CheckCircle2 size={16} /> 通过复核，等待发布
           </button>
           <div className="audit-list">
@@ -748,7 +786,7 @@ function TeacherDashboard({
               <p className="eyebrow">Submission Collection</p>
               <h3>报告收集看板</h3>
             </div>
-            <button className="ghost-button" type="button" onClick={() => setReminderResult(mockApi.remindUnsubmitted())}>
+            <button className="ghost-button" type="button" onClick={handleRemindUnsubmitted}>
               <Bell size={15} /> 一键催交
             </button>
           </div>
@@ -897,20 +935,20 @@ function StudentDashboard({
   const [receipt, setReceipt] = useState<ReturnType<typeof mockApi.createUploadReceipt> | null>(null);
   const [appealRows, setAppealRows] = useState(appeals);
 
-  const confirmUpload = () => {
+  const confirmUpload = async () => {
     setUploadProgress(100);
-    setReceipt(mockApi.createUploadReceipt(selectedFileName));
+    setReceipt(await createUploadReceipt(selectedFileName, 1, userId));
   };
 
-  const submitAppeal = (resultId: number, rubricItemId: number | null) => {
-    mockApi.createAppeal(
+  const submitAppeal = async (resultId: number, rubricItemId: number | null) => {
+    const appeal = await createAppeal(
       resultId,
       rubricItemId,
       userId,
       '我认为该评分项有可补充说明，申请教师复核。',
       '请重新查看报告中的相关章节和截图证据。'
     );
-    setAppealRows(mockApi.listAppeals(undefined, userId));
+    setAppealRows((current) => [appeal, ...current.filter((item) => item.id !== appeal.id)]);
   };
 
   return (
