@@ -36,25 +36,26 @@ public class GradingService {
   private final RubricStore rubricStore;
   private final GradeExportStore gradeExportStore;
   private final GradePublicationAuditStore publicationAuditStore;
+  private final AppealStore appealStore;
   private final ScoringProvider scoringProvider;
   private final AnnotationProvider annotationProvider;
   private final AtomicLong jobIds = new AtomicLong(2);
   private final AtomicLong resultIds = new AtomicLong(2);
-  private final AtomicLong appealIds = new AtomicLong(2);
   private final Map<Long, GradingJobSummary> jobs = new LinkedHashMap<>();
   private final Map<Long, GradingResultSummary> results = new LinkedHashMap<>();
-  private final Map<Long, AppealSummary> appeals = new LinkedHashMap<>();
 
   public GradingService(
       RubricStore rubricStore,
       GradeExportStore gradeExportStore,
       GradePublicationAuditStore publicationAuditStore,
+      AppealStore appealStore,
       ScoringProvider scoringProvider,
       AnnotationProvider annotationProvider
   ) {
     this.rubricStore = rubricStore;
     this.gradeExportStore = gradeExportStore;
     this.publicationAuditStore = publicationAuditStore;
+    this.appealStore = appealStore;
     this.scoringProvider = scoringProvider;
     this.annotationProvider = annotationProvider;
     jobs.put(1L, new GradingJobSummary(1L, 1L, 1L, 65, 47, GradingJobStatus.SCORING, 86, OffsetDateTime.now().minusMinutes(18)));
@@ -117,19 +118,6 @@ public class GradingService {
             new GradingAnnotationSummary(2L, 12, "系统运行截图", "建议补充失败场景截图", "info"),
             new GradingAnnotationSummary(3L, 17, "实训总结", "总结需要对应评分标准展开", "warning")
         )
-    ));
-    appeals.put(1L, new AppealSummary(
-        1L,
-        1L,
-        2L,
-        2L,
-        "张三",
-        "系统实现部分包含失败重试说明，可能未被识别。",
-        "申请将系统实现分项由 43 分调整为 45 分。",
-        AppealStatus.SUBMITTED,
-        null,
-        OffsetDateTime.now().minusHours(2),
-        null
     ));
   }
 
@@ -244,11 +232,7 @@ public class GradingService {
   }
 
   public Collection<AppealSummary> listAppeals(Long resultId, Long studentId, AppealStatus status) {
-    return appeals.values().stream()
-        .filter(item -> resultId == null || resultId.equals(item.resultId()))
-        .filter(item -> studentId == null || studentId.equals(item.studentId()))
-        .filter(item -> status == null || status == item.status())
-        .toList();
+    return appealStore.listAppeals(resultId, studentId, status);
   }
 
   public AppealSummary createAppeal(CreateAppealRequest request) {
@@ -256,47 +240,14 @@ public class GradingService {
     if (result.publicationStatus() != PublicationStatus.PUBLISHED) {
       throw new IllegalStateException("Only published grading results can be appealed: " + request.resultId());
     }
-    var id = appealIds.getAndIncrement();
-    var appeal = new AppealSummary(
-        id,
-        request.resultId(),
-        request.rubricItemId(),
-        request.studentId(),
-        result.studentName(),
-        request.reason(),
-        request.requestedChange(),
-        AppealStatus.SUBMITTED,
-        null,
-        OffsetDateTime.now(),
-        null
-    );
-    appeals.put(id, appeal);
-    return appeal;
+    return appealStore.createAppeal(request, result.studentName());
   }
 
   public AppealSummary resolveAppeal(Long appealId, ResolveAppealRequest request) {
     if (request.status() == AppealStatus.SUBMITTED) {
       throw new IllegalArgumentException("Resolved appeal status must be ACCEPTED or REJECTED");
     }
-    var appeal = appeals.get(appealId);
-    if (appeal == null) {
-      throw new IllegalArgumentException("Appeal not found: " + appealId);
-    }
-    var resolved = new AppealSummary(
-        appeal.id(),
-        appeal.resultId(),
-        appeal.rubricItemId(),
-        appeal.studentId(),
-        appeal.studentName(),
-        appeal.reason(),
-        appeal.requestedChange(),
-        request.status(),
-        request.teacherReply(),
-        appeal.createdAt(),
-        OffsetDateTime.now()
-    );
-    appeals.put(appealId, resolved);
-    return resolved;
+    return appealStore.resolveAppeal(appealId, request);
   }
 
   public Collection<GradeExportSummary> listGradeExports(Long assignmentId) {

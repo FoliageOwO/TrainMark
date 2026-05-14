@@ -200,6 +200,25 @@
 - `README.md`
 - `PROGRESS.md`
 
+### 10.4 成绩申诉 PostgreSQL 存储
+
+- 已为成绩申诉抽象 `AppealStore`，默认保留内存实现和演示种子数据。
+- 已新增 JDBC 实现，可将申诉原因、调整诉求、状态、教师回复和处理时间写入 `grade_appeals`。
+- 已支持按批改结果、学生和申诉状态筛选数据库申诉列表，并关联 `users` 读取学生姓名。
+- 已让申诉创建和处理流程通过 store 持久化，并保留仅已发布成绩可申诉、处理状态不可回到 `SUBMITTED` 的业务校验。
+- 已复用 grading-service 的 PostgreSQL 连接配置，并补充独立 `TRAINMARK_GRADING_APPEAL_STORE` 切换项。
+
+主要代码：
+
+- `backend/grading-service/src/main/java/com/trainmark/grading/AppealStore.java`
+- `backend/grading-service/src/main/java/com/trainmark/grading/InMemoryAppealStore.java`
+- `backend/grading-service/src/main/java/com/trainmark/grading/JdbcAppealStore.java`
+- `backend/grading-service/src/main/java/com/trainmark/grading/GradingService.java`
+- `backend/grading-service/src/main/resources/application.yml`
+- `.env.example`
+- `README.md`
+- `PROGRESS.md`
+
 ### 11. OCR 与文档结构化基础
 
 - 已实现 OCR 任务状态枚举。
@@ -1685,6 +1704,23 @@ curl --noproxy '*' -H 'Content-Type: application/json' -d '{...}' http://localho
 curl --noproxy '*' -H 'Content-Type: application/json' -d '{...}' http://localhost:8085/api/grading/results/1/publish
 ```
 
+成绩申诉 PostgreSQL 存储已通过后端模块编译：
+
+```bash
+mvn -f backend/pom.xml -pl grading-service -am package -DskipTests
+```
+
+评分服务默认内存模式已通过单服务启动、申诉列表/筛选、创建申诉、处理申诉和已处理状态筛选验证：
+
+```bash
+timeout 90s bash scripts/dev-service.sh grading-service
+curl --noproxy '*' 'http://localhost:8085/api/grading/results/appeals'
+curl --noproxy '*' 'http://localhost:8085/api/grading/results/appeals?resultId=1&status=SUBMITTED'
+curl --noproxy '*' -H 'Content-Type: application/json' -d '{...}' http://localhost:8085/api/grading/results/appeals
+curl --noproxy '*' -H 'Content-Type: application/json' -d '{...}' http://localhost:8085/api/grading/results/appeals/2/resolve
+curl --noproxy '*' 'http://localhost:8085/api/grading/results/appeals?status=ACCEPTED'
+```
+
 ## 已提交记录
 
 主要提交：
@@ -1758,6 +1794,7 @@ curl --noproxy '*' -H 'Content-Type: application/json' -d '{...}' http://localho
 - `feat: add rubric jdbc store`
 - `feat: add grade export jdbc store`
 - `feat: add publication audit jdbc store`
+- `feat: add appeal jdbc store`
 
 ## 接下来需要做
 
