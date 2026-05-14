@@ -411,6 +411,20 @@
 - `README.md`
 - `PROGRESS.md`
 
+### 26. MVP 回归验证脚本
+
+- 已新增 `scripts/verify-mvp.sh`，串联当前 MVP 的基础回归验证。
+- 验证脚本覆盖前端 ESLint、前端构建、后端全模块打包和 API 路由注解核对。
+- 已新增根目录 `pnpm verify:mvp` 脚本，方便从仓库根目录执行。
+- 已在 README 补充 MVP 回归验证命令。
+
+主要代码：
+
+- `scripts/verify-mvp.sh`
+- `package.json`
+- `README.md`
+- `PROGRESS.md`
+
 ## 已验证
 
 前端构建已通过：
@@ -489,6 +503,12 @@ pnpm lint:web
 pnpm build:web
 ```
 
+MVP 回归验证脚本已通过：
+
+```bash
+pnpm verify:mvp
+```
+
 全部后端模块已通过编译：
 
 ```bash
@@ -525,6 +545,7 @@ Docker Compose 暂未本地验证，因为当前机器没有 Docker。
 - `feat: connect frontend actions`
 - `feat: add gateway cors`
 - `feat: add grade exports`
+- `chore: add mvp verifier`
 
 ## 接下来需要做
 
@@ -545,4 +566,4 @@ Docker Compose 暂未本地验证，因为当前机器没有 Docker。
 ### 3. 工程质量
 
 - 继续拆分老师端/学生端工作台内部组件。
-- 增加基础测试。
+- 在引入测试依赖后补充单元测试和接口测试。

@@ -80,6 +80,12 @@ pnpm dev:web
 pnpm lint:web
 ```
 
+当前 MVP 回归验证：
+
+```bash
+pnpm verify:mvp
+```
+
 ### 4. 启动本地基础设施
 
 ```bash
