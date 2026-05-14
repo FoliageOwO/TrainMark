@@ -234,3 +234,40 @@ export type GradePublicationAuditEntry = {
   reason: string;
   createdAt: string;
 };
+
+export type ScoreBucket = {
+  label: string;
+  minScore: number;
+  maxScore: number;
+  studentCount: number;
+};
+
+export type GradeStatisticsSummary = {
+  assignmentId: number;
+  submittedCount: number;
+  publishedCount: number;
+  averageScore: number;
+  standardDeviation: number;
+  maxScore: number;
+  minScore: number;
+  difficultyIndex: number;
+  discriminationIndex: number;
+  scoreBuckets: ScoreBucket[];
+};
+
+export type LossPointSummary = {
+  rubricItemId: number;
+  title: string;
+  courseOutcomeCode: string;
+  averageLostScore: number;
+  affectedStudentCount: number;
+  topReason: string;
+};
+
+export type CourseOutcomeAchievement = {
+  courseOutcomeCode: string;
+  title: string;
+  targetValue: number;
+  achievedValue: number;
+  status: '达成' | '临界' | '未达成';
+};

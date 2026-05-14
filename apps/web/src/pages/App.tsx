@@ -101,6 +101,9 @@ export function App() {
   const ocrJobs = mockApi.listOcrJobs();
   const gradingResults = mockApi.listGradingResults();
   const publishedResults = mockApi.listPublishedResults(user.id);
+  const gradeStatistics = mockApi.getGradeStatistics();
+  const lossPoints = mockApi.listLossPoints();
+  const courseOutcomes = mockApi.listCourseOutcomes();
 
   const teacherStats = [
     { label: '进行中任务', value: String(metrics.activeAssignments), trend: '+2 本周', tone: 'blue' },
@@ -201,6 +204,9 @@ export function App() {
             gradingJobs={gradingJobs}
             ocrJobs={ocrJobs}
             gradingResults={gradingResults}
+            gradeStatistics={gradeStatistics}
+            lossPoints={lossPoints}
+            courseOutcomes={courseOutcomes}
           />
         )}
       </section>
@@ -225,6 +231,9 @@ function TeacherDashboard({
   gradingJobs,
   ocrJobs,
   gradingResults,
+  gradeStatistics,
+  lossPoints,
+  courseOutcomes,
 }: {
   assignments: ReturnType<typeof mockApi.listAssignments>;
   classes: ReturnType<typeof mockApi.listClasses>;
@@ -242,6 +251,9 @@ function TeacherDashboard({
   gradingJobs: ReturnType<typeof mockApi.listGradingJobs>;
   ocrJobs: ReturnType<typeof mockApi.listOcrJobs>;
   gradingResults: ReturnType<typeof mockApi.listGradingResults>;
+  gradeStatistics: ReturnType<typeof mockApi.getGradeStatistics>;
+  lossPoints: ReturnType<typeof mockApi.listLossPoints>;
+  courseOutcomes: ReturnType<typeof mockApi.listCourseOutcomes>;
 }) {
   const [reminderResult, setReminderResult] = useState<ReturnType<typeof mockApi.remindUnsubmitted> | null>(null);
   const [startedJob, setStartedJob] = useState<ReturnType<typeof mockApi.startGradingJob> | null>(null);
@@ -605,6 +617,88 @@ function TeacherDashboard({
                 </div>
               ))
             )}
+          </div>
+        </article>
+      </section>
+
+      <section className="analytics-grid">
+        <article className="panel analytics-panel">
+          <div className="panel-heading">
+            <div>
+              <p className="eyebrow">Grade Analytics</p>
+              <h3>成绩统计</h3>
+            </div>
+            <span className="status-pill">{gradeStatistics.publishedCount} 份已发布</span>
+          </div>
+          <div className="analytics-metrics">
+            <span><strong>{gradeStatistics.averageScore}</strong>均分</span>
+            <span><strong>{gradeStatistics.standardDeviation}</strong>标准差</span>
+            <span><strong>{gradeStatistics.maxScore}</strong>最高分</span>
+            <span><strong>{gradeStatistics.minScore}</strong>最低分</span>
+          </div>
+          <div className="score-buckets">
+            {gradeStatistics.scoreBuckets.map((bucket) => {
+              const width = gradeStatistics.publishedCount === 0 ? 0 : Math.round((bucket.studentCount / gradeStatistics.publishedCount) * 100);
+              return (
+                <div className="bucket-row" key={bucket.label}>
+                  <span>{bucket.label}</span>
+                  <div><b style={{ width: `${width}%` }} /></div>
+                  <strong>{bucket.studentCount} 人</strong>
+                </div>
+              );
+            })}
+          </div>
+          <div className="index-row">
+            <span>难度系数 {gradeStatistics.difficultyIndex}</span>
+            <span>区分度 {gradeStatistics.discriminationIndex}</span>
+          </div>
+        </article>
+
+        <article className="panel analytics-panel">
+          <div className="panel-heading">
+            <div>
+              <p className="eyebrow">Loss Points</p>
+              <h3>高频失分点</h3>
+            </div>
+            <BarChart3 size={22} />
+          </div>
+          <div className="loss-list">
+            {lossPoints.map((item) => (
+              <div className="loss-row" key={item.rubricItemId}>
+                <div>
+                  <strong>{item.title}</strong>
+                  <span>{item.courseOutcomeCode} · 影响 {item.affectedStudentCount} 人</span>
+                  <p>{item.topReason}</p>
+                </div>
+                <b>-{item.averageLostScore}</b>
+              </div>
+            ))}
+          </div>
+        </article>
+
+        <article className="panel analytics-panel outcome-panel">
+          <div className="panel-heading">
+            <div>
+              <p className="eyebrow">Course Outcomes</p>
+              <h3>课程目标达成度</h3>
+            </div>
+            <span className="status-pill">目标值 75%</span>
+          </div>
+          <div className="outcome-list">
+            {courseOutcomes.map((item) => (
+              <div className="outcome-row" key={item.courseOutcomeCode}>
+                <div className="outcome-title">
+                  <strong>{item.courseOutcomeCode}</strong>
+                  <span>{item.title}</span>
+                  <b>{item.status}</b>
+                </div>
+                <div className="outcome-bar">
+                  <span style={{ width: `${Math.round(item.achievedValue * 100)}%` }} />
+                  <i style={{ left: `${Math.round(item.targetValue * 100)}%` }} />
+                </div>
+                <small>{Math.round(item.achievedValue * 100)}% / 目标 {Math.round(item.targetValue * 100)}%</small>
+              </div>
+            ))}
           </div>
         </article>
       </section>

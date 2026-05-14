@@ -210,6 +210,29 @@
 - `apps/web/src/api/mockApi.ts`
 - `apps/web/src/styles/global.css`
 
+### 14. 统计分析
+
+- 已实现成绩统计 DTO，包含提交数、发布数、均分、标准差、最高分、最低分、难度系数、区分度和分数段分布。
+- 已实现高频失分点 DTO，包含评分项、课程目标、平均失分、影响人数和主要原因。
+- 已实现课程目标达成度 DTO，包含目标值、达成值和达成状态。
+- 已实现成绩统计、失分分析、课程目标达成度接口骨架。
+- 已在老师端加入统计分析面板，展示成绩指标、分数段条形图、高频失分点和课程目标达成度。
+- 当前统计数据仍为内存模拟数据，后续需要接入真实成绩、评分项和课程目标关联计算。
+
+主要代码：
+
+- `backend/analytics-service/src/main/java/com/trainmark/analytics/AnalyticsController.java`
+- `backend/analytics-service/src/main/java/com/trainmark/analytics/AnalyticsService.java`
+- `backend/analytics-service/pom.xml`
+- `backend/shared/src/main/java/com/trainmark/shared/dto/GradeStatisticsSummary.java`
+- `backend/shared/src/main/java/com/trainmark/shared/dto/ScoreBucketSummary.java`
+- `backend/shared/src/main/java/com/trainmark/shared/dto/LossPointSummary.java`
+- `backend/shared/src/main/java/com/trainmark/shared/dto/CourseOutcomeAchievementSummary.java`
+- `apps/web/src/pages/App.tsx`
+- `apps/web/src/api/types.ts`
+- `apps/web/src/api/mockApi.ts`
+- `apps/web/src/styles/global.css`
+
 ## 已验证
 
 前端构建已通过：
@@ -222,6 +245,12 @@ pnpm build:web
 
 ```bash
 mvn -f backend/pom.xml -pl grading-service -am package -DskipTests
+```
+
+统计分析相关后端模块已通过编译：
+
+```bash
+mvn -f backend/pom.xml -pl analytics-service -am package -DskipTests
 ```
 
 Docker Compose 暂未本地验证，因为当前机器没有 Docker。
@@ -242,23 +271,17 @@ Docker Compose 暂未本地验证，因为当前机器没有 Docker。
 - `feat: add ocr`
 - `feat: add manual review`
 - `feat: add grade publishing`
+- `feat: add analytics`
 
 ## 接下来需要做
 
-### 1. 统计分析
-
-- 实现成绩统计接口。
-- 实现失分分析接口。
-- 实现课程目标达成度接口。
-- 前端加入图表展示。
-
-### 2. 学生申诉
+### 1. 学生申诉
 
 - 实现学生申诉提交接口。
 - 实现教师处理申诉接口。
 - 补充申诉处理留痕和学生端状态反馈。
 
-### 3. 真实 AI / OCR 接入
+### 2. 真实 AI / OCR 接入
 
 - 接入 PaddleOCR。
 - 增加 PDF / Word / 图片转换流程。
@@ -266,13 +289,13 @@ Docker Compose 暂未本地验证，因为当前机器没有 Docker。
 - 实现规则评分、关键词匹配和语义相似度评分。
 - 实现批注 PDF 生成。
 
-### 4. 持久化与真实联调
+### 3. 持久化与真实联调
 
 - 接入 PostgreSQL / Flyway。
 - 将当前内存服务替换为数据库实现。
 - 安装 Docker 后验证 `infra/docker-compose.yml`。
 
-### 5. 工程质量
+### 4. 工程质量
 
 - 拆分前端页面组件。
 - 增加 ESLint 配置。

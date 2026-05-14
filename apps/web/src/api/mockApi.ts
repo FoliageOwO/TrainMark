@@ -2,8 +2,10 @@ import type {
   AssignmentSummary,
   CourseSummary,
   CollectionOverview,
+  CourseOutcomeAchievement,
   DashboardMetrics,
   GradePublicationAuditEntry,
+  GradeStatisticsSummary,
   GradingResultSummary,
   GradingJobSummary,
   OcrJobSummary,
@@ -11,6 +13,7 @@ import type {
   ReminderResult,
   RoleCode,
   RubricSummary,
+  LossPointSummary,
   StudentImportPreview,
   SubmissionTask,
   TeachingClassSummary,
@@ -188,6 +191,37 @@ const gradingResults: GradingResultSummary[] = [
 
 const publicationAudits: GradePublicationAuditEntry[] = [];
 
+const gradeStatistics: GradeStatisticsSummary = {
+  assignmentId: 1,
+  submittedCount: 65,
+  publishedCount: 48,
+  averageScore: 83.6,
+  standardDeviation: 7.8,
+  maxScore: 96,
+  minScore: 62,
+  difficultyIndex: 0.84,
+  discriminationIndex: 0.31,
+  scoreBuckets: [
+    { label: '90-100', minScore: 90, maxScore: 100, studentCount: 12 },
+    { label: '80-89', minScore: 80, maxScore: 89, studentCount: 24 },
+    { label: '70-79', minScore: 70, maxScore: 79, studentCount: 9 },
+    { label: '60-69', minScore: 60, maxScore: 69, studentCount: 3 },
+    { label: '<60', minScore: 0, maxScore: 59, studentCount: 0 },
+  ],
+};
+
+const lossPoints: LossPointSummary[] = [
+  { rubricItemId: 1, title: '需求与设计', courseOutcomeCode: 'CO1', averageLostScore: 4.2, affectedStudentCount: 31, topReason: '数据库约束、边界条件和异常流程说明不足' },
+  { rubricItemId: 2, title: '系统实现', courseOutcomeCode: 'CO2', averageLostScore: 6.8, affectedStudentCount: 28, topReason: '失败重试、权限边界和批量处理说明缺失' },
+  { rubricItemId: 3, title: '报告规范', courseOutcomeCode: 'CO3', averageLostScore: 3.7, affectedStudentCount: 22, topReason: '截图编号、图表说明和实训总结不够规范' },
+];
+
+const courseOutcomes: CourseOutcomeAchievement[] = [
+  { courseOutcomeCode: 'CO1', title: '需求分析与系统设计', targetValue: 0.75, achievedValue: 0.79, status: '达成' },
+  { courseOutcomeCode: 'CO2', title: '系统实现与调试', targetValue: 0.75, achievedValue: 0.84, status: '达成' },
+  { courseOutcomeCode: 'CO3', title: '工程表达与报告规范', targetValue: 0.75, achievedValue: 0.72, status: '临界' },
+];
+
 export const mockApi = {
   login(role: RoleCode): UserProfile {
     return users[role];
@@ -315,6 +349,15 @@ export const mockApi = {
     return gradingResults.filter((item) => (
       item.publicationStatus === 'PUBLISHED' && (studentId === undefined || item.studentId === studentId)
     ));
+  },
+  getGradeStatistics(): GradeStatisticsSummary {
+    return gradeStatistics;
+  },
+  listLossPoints(): LossPointSummary[] {
+    return lossPoints;
+  },
+  listCourseOutcomes(): CourseOutcomeAchievement[] {
+    return courseOutcomes;
   },
   startGradingJob(): GradingJobSummary {
     return { id: 2, assignmentId: 1, rubricId: 1, totalSubmissions: 18, completedSubmissions: 0, status: 'PENDING', confidence: 0, createdAt: new Date().toISOString() };
