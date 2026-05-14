@@ -2038,6 +2038,20 @@
 - `README.md`
 - `PROGRESS.md`
 
+### 67. 前端五类角色切换入口
+
+- 已将顶部角色切换从教师、学生、管理端扩展为教师、学生、课程负责人、督导和管理端五类角色。
+- 已补充 URL 角色参数解析，支持 `role=course_owner`、`role=owner` 和 `role=supervisor` 直达对应身份。
+- 课程负责人和督导继续复用教师工作台主链路，并在 hero 区展示对应角色文案，避免新增未闭环页面。
+- 本模块已通过前端 lint、前端构建和 MVP 主验证。
+
+主要代码：
+
+- `apps/web/src/components/AppChrome.tsx`
+- `apps/web/src/pages/App.tsx`
+- `README.md`
+- `PROGRESS.md`
+
 ## 已验证
 
 前端构建已通过：

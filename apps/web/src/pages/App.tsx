@@ -22,7 +22,10 @@ import { TeacherDashboard } from '../components/TeacherDashboard';
 
 const routeRoleMap: Record<string, RoleCode> = {
   admin: 'ADMIN',
+  course_owner: 'COURSE_OWNER',
+  owner: 'COURSE_OWNER',
   student: 'STUDENT',
+  supervisor: 'SUPERVISOR',
   teacher: 'TEACHER',
 };
 
