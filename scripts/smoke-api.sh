@@ -164,6 +164,7 @@ if [[ "$SMOKE_INCLUDE_WRITES" == "1" ]]; then
     post_json "upload complete" "$GATEWAY_URL/api/submissions/upload/complete" "{\"uploadId\":\"$upload_id\",\"objectKey\":\"$object_key\",\"checksum\":null}"
   fi
   post_json "assignment" "$GATEWAY_URL/api/assignments" '{"courseId":1,"title":"Smoke 实训任务","description":"Smoke assignment creation","deadline":"2030-05-20T23:59:00+08:00","totalScore":100,"classIds":[1,2],"similarityCheckEnabled":true,"aiGradingEnabled":true}'
+  post_json "rubric" "$GATEWAY_URL/api/rubrics" '{"assignmentId":1,"name":"Smoke 评分标准","totalScore":100,"items":[{"title":"需求与设计","score":20,"courseOutcomeCode":"CO1","points":[{"title":"需求完整","description":"覆盖需求、设计和约束","score":20,"keywords":["需求","设计"],"synonyms":[]}]},{"title":"系统实现","score":50,"courseOutcomeCode":"CO2","points":[{"title":"实现完整","description":"覆盖核心功能和异常处理","score":50,"keywords":["功能","接口"],"synonyms":[]}]},{"title":"报告规范","score":30,"courseOutcomeCode":"CO3","points":[{"title":"报告规范","description":"覆盖截图、总结和格式","score":30,"keywords":["截图","总结"],"synonyms":[]}]}]}'
   post_json "grading job" "$GATEWAY_URL/api/grading/jobs" '{"assignmentId":1,"rubricId":1,"submissionIds":[1]}'
   if [[ "$SMOKE_DRY_RUN" == "1" ]]; then
     post_json "ocr job" "$GATEWAY_URL/api/ocr/jobs" '{"submissionId":1,"objectKey":"assignments/1/students/2/database-report.docx","mode":"STRUCTURE"}'

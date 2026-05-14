@@ -770,6 +770,25 @@
 - `apps/web/src/components/StudentDashboard.tsx`
 - `PROGRESS.md`
 
+### 23.7 前端评分标准创建联调
+
+- 已扩展前端 HTTP API 层，支持在 `VITE_API_MODE=http` 下调用 `POST /api/rubrics` 创建真实评分标准。
+- 已在教师端 AI 流水线面板加入评分标准创建表单，可选择实训任务、填写标准名称、总分、三项评分项和关键词。
+- 已让老师端本地状态即时展示新创建的评分标准，并在没有评分标准时禁用“启动批改”，避免空标准启动批改。
+- 已同步 mock 数据层的评分标准创建能力，保持单前端演示可继续推进。
+- 已将 `POST /api/rubrics` 加入写接口 smoke dry-run 清单，后续 MVP 验证会覆盖评分标准创建端点。
+- 本模块已通过前端 lint、生产构建和 MVP 验证脚本。
+
+主要代码：
+
+- `apps/web/src/api/httpApi.ts`
+- `apps/web/src/api/mockApi.ts`
+- `apps/web/src/components/TeacherAiPipeline.tsx`
+- `apps/web/src/components/TeacherDashboard.tsx`
+- `apps/web/src/styles/global.css`
+- `scripts/smoke-api.sh`
+- `PROGRESS.md`
+
 ### 24. Gateway 本地跨域联调
 
 - 已为 gateway 增加本地 Vite 开发端口 CORS 配置。
@@ -1761,6 +1780,14 @@ pnpm verify:mvp
 ```
 
 前端学生提交即时状态反馈后已通过静态检查、构建和 MVP 验证：
+
+```bash
+pnpm --filter trainmark-ai-web lint
+pnpm --filter trainmark-ai-web build
+pnpm verify:mvp
+```
+
+前端评分标准创建联调后已通过静态检查、构建和 MVP 验证：
 
 ```bash
 pnpm --filter trainmark-ai-web lint

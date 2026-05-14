@@ -5,6 +5,7 @@ import {
   approveGradingResult,
   createGradeExport,
   createGradingJob,
+  createRubric,
   loadPublicationAudits,
   publishGradingResult,
   remindUnsubmitted,
@@ -13,8 +14,9 @@ import {
   updateReviewItem,
   withdrawGradingResult,
   type CreateAssignmentInput,
+  type CreateRubricInput,
 } from '../api/httpApi';
-import type { CourseSummary } from '../api/types';
+import type { CourseSummary, RubricSummary } from '../api/types';
 import { TeacherAnalyticsPanel } from './TeacherAnalyticsPanel';
 import { TeacherAiPipeline } from './TeacherAiPipeline';
 import { TeacherAppealPanel } from './TeacherAppealPanel';
@@ -85,8 +87,10 @@ export function TeacherDashboard({
   const [similarityRows, setSimilarityRows] = useState(similarityJobs);
   const [exportRows, setExportRows] = useState(gradeExports);
   const [assignmentRows, setAssignmentRows] = useState(assignments);
+  const [rubricRows, setRubricRows] = useState<RubricSummary[]>(rubrics);
   const [assignmentNotice, setAssignmentNotice] = useState('');
-  const rubric = rubrics[0];
+  const [rubricNotice, setRubricNotice] = useState('');
+  const rubric = rubricRows[0] ?? null;
   const visibleJobs = startedJob ? [startedJob, ...gradingJobs] : gradingJobs;
   const selectedReview = reviewResults.find((item) => item.id === selectedReviewId) ?? reviewResults[0]!;
 
@@ -94,12 +98,19 @@ export function TeacherDashboard({
     setAssignmentRows(assignments);
   }, [assignments]);
 
+  useEffect(() => {
+    setRubricRows(rubrics);
+  }, [rubrics]);
+
   const syncReviewResult = (updated: NonNullable<typeof selectedReview>) => {
     setReviewResults((current) => current.map((item) => (item.id === updated.id ? { ...updated } : item)));
     setSelectedReviewId(updated.id);
   };
 
   const handleStartGrading = async () => {
+    if (!rubric) {
+      return;
+    }
     setStartedJob(await createGradingJob(rubric.assignmentId, rubric.id));
   };
 
@@ -161,6 +172,12 @@ export function TeacherDashboard({
     setAssignmentNotice(`已创建任务：${assignment.title}`);
   };
 
+  const handleCreateRubric = async (input: CreateRubricInput) => {
+    const nextRubric = await createRubric(input);
+    setRubricRows((current) => [nextRubric, ...current.filter((item) => item.id !== nextRubric.id)]);
+    setRubricNotice(`已保存评分标准：${nextRubric.name}`);
+  };
+
   return (
     <>
       <TeacherCoursePanel
@@ -176,9 +193,12 @@ export function TeacherDashboard({
       />
 
       <TeacherAiPipeline
+        assignments={assignmentRows}
         rubric={rubric}
+        rubricNotice={rubricNotice}
         gradingJobs={visibleJobs}
         ocrJobs={ocrJobs}
+        onCreateRubric={handleCreateRubric}
         onStartGrading={handleStartGrading}
       />
 

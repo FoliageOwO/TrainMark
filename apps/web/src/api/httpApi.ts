@@ -67,6 +67,24 @@ export type CreateAssignmentInput = {
   aiGradingEnabled: boolean;
 };
 
+export type CreateRubricInput = {
+  assignmentId: number;
+  name: string;
+  totalScore: number;
+  items: Array<{
+    title: string;
+    score: number;
+    courseOutcomeCode: string;
+    points: Array<{
+      title: string;
+      description: string;
+      score: number;
+      keywords: string[];
+      synonyms: string[];
+    }>;
+  }>;
+};
+
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8080';
 const API_MODE = import.meta.env.VITE_API_MODE ?? 'mock';
 
@@ -348,6 +366,15 @@ export async function createAssignment(input: CreateAssignmentInput): Promise<As
     '/api/assignments',
     input,
     () => mockApi.createAssignment(input),
+  );
+}
+
+export async function createRubric(input: CreateRubricInput): Promise<RubricSummary> {
+  return mutateOr(
+    'POST',
+    '/api/rubrics',
+    input,
+    () => mockApi.createRubric(input),
   );
 }
 

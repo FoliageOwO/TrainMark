@@ -1,5 +1,7 @@
+import { useState, type FormEvent } from 'react';
 import { FileText, Plus, Sparkles } from 'lucide-react';
-import type { GradingJobSummary, OcrJobSummary, RubricSummary } from '../api/types';
+import type { CreateRubricInput } from '../api/httpApi';
+import type { AssignmentSummary, GradingJobSummary, OcrJobSummary, RubricSummary } from '../api/types';
 
 const gradingStatusText = {
   PENDING: '等待中',
@@ -22,13 +24,52 @@ const ocrStatusText = {
 };
 
 type TeacherAiPipelineProps = {
-  rubric: RubricSummary;
+  assignments: AssignmentSummary[];
+  rubric: RubricSummary | null;
+  rubricNotice: string;
   gradingJobs: GradingJobSummary[];
   ocrJobs: OcrJobSummary[];
+  onCreateRubric: (input: CreateRubricInput) => Promise<void>;
   onStartGrading: () => void;
 };
 
-export function TeacherAiPipeline({ rubric, gradingJobs, ocrJobs, onStartGrading }: TeacherAiPipelineProps) {
+export function TeacherAiPipeline({
+  assignments,
+  rubric,
+  rubricNotice,
+  gradingJobs,
+  ocrJobs,
+  onCreateRubric,
+  onStartGrading,
+}: TeacherAiPipelineProps) {
+  const [showRubricForm, setShowRubricForm] = useState(false);
+  const [isCreatingRubric, setIsCreatingRubric] = useState(false);
+
+  const handleSubmitRubric = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const formData = new FormData(event.currentTarget);
+    const assignmentId = Number(formData.get('assignmentId'));
+    const name = String(formData.get('name') ?? '').trim();
+    const totalScore = Number(formData.get('totalScore') ?? 100);
+    if (!assignmentId || !name) {
+      return;
+    }
+
+    setIsCreatingRubric(true);
+    try {
+      await onCreateRubric({
+        assignmentId,
+        name,
+        totalScore,
+        items: buildRubricItems(formData),
+      });
+      event.currentTarget.reset();
+      setShowRubricForm(false);
+    } finally {
+      setIsCreatingRubric(false);
+    }
+  };
+
   return (
     <>
       <section className="management-grid">
@@ -38,26 +79,97 @@ export function TeacherAiPipeline({ rubric, gradingJobs, ocrJobs, onStartGrading
               <p className="eyebrow">Rubric</p>
               <h3>评分标准</h3>
             </div>
-            <button className="ghost-button" type="button"><Plus size={15} /> 编辑标准</button>
+            <button className="ghost-button" type="button" onClick={() => setShowRubricForm((value) => !value)}>
+              <Plus size={15} /> 新建标准
+            </button>
           </div>
-          <div className="rubric-summary">
-            <div>
-              <strong>{rubric.name}</strong>
-              <span>总分 {rubric.totalScore} · {rubric.items.length} 个评分项</span>
-            </div>
-            <span className="score-chip">可解释评分</span>
-          </div>
-          <div className="rubric-list">
-            {rubric.items.map((item) => (
-              <div className="rubric-row" key={item.id}>
+          {showRubricForm && (
+            <form className="assignment-create-form" onSubmit={handleSubmitRubric}>
+              <label>
+                适用任务
+                <select name="assignmentId" required defaultValue={assignments[0]?.id ?? ''}>
+                  {assignments.map((assignment) => (
+                    <option key={assignment.id} value={assignment.id}>{assignment.title}</option>
+                  ))}
+                </select>
+              </label>
+              <label>
+                标准名称
+                <input name="name" required defaultValue="实训报告评分标准" />
+              </label>
+              <label>
+                总分
+                <input name="totalScore" min="1" max="1000" required type="number" defaultValue="100" />
+              </label>
+              <label>
+                评分项一
+                <input name="item1Title" required defaultValue="需求与设计" />
+              </label>
+              <label>
+                分值
+                <input name="item1Score" min="1" required type="number" defaultValue="20" />
+              </label>
+              <label>
+                关键词
+                <input name="item1Keywords" defaultValue="需求,设计,ER图,约束" />
+              </label>
+              <label>
+                评分项二
+                <input name="item2Title" required defaultValue="系统实现" />
+              </label>
+              <label>
+                分值
+                <input name="item2Score" min="1" required type="number" defaultValue="50" />
+              </label>
+              <label>
+                关键词
+                <input name="item2Keywords" defaultValue="功能,接口,权限,异常" />
+              </label>
+              <label>
+                评分项三
+                <input name="item3Title" required defaultValue="报告规范" />
+              </label>
+              <label>
+                分值
+                <input name="item3Score" min="1" required type="number" defaultValue="30" />
+              </label>
+              <label>
+                关键词
+                <input name="item3Keywords" defaultValue="截图,总结,目录,格式" />
+              </label>
+              <button className="primary-button" type="submit" disabled={isCreatingRubric || assignments.length === 0}>
+                {isCreatingRubric ? '保存中...' : '保存评分标准'}
+              </button>
+            </form>
+          )}
+          {rubricNotice && <div className="inline-success">{rubricNotice}</div>}
+          {rubric ? (
+            <>
+              <div className="rubric-summary">
                 <div>
-                  <strong>{item.title}</strong>
-                  <span>{item.courseOutcomeCode} · {item.points[0]?.title ?? '待配置得分点'}</span>
+                  <strong>{rubric.name}</strong>
+                  <span>总分 {rubric.totalScore} · {rubric.items.length} 个评分项</span>
                 </div>
-                <b>{item.score} 分</b>
+                <span className="score-chip">可解释评分</span>
               </div>
-            ))}
-          </div>
+              <div className="rubric-list">
+                {rubric.items.map((item) => (
+                  <div className="rubric-row" key={item.id}>
+                    <div>
+                      <strong>{item.title}</strong>
+                      <span>{item.courseOutcomeCode} · {item.points[0]?.title ?? '待配置得分点'}</span>
+                    </div>
+                    <b>{item.score} 分</b>
+                  </div>
+                ))}
+              </div>
+            </>
+          ) : (
+            <div className="empty-result">
+              <strong>暂无评分标准</strong>
+              <span>先为实训任务创建评分标准，再启动 AI 批改。</span>
+            </div>
+          )}
         </article>
 
         <article className="panel grading-panel">
@@ -66,7 +178,7 @@ export function TeacherAiPipeline({ rubric, gradingJobs, ocrJobs, onStartGrading
               <p className="eyebrow">AI Grading</p>
               <h3>批改队列</h3>
             </div>
-            <button className="ghost-button" type="button" onClick={onStartGrading}>
+            <button className="ghost-button" type="button" onClick={onStartGrading} disabled={!rubric}>
               <Sparkles size={15} /> 启动批改
             </button>
           </div>
@@ -146,4 +258,31 @@ export function TeacherAiPipeline({ rubric, gradingJobs, ocrJobs, onStartGrading
       </section>
     </>
   );
+}
+
+function buildRubricItems(formData: FormData): CreateRubricInput['items'] {
+  return [1, 2, 3].map((index) => {
+    const title = String(formData.get(`item${index}Title`) ?? '').trim();
+    const score = Number(formData.get(`item${index}Score`) ?? 1);
+    const keywords = splitKeywords(String(formData.get(`item${index}Keywords`) ?? ''));
+    return {
+      title,
+      score,
+      courseOutcomeCode: `CO${index}`,
+      points: [{
+        title: `${title}关键点`,
+        description: `围绕${title}的完整性、准确性和证据进行评分。`,
+        score,
+        keywords,
+        synonyms: [],
+      }],
+    };
+  });
+}
+
+function splitKeywords(value: string) {
+  return value
+    .split(/[,，]/)
+    .map((item) => item.trim())
+    .filter(Boolean);
 }

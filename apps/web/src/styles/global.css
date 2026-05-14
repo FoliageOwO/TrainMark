@@ -567,6 +567,7 @@ button:focus-visible {
 }
 
 .assignment-create-form input,
+.assignment-create-form select,
 .assignment-create-form textarea {
   width: 100%;
   padding: 10px 11px;

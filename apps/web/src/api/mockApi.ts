@@ -357,6 +357,44 @@ export const mockApi = {
   listRubrics(): RubricSummary[] {
     return rubrics;
   },
+  createRubric(input: {
+    assignmentId: number;
+    name: string;
+    totalScore: number;
+    items: Array<{
+      title: string;
+      score: number;
+      courseOutcomeCode: string;
+      points: Array<{
+        title: string;
+        description: string;
+        score: number;
+        keywords: string[];
+        synonyms: string[];
+      }>;
+    }>;
+  }): RubricSummary {
+    const nextRubric: RubricSummary = {
+      id: Math.max(0, ...rubrics.map((item) => item.id)) + 1,
+      assignmentId: input.assignmentId,
+      name: input.name,
+      totalScore: input.totalScore,
+      items: input.items.map((item, index) => ({
+        id: Date.now() + index,
+        title: item.title,
+        score: item.score,
+        courseOutcomeCode: item.courseOutcomeCode,
+        points: item.points.map((point, pointIndex) => ({
+          id: Date.now() + index * 10 + pointIndex,
+          title: point.title,
+          score: point.score,
+          keywords: point.keywords,
+        })),
+      })),
+    };
+    rubrics.unshift(nextRubric);
+    return nextRubric;
+  },
   listGradingJobs(): GradingJobSummary[] {
     return gradingJobs;
   },
