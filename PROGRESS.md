@@ -871,6 +871,17 @@
 - `apps/web/src/components/TeacherCollectionPanel.tsx`
 - `PROGRESS.md`
 
+### 23.14 HTTP 局部失败作业维度兜底
+
+- 已让 HTTP 工作区在收交统计、未交名单、成绩统计、失分点和课程目标接口局部失败时，使用当前作业 ID 生成 mock 兜底数据。
+- 已避免局部服务失败时重新混入作业 1 的演示收交或分析数据，保持 HTTP/mock 兜底链路的作业维度一致。
+- 本模块已通过前端 lint、生产构建和 MVP 验证脚本。
+
+主要代码：
+
+- `apps/web/src/api/httpApi.ts`
+- `PROGRESS.md`
+
 ### 24. Gateway 本地跨域联调
 
 - 已为 gateway 增加本地 Vite 开发端口 CORS 配置。
@@ -2515,6 +2526,14 @@ pnpm verify:mvp
 ```
 
 Mock 工作区作业维度与空态兜底后已通过静态检查、构建和 MVP 验证：
+
+```bash
+pnpm --filter trainmark-ai-web lint
+pnpm --filter trainmark-ai-web build
+pnpm verify:mvp
+```
+
+HTTP 局部失败作业维度兜底后已通过静态检查、构建和 MVP 验证：
 
 ```bash
 pnpm --filter trainmark-ai-web lint
