@@ -894,6 +894,18 @@
 - `apps/web/src/api/httpApi.ts`
 - `PROGRESS.md`
 
+### 23.16 HTTP 空课程首屏兜底
+
+- 已让应用入口在 HTTP 返回空课程列表时安全派生课程、班级、任务和作业 ID，避免首屏访问 `selectedCourse.id` 崩溃。
+- 已为教师端增加空课程提示，课程数据同步前不再继续渲染依赖课程上下文的工作台。
+- 已保留学生端和管理端不依赖当前课程的渲染路径，避免空课程影响跨课程任务和管理数据查看。
+- 本模块已通过前端 lint、生产构建和 MVP 验证脚本。
+
+主要代码：
+
+- `apps/web/src/pages/App.tsx`
+- `PROGRESS.md`
+
 ### 24. Gateway 本地跨域联调
 
 - 已为 gateway 增加本地 Vite 开发端口 CORS 配置。
@@ -2554,6 +2566,14 @@ pnpm verify:mvp
 ```
 
 学生端 HTTP 跨课程任务加载后已通过静态检查、构建和 MVP 验证：
+
+```bash
+pnpm --filter trainmark-ai-web lint
+pnpm --filter trainmark-ai-web build
+pnpm verify:mvp
+```
+
+HTTP 空课程首屏兜底后已通过静态检查、构建和 MVP 验证：
 
 ```bash
 pnpm --filter trainmark-ai-web lint

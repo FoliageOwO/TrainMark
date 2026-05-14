@@ -46,10 +46,11 @@ export function App() {
   const primaryRole = user.roles[0];
   const metrics = mockApi.getMetrics();
   const courses = workspaceData?.courses ?? mockApi.listCourses();
-  const selectedCourse = courses.find((course) => course.id === selectedCourseId) ?? courses[0];
-  const classes = workspaceData?.classes ?? mockApi.listClasses(selectedCourse.id);
-  const assignments = workspaceData?.assignments ?? mockApi.listAssignments(selectedCourse.id);
-  const selectedAssignmentId = assignments.find((assignment) => assignment.courseId === selectedCourse.id)?.id ?? assignments[0]?.id ?? 1;
+  const selectedCourse = courses.find((course) => course.id === selectedCourseId) ?? courses[0] ?? null;
+  const selectedWorkspaceCourseId = selectedCourse?.id ?? selectedCourseId;
+  const classes = workspaceData?.classes ?? (selectedCourse ? mockApi.listClasses(selectedCourse.id) : []);
+  const assignments = workspaceData?.assignments ?? (selectedCourse ? mockApi.listAssignments(selectedCourse.id) : []);
+  const selectedAssignmentId = assignments.find((assignment) => assignment.courseId === selectedWorkspaceCourseId)?.id ?? assignments[0]?.id ?? 1;
   const studentTasks = workspaceData?.studentTasks ?? mockApi.listStudentTasks();
   const organizations = workspaceData?.organizations ?? mockApi.listOrganizations();
   const students = workspaceData?.students ?? mockApi.listUsers('STUDENT');
@@ -133,6 +134,11 @@ export function App() {
           auditLogs={auditLogs}
           systemSettings={systemSettings}
         />
+      ) : !selectedCourse ? (
+        <section className="empty-result">
+          <strong>暂无课程数据</strong>
+          <span>当前接口没有返回可用课程，教师工作台会在课程数据同步后恢复。</span>
+        </section>
       ) : (
         <TeacherDashboard
           assignments={assignments}
