@@ -1097,6 +1097,7 @@
 - 设置 `SMOKE_INCLUDE_WRITES=1` 时会覆盖上传初始化、上传完成、创建批改任务、复核改分、复核通过、成绩发布、发布审计、学生申诉、处理申诉、创建成绩导出、一键催交和启动查重。
 - 上传完成会复用上传初始化返回的 `uploadId` 和 `objectKey`，避免使用伪造会话。
 - 复核改分使用 `PATCH` 请求，匹配后端 `GradingReviewController` 的真实接口方法。
+- API 读取端点会校验 `ApiResponse.success=true`，下载资源和 actuator health 继续按 HTTP 状态检查。
 - 写接口响应会校验 `ApiResponse.success=true`，不再只依赖 HTTP 2xx。
 - 已在 README 补充写接口冒烟检查示例。
 
@@ -1573,6 +1574,13 @@ MVP 主验证已自动覆盖写接口 smoke dry-run：
 
 ```bash
 pnpm verify:mvp
+```
+
+API smoke 的读取端点响应体校验已通过主验证和真实 gateway 写入联调：
+
+```bash
+pnpm verify:mvp
+SMOKE_INCLUDE_WRITES=1 SMOKE_RETRIES=60 SMOKE_RETRY_DELAY_SECONDS=2 pnpm smoke:api
 ```
 
 用户与组织 PostgreSQL 存储已通过后端模块编译：

@@ -30,6 +30,30 @@ check_url() {
   done
 }
 
+check_api() {
+  local label="$1"
+  local url="$2"
+  local attempt=1
+  local response
+
+  if [[ "$SMOKE_DRY_RUN" == "1" ]]; then
+    echo "[smoke:dry-run] API $label -> $url"
+    return
+  fi
+
+  while true; do
+    echo "[smoke] API $label (attempt $attempt/$SMOKE_RETRIES)"
+    if response="$(curl --noproxy '*' --fail --silent --show-error --max-time 5 "$url")" && api_success "$response"; then
+      return
+    fi
+    if ((attempt >= SMOKE_RETRIES)); then
+      return 1
+    fi
+    attempt=$((attempt + 1))
+    sleep "$SMOKE_RETRY_DELAY_SECONDS"
+  done
+}
+
 post_json() {
   local label="$1"
   local url="$2"
@@ -111,23 +135,23 @@ check_url "notification-service health" "${NOTIFICATION_SERVICE_URL:-http://loca
 check_url "admin-service health" "${ADMIN_SERVICE_URL:-http://localhost:8090}/actuator/health"
 check_url "analytics-service health" "${ANALYTICS_SERVICE_URL:-http://localhost:8091}/actuator/health"
 
-check_url "gateway auth profile" "$GATEWAY_URL/api/auth/me"
-check_url "gateway organizations" "$GATEWAY_URL/api/organizations"
-check_url "gateway users" "$GATEWAY_URL/api/users"
-check_url "gateway courses" "$GATEWAY_URL/api/courses"
-check_url "gateway assignments" "$GATEWAY_URL/api/assignments"
-check_url "gateway submissions" "$GATEWAY_URL/api/submissions"
-check_url "gateway collection overview" "$GATEWAY_URL/api/notifications/assignments/1/collection"
-check_url "gateway rubrics" "$GATEWAY_URL/api/rubrics"
-check_url "gateway grading jobs" "$GATEWAY_URL/api/grading/jobs"
-check_url "gateway grading results" "$GATEWAY_URL/api/grading/results"
+check_api "gateway auth profile" "$GATEWAY_URL/api/auth/me"
+check_api "gateway organizations" "$GATEWAY_URL/api/organizations"
+check_api "gateway users" "$GATEWAY_URL/api/users"
+check_api "gateway courses" "$GATEWAY_URL/api/courses"
+check_api "gateway assignments" "$GATEWAY_URL/api/assignments"
+check_api "gateway submissions" "$GATEWAY_URL/api/submissions"
+check_api "gateway collection overview" "$GATEWAY_URL/api/notifications/assignments/1/collection"
+check_api "gateway rubrics" "$GATEWAY_URL/api/rubrics"
+check_api "gateway grading jobs" "$GATEWAY_URL/api/grading/jobs"
+check_api "gateway grading results" "$GATEWAY_URL/api/grading/results"
 check_url "gateway annotation PDF" "$GATEWAY_URL/annotations/submissions/1/annotated.pdf"
 check_url "gateway grade export" "$GATEWAY_URL/exports/assignments/1/grades.csv"
-check_url "gateway OCR jobs" "$GATEWAY_URL/api/ocr/jobs"
-check_url "gateway similarity jobs" "$GATEWAY_URL/api/similarity/jobs"
-check_url "gateway analytics" "$GATEWAY_URL/api/analytics/grade-statistics?assignmentId=1"
-check_url "gateway admin audit logs" "$GATEWAY_URL/api/admin/audit-logs"
-check_url "gateway admin settings" "$GATEWAY_URL/api/admin/settings"
+check_api "gateway OCR jobs" "$GATEWAY_URL/api/ocr/jobs"
+check_api "gateway similarity jobs" "$GATEWAY_URL/api/similarity/jobs"
+check_api "gateway analytics" "$GATEWAY_URL/api/analytics/grade-statistics?assignmentId=1"
+check_api "gateway admin audit logs" "$GATEWAY_URL/api/admin/audit-logs"
+check_api "gateway admin settings" "$GATEWAY_URL/api/admin/settings"
 
 if [[ "$SMOKE_INCLUDE_WRITES" == "1" ]]; then
   if [[ "$SMOKE_DRY_RUN" == "1" ]]; then
@@ -143,8 +167,8 @@ if [[ "$SMOKE_INCLUDE_WRITES" == "1" ]]; then
   patch_json "review item" "$GATEWAY_URL/api/grading/results/1/items" '{"rubricItemId":1,"teacherScore":18,"teacherComment":"Smoke review comment"}'
   post_json "approve result" "$GATEWAY_URL/api/grading/results/1/approve" '{"reviewerName":"Smoke Reviewer","overallComment":"Smoke approved"}'
   post_json "publish result" "$GATEWAY_URL/api/grading/results/1/publish" '{"operatorName":"Smoke","message":"Smoke publish"}'
-  check_url "gateway publications" "$GATEWAY_URL/api/grading/results/publications?assignmentId=1"
-  check_url "gateway publication audits" "$GATEWAY_URL/api/grading/results/1/publication-audits"
+  check_api "gateway publications" "$GATEWAY_URL/api/grading/results/publications?assignmentId=1"
+  check_api "gateway publication audits" "$GATEWAY_URL/api/grading/results/1/publication-audits"
   if [[ "$SMOKE_DRY_RUN" == "1" ]]; then
     post_json "grade appeal" "$GATEWAY_URL/api/grading/results/appeals" '{"resultId":1,"rubricItemId":1,"studentId":2,"reason":"Smoke appeal reason","requestedChange":"Smoke requested change"}'
     post_json "resolve grade appeal" "$GATEWAY_URL/api/grading/results/appeals/<from grade appeal>/resolve" '{"status":"REJECTED","teacherReply":"Smoke appeal reply"}'
@@ -153,7 +177,7 @@ if [[ "$SMOKE_INCLUDE_WRITES" == "1" ]]; then
     appeal_id="$(json_field id <<< "$appeal_response")"
     post_json "resolve grade appeal" "$GATEWAY_URL/api/grading/results/appeals/$appeal_id/resolve" '{"status":"REJECTED","teacherReply":"Smoke appeal reply"}'
   fi
-  check_url "gateway grade appeals" "$GATEWAY_URL/api/grading/results/appeals?resultId=1"
+  check_api "gateway grade appeals" "$GATEWAY_URL/api/grading/results/appeals?resultId=1"
   post_json "grade export" "$GATEWAY_URL/api/grading/exports" '{"assignmentId":1,"format":"CSV","operatorName":"Smoke"}'
   post_json "remind unsubmitted" "$GATEWAY_URL/api/notifications/remind-unsubmitted" '{"assignmentId":1,"studentIds":[2],"channels":["IN_APP"],"message":"Smoke reminder"}'
   post_json "similarity job" "$GATEWAY_URL/api/similarity/jobs" '{"assignmentId":1,"submissionIds":[1,2],"includeHistory":true}'
