@@ -1800,6 +1800,21 @@
 - `docs/API.md`
 - `PROGRESS.md`
 
+### 61.5 教师端真实工作区指标
+
+- 已将教师端顶部“进行中任务、待 AI 批改、待教师复核、未提交学生”从固定 mock 数字改为当前工作区数据派生。
+- 进行中任务按当前课程任务状态计算，待批改按批改队列未完成提交数汇总。
+- 待复核按复核结果中 `NEEDS_REVIEW` / `IN_REVIEW` 数量计算，未提交学生复用当前任务收交概览。
+- 已更新指标趋势文案，避免 HTTP 模式下继续展示静态演示语义。
+- 已更新 README 当前进度。
+- 本模块已通过前端 lint、前端构建和 MVP 主验证。
+
+主要代码：
+
+- `apps/web/src/pages/App.tsx`
+- `README.md`
+- `PROGRESS.md`
+
 ### 62. 数据库迁移版本修复
 
 - 已修复 demo 数据和上传会话迁移文件与既有迁移版本号重复的问题。
@@ -2793,6 +2808,14 @@ pnpm --filter trainmark-ai-web lint
 pnpm --filter trainmark-ai-web build
 mvn -f backend/pom.xml package -DskipTests
 SMOKE_DRY_RUN=1 SMOKE_INCLUDE_WRITES=1 pnpm smoke:api
+pnpm verify:mvp
+```
+
+教师端真实工作区指标已通过前端静态检查、构建和 MVP 主验证：
+
+```bash
+pnpm --filter trainmark-ai-web lint
+pnpm --filter trainmark-ai-web build
 pnpm verify:mvp
 ```
 

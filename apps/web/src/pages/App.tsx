@@ -5,7 +5,15 @@ import {
   shouldUseHttpApi,
   type WorkspaceData,
 } from '../api/httpApi';
-import type { RoleCode, UserProfile } from '../api/types';
+import type {
+  AssignmentSummary,
+  CollectionOverview,
+  DashboardMetrics,
+  GradingJobSummary,
+  GradingResultSummary,
+  RoleCode,
+  UserProfile,
+} from '../api/types';
 import { AdminDashboard } from '../components/AdminDashboard';
 import { AppChrome } from '../components/AppChrome';
 import { StudentDashboard } from '../components/StudentDashboard';
@@ -44,7 +52,6 @@ export function App() {
   const [apiModeLabel, setApiModeLabel] = useState(shouldUseHttpApi() ? 'HTTP API' : 'Mock 数据');
 
   const primaryRole = user.roles[0];
-  const metrics = mockApi.getMetrics();
   const courses = workspaceData?.courses ?? mockApi.listCourses();
   const selectedCourse = courses.find((course) => course.id === selectedCourseId) ?? courses[0] ?? null;
   const selectedWorkspaceCourseId = selectedCourse?.id ?? selectedCourseId;
@@ -75,6 +82,7 @@ export function App() {
   const similarityJobs = workspaceData?.similarityJobs ?? mockApi.listSimilarityJobs(selectedAssignmentId);
   const auditLogs = workspaceData?.auditLogs ?? mockApi.listAuditLogs();
   const systemSettings = workspaceData?.systemSettings ?? mockApi.listSystemSettings();
+  const metrics = deriveTeacherMetrics(assignments, gradingJobs, gradingResults, collectionOverview);
 
   useEffect(() => {
     const syncRoleFromLocation = () => {
@@ -110,10 +118,10 @@ export function App() {
   }, [primaryRole, selectedCourseId, user.id]);
 
   const teacherStats = [
-    { label: '进行中任务', value: String(metrics.activeAssignments), trend: '+2 本周', tone: 'blue' },
-    { label: '待 AI 批改', value: String(metrics.pendingGrading), trend: '预计 42 分钟', tone: 'violet' },
-    { label: '待教师复核', value: String(metrics.pendingReview), trend: '低置信度优先', tone: 'teal' },
-    { label: '未提交学生', value: String(metrics.unsubmitted), trend: '今晚 18:00 催交', tone: 'orange' },
+    { label: '进行中任务', value: String(metrics.activeAssignments), trend: '当前课程', tone: 'blue' },
+    { label: '待 AI 批改', value: String(metrics.pendingGrading), trend: '来自批改队列', tone: 'violet' },
+    { label: '待教师复核', value: String(metrics.pendingReview), trend: '未完成复核', tone: 'teal' },
+    { label: '未提交学生', value: String(metrics.unsubmitted), trend: '当前任务', tone: 'orange' },
   ];
 
   return (
@@ -170,4 +178,25 @@ export function App() {
       )}
     </AppChrome>
   );
+}
+
+function deriveTeacherMetrics(
+  assignments: AssignmentSummary[],
+  gradingJobs: GradingJobSummary[],
+  gradingResults: GradingResultSummary[],
+  collectionOverview: CollectionOverview,
+): DashboardMetrics {
+  return {
+    activeAssignments: assignments.filter((assignment) => assignment.status === 'PUBLISHED').length,
+    pendingGrading: gradingJobs.reduce((total, job) => {
+      if (job.status === 'COMPLETED' || job.status === 'FAILED') {
+        return total;
+      }
+      return total + Math.max(job.totalSubmissions - job.completedSubmissions, 0);
+    }, 0),
+    pendingReview: gradingResults.filter((result) => (
+      result.reviewStatus === 'NEEDS_REVIEW' || result.reviewStatus === 'IN_REVIEW'
+    )).length,
+    unsubmitted: collectionOverview.unsubmitted,
+  };
 }
