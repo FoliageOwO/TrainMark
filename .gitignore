@@ -31,3 +31,6 @@ yarn-error.log*
 # Runtime data
 *.pid
 *.seed
+
+# Agents
+.omx/

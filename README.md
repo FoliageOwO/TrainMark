@@ -69,13 +69,41 @@ pnpm dev:infra
 pnpm build:backend
 ```
 
-### 5. 启动后端示例服务
+这一步只用于校验和打包所有 Maven 模块，不会启动后端服务。日常开发可以跳过构建，直接启动需要调试的服务；`spring-boot:run` 会自动编译当前服务及其依赖模块。
+
+### 5. 启动后端服务
 
 ```bash
-mvn -f backend/pom.xml -pl auth-service spring-boot:run
-mvn -f backend/pom.xml -pl course-service spring-boot:run
-mvn -f backend/pom.xml -pl gateway-service spring-boot:run
+pnpm dev:backend
 ```
+
+这会一键启动所有后端服务，日志写入 `.logs/backend/*.log`，按 `Ctrl+C` 会停止全部后端服务。
+
+也可以只启动单个服务：
+
+```bash
+pnpm dev:backend:auth
+pnpm dev:backend:course
+pnpm dev:backend:gateway
+```
+
+后端是多服务架构，每个服务单独运行、占用独立端口。常用服务端口：
+
+| 脚本 | 服务 | 地址 |
+|---|---|---|
+| `pnpm dev:backend:gateway` | gateway-service | `http://localhost:8080` |
+| `pnpm dev:backend:auth` | auth-service | `http://localhost:8081` |
+| `pnpm dev:backend:user` | user-service | `http://localhost:8082` |
+| `pnpm dev:backend:course` | course-service | `http://localhost:8083` |
+| `pnpm dev:backend:file` | file-service | `http://localhost:8084` |
+| `pnpm dev:backend:grading` | grading-service | `http://localhost:8085` |
+| `pnpm dev:backend:ocr` | ocr-service | `http://localhost:8086` |
+| `pnpm dev:backend:similarity` | similarity-service | `http://localhost:8087` |
+| `pnpm dev:backend:notification` | notification-service | `http://localhost:8089` |
+| `pnpm dev:backend:admin` | admin-service | `http://localhost:8090` |
+| `pnpm dev:backend:analytics` | analytics-service | `http://localhost:8091` |
+
+这些脚本会启用 Maven 的 `dev` profile，加载 Spring Boot DevTools。修改 Java 源码后需要 IDE 或 Maven 编译生成新的 class 文件，DevTools 会检测 classpath 变化并重启对应服务。
 
 示例接口：
 

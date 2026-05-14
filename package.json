@@ -7,6 +7,18 @@
     "build:web": "pnpm --filter trainmark-ai-web build",
     "dev:infra": "docker compose -f infra/docker-compose.yml up -d",
     "stop:infra": "docker compose -f infra/docker-compose.yml down",
+    "dev:backend": "bash scripts/dev-backend.sh",
+    "dev:backend:gateway": "mvn -f backend/pom.xml -pl gateway-service -am -Pdev spring-boot:run",
+    "dev:backend:auth": "mvn -f backend/pom.xml -pl auth-service -am -Pdev spring-boot:run",
+    "dev:backend:user": "mvn -f backend/pom.xml -pl user-service -am -Pdev spring-boot:run",
+    "dev:backend:course": "mvn -f backend/pom.xml -pl course-service -am -Pdev spring-boot:run",
+    "dev:backend:file": "mvn -f backend/pom.xml -pl file-service -am -Pdev spring-boot:run",
+    "dev:backend:grading": "mvn -f backend/pom.xml -pl grading-service -am -Pdev spring-boot:run",
+    "dev:backend:ocr": "mvn -f backend/pom.xml -pl ocr-service -am -Pdev spring-boot:run",
+    "dev:backend:similarity": "mvn -f backend/pom.xml -pl similarity-service -am -Pdev spring-boot:run",
+    "dev:backend:analytics": "mvn -f backend/pom.xml -pl analytics-service -am -Pdev spring-boot:run",
+    "dev:backend:notification": "mvn -f backend/pom.xml -pl notification-service -am -Pdev spring-boot:run",
+    "dev:backend:admin": "mvn -f backend/pom.xml -pl admin-service -am -Pdev spring-boot:run",
     "build:backend": "mvn -f backend/pom.xml package -DskipTests"
   },
   "packageManager": "pnpm@10.17.1"
