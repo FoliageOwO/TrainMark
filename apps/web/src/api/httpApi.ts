@@ -59,6 +59,19 @@ export function shouldUseHttpApi() {
   return API_MODE === 'http';
 }
 
+export function resolveApiAssetUrl(path: string) {
+  if (!path || path.startsWith('data:') || path.startsWith('blob:')) {
+    return path;
+  }
+  if (/^https?:\/\//i.test(path)) {
+    return path;
+  }
+  if (shouldUseHttpApi() && path.startsWith('/')) {
+    return `${API_BASE_URL.replace(/\/$/, '')}${path}`;
+  }
+  return path;
+}
+
 export async function loadWorkspaceData(selectedCourseId: number, studentId: number): Promise<WorkspaceData> {
   const fallbackGradingResults = mockApi.listGradingResults();
   const [

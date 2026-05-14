@@ -825,6 +825,21 @@
 - `README.md`
 - `PROGRESS.md`
 
+### 50. HTTP 资源链接解析
+
+- 已在前端 HTTP API 层新增 `resolveApiAssetUrl`，用于把后端返回的相对资源路径解析到 `VITE_API_BASE_URL`。
+- HTTP 模式下，批注 PDF 链接会打开 gateway 资源地址，避免相对路径误落到 Vite 前端域名。
+- Mock 模式和绝对 URL 保持原样，避免影响本地纯前端演示。
+- 已将教师端和学生端批注 PDF 查看入口接入资源 URL 解析。
+- 已更新 README 状态表和进度记录。
+
+主要代码：
+
+- `apps/web/src/api/httpApi.ts`
+- `apps/web/src/pages/App.tsx`
+- `README.md`
+- `PROGRESS.md`
+
 ## 已验证
 
 前端构建已通过：
@@ -1071,6 +1086,13 @@ pnpm lint:web
 pnpm build:web
 ```
 
+HTTP 资源链接解析已通过前端静态检查和构建：
+
+```bash
+pnpm lint:web
+pnpm build:web
+```
+
 全部后端模块已通过编译：
 
 ```bash
@@ -1131,6 +1153,7 @@ Docker Compose 已完成配置展开校验，暂未拉起 PostgreSQL、Redis、R
 - `chore: expand smoke coverage`
 - `feat: add annotation provider switch`
 - `feat: link annotation pdfs`
+- `fix: resolve api asset urls`
 
 ## 接下来需要做
 

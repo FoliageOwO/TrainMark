@@ -26,6 +26,7 @@ import {
   publishGradingResult,
   remindUnsubmitted,
   resolveAppeal,
+  resolveApiAssetUrl,
   shouldUseHttpApi,
   startSimilarityJob,
   updateReviewItem,
@@ -616,7 +617,7 @@ function TeacherDashboard({
             <div className="pdf-page">
               <div className="pdf-toolbar">
                 <span>{selectedReview.fileName}</span>
-                <a className="ghost-button compact-link" href={selectedReview.annotationPdfUrl} rel="noreferrer" target="_blank">
+                <a className="ghost-button compact-link" href={resolveApiAssetUrl(selectedReview.annotationPdfUrl)} rel="noreferrer" target="_blank">
                   <FileText size={14} /> 打开批注
                 </a>
               </div>
@@ -1200,7 +1201,7 @@ function StudentDashboard({
                     ))}
                   </div>
                   <div className="student-result-actions">
-                    <a className="primary-button" href={result.annotationPdfUrl} rel="noreferrer" target="_blank">查看批注 PDF</a>
+                    <a className="primary-button" href={resolveApiAssetUrl(result.annotationPdfUrl)} rel="noreferrer" target="_blank">查看批注 PDF</a>
                     <button className="ghost-button" type="button" onClick={() => submitAppeal(result.id, null)}>提交申诉</button>
                   </div>
                 </div>
