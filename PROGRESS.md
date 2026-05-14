@@ -745,6 +745,19 @@
 - `apps/web/src/styles/global.css`
 - `PROGRESS.md`
 
+### 23.5 前端学生申诉状态同步
+
+- 已稳定学生端接收的当前用户申诉列表，避免父组件每次渲染都传入新的数组引用。
+- 已让学生端在 HTTP 工作区申诉数据异步加载后同步刷新“我的申诉”列表。
+- 已保留学生端刚提交但父级尚未重新拉取到的本地申诉行，避免提交后界面闪回为空。
+- 本模块已通过前端 lint、生产构建和 MVP 验证脚本。
+
+主要代码：
+
+- `apps/web/src/pages/App.tsx`
+- `apps/web/src/components/StudentDashboard.tsx`
+- `PROGRESS.md`
+
 ### 24. Gateway 本地跨域联调
 
 - 已为 gateway 增加本地 Vite 开发端口 CORS 配置。
@@ -1720,6 +1733,14 @@ pnpm verify:mvp
 ```
 
 前端学生提交任务绑定后已通过静态检查、构建和 MVP 验证：
+
+```bash
+pnpm --filter trainmark-ai-web lint
+pnpm --filter trainmark-ai-web build
+pnpm verify:mvp
+```
+
+前端学生申诉状态同步后已通过静态检查、构建和 MVP 验证：
 
 ```bash
 pnpm --filter trainmark-ai-web lint

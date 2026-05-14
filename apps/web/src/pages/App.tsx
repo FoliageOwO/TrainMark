@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { mockApi } from '../api/mockApi';
 import {
   loadWorkspaceData,
@@ -65,7 +65,10 @@ export function App() {
   const lossPoints = workspaceData?.lossPoints ?? mockApi.listLossPoints();
   const courseOutcomes = workspaceData?.courseOutcomes ?? mockApi.listCourseOutcomes();
   const allAppeals = workspaceData?.appeals ?? mockApi.listAppeals();
-  const studentAppeals = allAppeals.filter((item) => item.studentId === user.id);
+  const studentAppeals = useMemo(
+    () => allAppeals.filter((item) => item.studentId === user.id),
+    [allAppeals, user.id],
+  );
   const similarityJobs = workspaceData?.similarityJobs ?? mockApi.listSimilarityJobs();
   const auditLogs = workspaceData?.auditLogs ?? mockApi.listAuditLogs();
   const systemSettings = workspaceData?.systemSettings ?? mockApi.listSystemSettings();

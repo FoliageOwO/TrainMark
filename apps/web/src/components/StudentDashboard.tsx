@@ -40,6 +40,14 @@ export function StudentDashboard({ tasks, publishedResults, appeals, userId }: S
     }
   }, [selectedTaskId, tasks]);
 
+  useEffect(() => {
+    setAppealRows((current) => {
+      const incomingIds = new Set(appeals.map((appeal) => appeal.id));
+      const pendingRows = current.filter((appeal) => !incomingIds.has(appeal.id));
+      return [...pendingRows, ...appeals];
+    });
+  }, [appeals]);
+
   const confirmUpload = async () => {
     if (!selectedTask) {
       return;
