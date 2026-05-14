@@ -11,6 +11,11 @@ management:
 
 trainmark:
   ocr:
+    store: ${TRAINMARK_OCR_STORE:memory}
     provider: ${OCR_PROVIDER:local}
     command: ${OCR_COMMAND:}
     timeout-seconds: ${OCR_TIMEOUT_SECONDS:60}
+    jdbc:
+      url: ${TRAINMARK_OCR_JDBC_URL:}
+      username: ${TRAINMARK_OCR_JDBC_USERNAME:}
+      password: ${TRAINMARK_OCR_JDBC_PASSWORD:}

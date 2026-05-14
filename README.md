@@ -36,6 +36,7 @@ TrainMark AI，中文名“智训批”，是面向高校实训教学场景的�
 | 用户与组织 PostgreSQL 存储 | 已支持 |
 | 课程与任务 PostgreSQL 存储 | 已支持 |
 | 上传与提交 PostgreSQL 存储 | 已支持 |
+| OCR 任务 PostgreSQL 存储 | 已支持 |
 | 催交通知 PostgreSQL 存储 | 已支持 |
 | 查重任务 PostgreSQL 存储 | 已支持 |
 | 统计分析 PostgreSQL 存储 | 已支持 |
@@ -178,6 +179,16 @@ TRAINMARK_FILE_JDBC_URL=jdbc:postgresql://localhost:5432/trainmark_ai \
 TRAINMARK_FILE_JDBC_USERNAME=trainmark \
 TRAINMARK_FILE_JDBC_PASSWORD=trainmark_dev \
 pnpm dev:backend:file
+```
+
+OCR 服务默认使用内存任务结果。需要让 OCR 任务和结构化块写入 PostgreSQL 时，设置：
+
+```bash
+TRAINMARK_OCR_STORE=jdbc \
+TRAINMARK_OCR_JDBC_URL=jdbc:postgresql://localhost:5432/trainmark_ai \
+TRAINMARK_OCR_JDBC_USERNAME=trainmark \
+TRAINMARK_OCR_JDBC_PASSWORD=trainmark_dev \
+pnpm dev:backend:ocr
 ```
 
 通知服务默认使用内存数据。需要从 PostgreSQL 计算提交收集状态、未交名单，并将催交消息写入通知事件表时，设置：

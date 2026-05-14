@@ -162,6 +162,25 @@
 - `backend/shared/src/main/java/com/trainmark/shared/dto/OcrResultSummary.java`
 - `apps/web/src/pages/App.tsx`
 
+### 11.1 OCR 任务 PostgreSQL 存储
+
+- 已为 OCR 服务抽象 `OcrStore`，默认保留内存实现，继续支持无数据库演示。
+- 已新增 JDBC 实现，可将 OCR 任务写入 `ocr_jobs`，并将结构化识别块写入 `ocr_blocks`。
+- 已复用现有 OCR provider 契约，JDBC 模式下创建任务后同步执行本地/命令 provider 并落库。
+- 已支持从数据库读取 OCR 任务列表和按任务重建结构化识别结果。
+- 已补充 PostgreSQL 切换环境变量和 README 启动说明。
+
+主要代码：
+
+- `backend/ocr-service/src/main/java/com/trainmark/ocr/OcrStore.java`
+- `backend/ocr-service/src/main/java/com/trainmark/ocr/InMemoryOcrStore.java`
+- `backend/ocr-service/src/main/java/com/trainmark/ocr/JdbcOcrStore.java`
+- `backend/ocr-service/src/main/java/com/trainmark/ocr/OcrService.java`
+- `backend/ocr-service/src/main/resources/application.yml`
+- `.env.example`
+- `README.md`
+- `PROGRESS.md`
+
 ### 12. 人工复核
 
 - 已实现批改结果 DTO，包含学生、提交文件、AI 初评、教师复核分、总评、批注 PDF 地址、分项评分和证据。
@@ -1549,6 +1568,21 @@ curl --noproxy '*' 'http://localhost:8090/api/admin/audit-logs?action=GRADE_EXPO
 curl --noproxy '*' 'http://localhost:8090/api/admin/settings?category=AI'
 ```
 
+OCR 任务 PostgreSQL 存储已通过后端模块编译：
+
+```bash
+mvn -f backend/pom.xml -pl ocr-service -am package -DskipTests
+```
+
+OCR 服务默认内存模式已通过单服务启动和任务列表/创建/结果接口验证：
+
+```bash
+timeout 90s bash scripts/dev-service.sh ocr-service
+curl --noproxy '*' http://localhost:8086/api/ocr/jobs
+curl --noproxy '*' -H 'Content-Type: application/json' -d '{...}' http://localhost:8086/api/ocr/jobs
+curl --noproxy '*' http://localhost:8086/api/ocr/jobs/2/result
+```
+
 ## 已提交记录
 
 主要提交：
@@ -1618,6 +1652,7 @@ curl --noproxy '*' 'http://localhost:8090/api/admin/settings?category=AI'
 - `feat: add similarity jdbc store`
 - `feat: add analytics jdbc store`
 - `feat: add admin jdbc store`
+- `feat: add ocr jdbc store`
 
 ## 接下来需要做
 
