@@ -354,8 +354,8 @@ export const mockApi = {
       status: '已发送',
     };
   },
-  listRubrics(): RubricSummary[] {
-    return rubrics;
+  listRubrics(assignmentId?: number): RubricSummary[] {
+    return rubrics.filter((item) => assignmentId === undefined || item.assignmentId === assignmentId);
   },
   createRubric(input: {
     assignmentId: number;
@@ -395,14 +395,14 @@ export const mockApi = {
     rubrics.unshift(nextRubric);
     return nextRubric;
   },
-  listGradingJobs(): GradingJobSummary[] {
-    return gradingJobs;
+  listGradingJobs(assignmentId?: number): GradingJobSummary[] {
+    return gradingJobs.filter((item) => assignmentId === undefined || item.assignmentId === assignmentId);
   },
   listOcrJobs(): OcrJobSummary[] {
     return ocrJobs;
   },
-  listGradingResults(): GradingResultSummary[] {
-    return gradingResults;
+  listGradingResults(assignmentId?: number): GradingResultSummary[] {
+    return gradingResults.filter((item) => assignmentId === undefined || item.assignmentId === assignmentId);
   },
   updateReviewItem(resultId: number, rubricItemId: number, teacherScore: number, teacherComment: string): GradingResultSummary {
     const result = gradingResults.find((item) => item.id === resultId);
@@ -566,8 +566,17 @@ export const mockApi = {
     appeal.resolvedAt = new Date().toISOString();
     return appeal;
   },
-  startGradingJob(): GradingJobSummary {
-    return { id: 2, assignmentId: 1, rubricId: 1, totalSubmissions: 18, completedSubmissions: 18, status: 'COMPLETED', confidence: 86, createdAt: new Date().toISOString() };
+  startGradingJob(assignmentId = 1, rubricId = 1, submissionIds = [1]): GradingJobSummary {
+    return {
+      id: gradingJobs.length + 1,
+      assignmentId,
+      rubricId,
+      totalSubmissions: submissionIds.length,
+      completedSubmissions: submissionIds.length,
+      status: 'COMPLETED',
+      confidence: 86,
+      createdAt: new Date().toISOString(),
+    };
   },
   createUploadReceipt(fileName: string): UploadReceipt {
     return {

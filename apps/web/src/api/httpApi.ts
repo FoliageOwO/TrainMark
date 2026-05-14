@@ -109,10 +109,10 @@ export function resolveApiAssetUrl(path: string) {
 }
 
 export async function loadWorkspaceData(selectedCourseId: number, userId: number, role: RoleCode): Promise<WorkspaceData> {
-  const fallbackGradingResults = mockApi.listGradingResults();
   const submissionPath = role === 'STUDENT' ? `/api/submissions?studentId=${userId}` : '/api/submissions';
   const assignments = await getOr(`/api/assignments?courseId=${selectedCourseId}`, mockApi.listAssignments(selectedCourseId));
   const selectedAssignmentId = resolveWorkspaceAssignmentId(assignments, selectedCourseId);
+  const fallbackGradingResults = mockApi.listGradingResults(selectedAssignmentId);
   const [
     courses,
     classes,
@@ -140,10 +140,10 @@ export async function loadWorkspaceData(selectedCourseId: number, userId: number
     getOr('/api/users?role=STUDENT', mockApi.listUsers('STUDENT')),
     getOr(`/api/notifications/assignments/${selectedAssignmentId}/collection`, mockApi.getCollectionOverview()),
     getOr(`/api/notifications/assignments/${selectedAssignmentId}/unsubmitted`, mockApi.listUnsubmittedStudents()),
-    getOr('/api/rubrics', mockApi.listRubrics()),
-    getOr('/api/grading/jobs', mockApi.listGradingJobs()),
+    getOr(`/api/rubrics?assignmentId=${selectedAssignmentId}`, mockApi.listRubrics(selectedAssignmentId)),
+    getOr(`/api/grading/jobs?assignmentId=${selectedAssignmentId}`, mockApi.listGradingJobs(selectedAssignmentId)),
     loadOcrJobs(),
-    getOr('/api/grading/results', fallbackGradingResults),
+    getOr(`/api/grading/results?assignmentId=${selectedAssignmentId}`, fallbackGradingResults),
     getOr(submissionPath, [] as SubmissionSummary[]),
     getOr(`/api/grading/exports?assignmentId=${selectedAssignmentId}`, mockApi.listGradeExports(selectedAssignmentId)),
     getOr(`/api/analytics/grade-statistics?assignmentId=${selectedAssignmentId}`, mockApi.getGradeStatistics()),
@@ -273,7 +273,7 @@ export async function createGradingJob(assignmentId: number, rubricId: number, s
     'POST',
     '/api/grading/jobs',
     { assignmentId, rubricId, submissionIds },
-    () => mockApi.startGradingJob(),
+    () => mockApi.startGradingJob(assignmentId, rubricId, submissionIds),
   );
 }
 

@@ -843,6 +843,19 @@
 - `apps/web/src/components/TeacherDashboard.tsx`
 - `PROGRESS.md`
 
+### 23.12 教师端批改链路作业维度收敛
+
+- 已让 HTTP 工作区按当前作业 ID 请求评分标准、批改任务和复核结果，避免教师切换课程/作业后继续混入其他作业数据。
+- 已让 mock 数据层的评分标准、批改任务和复核结果支持按作业过滤，保持 HTTP 失败兜底与真实接口语义一致。
+- 已让创建批改任务的 mock fallback 使用当前作业 ID、评分标准 ID 和真实提交 ID，不再固定返回演示作业的批改任务。
+- 本模块已通过前端 lint、生产构建和 MVP 验证脚本。
+
+主要代码：
+
+- `apps/web/src/api/httpApi.ts`
+- `apps/web/src/api/mockApi.ts`
+- `PROGRESS.md`
+
 ### 24. Gateway 本地跨域联调
 
 - 已为 gateway 增加本地 Vite 开发端口 CORS 配置。
@@ -2471,6 +2484,14 @@ pnpm verify:mvp
 ```
 
 教师端发布审计 HTTP 首屏同步后已通过静态检查、构建和 MVP 验证：
+
+```bash
+pnpm --filter trainmark-ai-web lint
+pnpm --filter trainmark-ai-web build
+pnpm verify:mvp
+```
+
+教师端批改链路作业维度收敛后已通过静态检查、构建和 MVP 验证：
 
 ```bash
 pnpm --filter trainmark-ai-web lint
