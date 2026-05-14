@@ -900,6 +900,20 @@
 - `README.md`
 - `PROGRESS.md`
 
+### 55. 写接口冒烟检查
+
+- 已为 `scripts/smoke-api.sh` 增加可选写接口检查模式。
+- 设置 `SMOKE_INCLUDE_WRITES=1` 时会覆盖上传初始化、上传完成、创建批改任务、创建成绩导出、一键催交和启动查重。
+- 上传完成会复用上传初始化返回的 `uploadId` 和 `objectKey`，避免使用伪造会话。
+- 写接口响应会校验 `ApiResponse.success=true`，不再只依赖 HTTP 2xx。
+- 已在 README 补充写接口冒烟检查示例。
+
+主要代码：
+
+- `scripts/smoke-api.sh`
+- `README.md`
+- `PROGRESS.md`
+
 ## 已验证
 
 前端构建已通过：
@@ -1180,6 +1194,13 @@ MVP 一键联调脚本已通过脚本语法检查：
 bash -n scripts/dev-mvp.sh
 ```
 
+写接口冒烟检查已通过脚本语法检查和 dry-run：
+
+```bash
+bash -n scripts/smoke-api.sh
+SMOKE_DRY_RUN=1 SMOKE_INCLUDE_WRITES=1 pnpm smoke:api
+```
+
 全部后端模块已通过编译：
 
 ```bash
@@ -1245,6 +1266,7 @@ Docker Compose 已完成配置展开校验，暂未拉起 PostgreSQL、Redis、R
 - `feat: serve grading assets`
 - `chore: add smoke retries`
 - `chore: add mvp dev launcher`
+- `chore: smoke write apis`
 
 ## 接下来需要做
 
