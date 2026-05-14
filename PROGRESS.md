@@ -957,7 +957,7 @@
 - 已将用户目录服务拆成 `UserDirectoryStore` 存储接口，默认仍使用内存实现，保证无数据库环境下的开发和冒烟不受影响。
 - 已新增 `JdbcUserDirectoryStore`，设置 `TRAINMARK_USER_STORE=jdbc` 后可将组织、用户、角色和学生名单导入写入 PostgreSQL。
 - 已为 `user-service` 增加 PostgreSQL JDBC runtime 驱动，并通过环境变量配置 JDBC URL、用户名和密码。
-- 已补充 demo 用户组织种子迁移 `V3__seed_demo_directory.sql`，并让 Docker PostgreSQL 首次初始化时挂载并执行 `backend/db/migration/`。
+- 已补充 demo 用户组织种子迁移 `V6__seed_demo_directory.sql`，并让 Docker PostgreSQL 首次初始化时挂载并执行 `backend/db/migration/`。
 - 已在 README、infra README 和 `.env.example` 中补充 JDBC 模式说明。
 
 主要代码：
@@ -966,7 +966,7 @@
 - `backend/user-service/src/main/java/com/trainmark/user/InMemoryUserDirectoryStore.java`
 - `backend/user-service/src/main/java/com/trainmark/user/JdbcUserDirectoryStore.java`
 - `backend/user-service/src/main/java/com/trainmark/user/UserDirectoryService.java`
-- `backend/db/migration/V3__seed_demo_directory.sql`
+- `backend/db/migration/V6__seed_demo_directory.sql`
 - `infra/postgres/init.sql`
 - `infra/docker-compose.yml`
 - `.env.example`
@@ -979,7 +979,7 @@
 - 已将课程服务拆成 `CourseStore` 存储接口，默认仍使用内存实现，保证现有本地开发和 smoke 不受数据库影响。
 - 已新增 `JdbcCourseStore`，设置 `TRAINMARK_COURSE_STORE=jdbc` 后可将课程、教学班、任务和任务-班级关联写入 PostgreSQL。
 - 已为 `course-service` 增加 PostgreSQL JDBC runtime 驱动，并通过环境变量配置 JDBC URL、用户名和密码。
-- 已补充 demo 课程班级和任务种子迁移 `V4__seed_demo_courses.sql`，并纳入 Docker PostgreSQL 首次初始化流程。
+- 已补充 demo 课程班级和任务种子迁移 `V7__seed_demo_courses.sql`，并纳入 Docker PostgreSQL 首次初始化流程。
 - 已在 README、infra README 和 `.env.example` 中补充课程 JDBC 模式说明。
 
 主要代码：
@@ -988,7 +988,7 @@
 - `backend/course-service/src/main/java/com/trainmark/course/InMemoryCourseStore.java`
 - `backend/course-service/src/main/java/com/trainmark/course/JdbcCourseStore.java`
 - `backend/course-service/src/main/java/com/trainmark/course/CourseService.java`
-- `backend/db/migration/V4__seed_demo_courses.sql`
+- `backend/db/migration/V7__seed_demo_courses.sql`
 - `infra/postgres/init.sql`
 - `.env.example`
 - `README.md`
@@ -1000,7 +1000,7 @@
 - 已将文件服务上传数据拆成 `UploadStore` 存储接口，默认仍使用内存实现，保证现有无数据库开发和 smoke 不受影响。
 - 已新增 `JdbcUploadStore`，设置 `TRAINMARK_FILE_STORE=jdbc` 后可将上传会话、上传完成状态和提交记录写入 PostgreSQL。
 - 已为 `file-service` 增加 PostgreSQL JDBC runtime 驱动，并通过环境变量配置 JDBC URL、用户名和密码。
-- 已补充迁移 `V5__upload_sessions.sql`，为 `submissions` 增加 `file_name` / `object_key`，并新增 `upload_sessions` 表。
+- 已补充迁移 `V8__upload_sessions.sql`，为 `submissions` 增加 `file_name` / `object_key`，并新增 `upload_sessions` 表。
 - 已在 README、infra README 和 `.env.example` 中补充文件服务 JDBC 模式说明。
 
 主要代码：
@@ -1009,11 +1009,27 @@
 - `backend/file-service/src/main/java/com/trainmark/file/InMemoryUploadStore.java`
 - `backend/file-service/src/main/java/com/trainmark/file/JdbcUploadStore.java`
 - `backend/file-service/src/main/java/com/trainmark/file/UploadService.java`
-- `backend/db/migration/V5__upload_sessions.sql`
+- `backend/db/migration/V8__upload_sessions.sql`
 - `infra/postgres/init.sql`
 - `.env.example`
 - `README.md`
 - `infra/README.md`
+- `PROGRESS.md`
+
+### 62. 数据库迁移版本修复
+
+- 已修复 demo 数据和上传会话迁移文件与既有迁移版本号重复的问题。
+- 已将 demo 用户组织迁移调整为 `V6__seed_demo_directory.sql`。
+- 已将 demo 课程班级任务迁移调整为 `V7__seed_demo_courses.sql`。
+- 已将上传会话迁移调整为 `V8__upload_sessions.sql`。
+- 已同步更新 `infra/postgres/init.sql`，避免 Docker PostgreSQL 首次初始化引用旧文件名。
+
+主要代码：
+
+- `backend/db/migration/V6__seed_demo_directory.sql`
+- `backend/db/migration/V7__seed_demo_courses.sql`
+- `backend/db/migration/V8__upload_sessions.sql`
+- `infra/postgres/init.sql`
 - `PROGRESS.md`
 
 ## 已验证
@@ -1379,6 +1395,13 @@ curl --noproxy '*' -H 'Content-Type: application/json' -d '{...}' http://localho
 curl --noproxy '*' -H 'Content-Type: application/json' -d '{...}' http://localhost:8084/api/submissions/upload/complete
 ```
 
+数据库迁移版本号已检查为唯一，Docker Compose 配置可展开：
+
+```bash
+ls -1 backend/db/migration
+docker compose -f infra/docker-compose.yml config
+```
+
 全部后端模块已通过编译：
 
 ```bash
@@ -1451,6 +1474,7 @@ Docker Compose 已完成配置展开校验，暂未拉起 PostgreSQL、Redis、R
 - `feat: add user jdbc store`
 - `feat: add course jdbc store`
 - `feat: add file jdbc store`
+- `fix: renumber db migrations`
 
 ## 接下来需要做
 
