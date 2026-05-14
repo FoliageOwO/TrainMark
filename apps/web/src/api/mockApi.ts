@@ -3,6 +3,7 @@ import type {
   CourseSummary,
   CollectionOverview,
   DashboardMetrics,
+  GradingResultSummary,
   GradingJobSummary,
   OcrJobSummary,
   OrganizationSummary,
@@ -121,6 +122,67 @@ const ocrJobs: OcrJobSummary[] = [
   },
 ];
 
+const gradingResults: GradingResultSummary[] = [
+  {
+    id: 1,
+    assignmentId: 1,
+    submissionId: 1,
+    studentId: 2,
+    studentName: '张三',
+    studentNo: '2024010101',
+    fileName: 'JavaWeb综合实训报告-张三-2024010101.pdf',
+    previewUrl: '/previews/submissions/1/report.pdf',
+    annotationPdfUrl: '/annotations/submissions/1/annotated.pdf',
+    totalScore: 100,
+    aiScore: 84,
+    teacherScore: 84,
+    confidence: 88,
+    reviewStatus: 'NEEDS_REVIEW',
+    overallComment: '报告结构完整，核心功能说明较清楚；数据库约束和异常处理说明还需要补强。',
+    reviewedAt: null,
+    items: [
+      {
+        rubricItemId: 1,
+        title: '需求与设计',
+        maxScore: 20,
+        aiScore: 16,
+        teacherScore: 16,
+        deductionReason: '用例描述完整，但数据库约束和边界条件说明不足。',
+        teacherComment: '建议补充关键表约束和异常流程说明。',
+        confidence: 86,
+        evidence: ['第 2 页需求分析', '第 7 页数据库表结构'],
+      },
+      {
+        rubricItemId: 2,
+        title: '系统实现',
+        maxScore: 50,
+        aiScore: 43,
+        teacherScore: 43,
+        deductionReason: '核心流程可运行，缺少批量异常处理和权限边界说明。',
+        teacherComment: '上传、批改、发布主流程描述清晰，需补充失败重试策略。',
+        confidence: 91,
+        evidence: ['第 11 页核心流程', '第 12 页运行截图'],
+      },
+      {
+        rubricItemId: 3,
+        title: '报告规范',
+        maxScore: 30,
+        aiScore: 25,
+        teacherScore: 25,
+        deductionReason: '章节完整，截图标注不够统一，结论部分偏简略。',
+        teacherComment: '统一图表编号并补充实训反思。',
+        confidence: 87,
+        evidence: ['第 1 页目录', '第 17 页总结'],
+      },
+    ],
+    annotations: [
+      { id: 1, page: 7, anchorText: '数据库表结构', comment: '外键约束说明不完整', severity: 'warning' },
+      { id: 2, page: 12, anchorText: '系统运行截图', comment: '建议补充失败场景截图', severity: 'info' },
+      { id: 3, page: 17, anchorText: '实训总结', comment: '总结需要对应评分标准展开', severity: 'warning' },
+    ],
+  },
+];
+
 export const mockApi = {
   login(role: RoleCode): UserProfile {
     return users[role];
@@ -171,6 +233,31 @@ export const mockApi = {
   },
   listOcrJobs(): OcrJobSummary[] {
     return ocrJobs;
+  },
+  listGradingResults(): GradingResultSummary[] {
+    return gradingResults;
+  },
+  updateReviewItem(resultId: number, rubricItemId: number, teacherScore: number, teacherComment: string): GradingResultSummary {
+    const result = gradingResults.find((item) => item.id === resultId);
+    if (!result) {
+      throw new Error(`Grading result not found: ${resultId}`);
+    }
+    result.items = result.items.map((item) => (
+      item.rubricItemId === rubricItemId ? { ...item, teacherScore, teacherComment } : item
+    ));
+    result.teacherScore = result.items.reduce((total, item) => total + item.teacherScore, 0);
+    result.reviewStatus = 'IN_REVIEW';
+    result.reviewedAt = null;
+    return result;
+  },
+  approveGradingResult(resultId: number): GradingResultSummary {
+    const result = gradingResults.find((item) => item.id === resultId);
+    if (!result) {
+      throw new Error(`Grading result not found: ${resultId}`);
+    }
+    result.reviewStatus = 'APPROVED';
+    result.reviewedAt = new Date().toISOString();
+    return result;
   },
   startGradingJob(): GradingJobSummary {
     return { id: 2, assignmentId: 1, rubricId: 1, totalSubmissions: 18, completedSubmissions: 0, status: 'PENDING', confidence: 0, createdAt: new Date().toISOString() };

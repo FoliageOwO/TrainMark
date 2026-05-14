@@ -162,15 +162,43 @@
 - `backend/shared/src/main/java/com/trainmark/shared/dto/OcrResultSummary.java`
 - `apps/web/src/pages/App.tsx`
 
+### 12. 人工复核
+
+- 已实现批改结果 DTO，包含学生、提交文件、AI 初评、教师复核分、总评、批注 PDF 地址、分项评分和证据。
+- 已实现单项分数、扣分原因、教师评语、批注摘要 DTO。
+- 已实现人工复核状态枚举。
+- 已实现批改结果列表、详情、单项改分、复核通过接口骨架。
+- 已在老师端加入人工复核工作区，包括模拟 PDF 预览、批注列表、AI/教师得分对照、分项改分表单、扣分原因、证据标签、教师评语和复核通过操作。
+- 当前复核结果仍为内存模拟数据，后续需要接入真实提交、批注 PDF 文件、审计日志和成绩发布流程。
+
+主要代码：
+
+- `backend/grading-service/src/main/java/com/trainmark/grading/GradingReviewController.java`
+- `backend/grading-service/src/main/java/com/trainmark/grading/GradingService.java`
+- `backend/shared/src/main/java/com/trainmark/shared/ReviewStatus.java`
+- `backend/shared/src/main/java/com/trainmark/shared/dto/GradingResultSummary.java`
+- `backend/shared/src/main/java/com/trainmark/shared/dto/GradingItemReview.java`
+- `backend/shared/src/main/java/com/trainmark/shared/dto/GradingAnnotationSummary.java`
+- `backend/shared/src/main/java/com/trainmark/shared/dto/UpdateReviewItemRequest.java`
+- `backend/shared/src/main/java/com/trainmark/shared/dto/ReviewDecisionRequest.java`
+- `apps/web/src/pages/App.tsx`
+- `apps/web/src/api/types.ts`
+- `apps/web/src/api/mockApi.ts`
+- `apps/web/src/styles/global.css`
+
 ## 已验证
 
-前端构建已多次通过：
+前端构建已通过：
 
 ```bash
 pnpm build:web
 ```
 
-后端暂未本地编译，因为当前机器没有 Maven。
+人工复核相关后端模块已通过编译：
+
+```bash
+mvn -f backend/pom.xml -pl grading-service -am package -DskipTests
+```
 
 Docker Compose 暂未本地验证，因为当前机器没有 Docker。
 
@@ -188,29 +216,24 @@ Docker Compose 暂未本地验证，因为当前机器没有 Docker。
 - `feat: add reminders`
 - `feat: add grading`
 - `feat: add ocr`
+- `feat: add manual review`
 
 ## 接下来需要做
 
-### 1. 人工复核
-
-- 实现批改结果 DTO。
-- 实现单项分数、扣分原因、评语接口。
-- 前端加入 PDF 预览 + 评分面板布局。
-
-### 2. 成绩发布与学生查看结果
+### 1. 成绩发布与学生查看结果
 
 - 实现成绩发布接口。
 - 实现成绩撤回和修改审计。
 - 学生端加入成绩、批注、申诉入口。
 
-### 3. 统计分析
+### 2. 统计分析
 
 - 实现成绩统计接口。
 - 实现失分分析接口。
 - 实现课程目标达成度接口。
 - 前端加入图表展示。
 
-### 4. 真实 AI / OCR 接入
+### 3. 真实 AI / OCR 接入
 
 - 接入 PaddleOCR。
 - 增加 PDF / Word / 图片转换流程。
@@ -218,14 +241,13 @@ Docker Compose 暂未本地验证，因为当前机器没有 Docker。
 - 实现规则评分、关键词匹配和语义相似度评分。
 - 实现批注 PDF 生成。
 
-### 5. 持久化与真实联调
+### 4. 持久化与真实联调
 
-- 安装或配置 Maven 后编译后端。
 - 接入 PostgreSQL / Flyway。
 - 将当前内存服务替换为数据库实现。
 - 安装 Docker 后验证 `infra/docker-compose.yml`。
 
-### 6. 工程质量
+### 5. 工程质量
 
 - 拆分前端页面组件。
 - 增加 ESLint 配置。

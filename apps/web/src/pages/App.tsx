@@ -1,4 +1,4 @@
-import { useState, type CSSProperties } from 'react';
+import { useState, type CSSProperties, type FormEvent } from 'react';
 import {
   BarChart3,
   Bell,
@@ -66,6 +66,13 @@ const ocrStatusText = {
   FAILED: '失败',
 };
 
+const reviewStatusText = {
+  NEEDS_REVIEW: '待复核',
+  IN_REVIEW: '复核中',
+  APPROVED: '已通过',
+  RETURNED: '已退回',
+};
+
 export function App() {
   const [user, setUser] = useState<UserProfile>(() => mockApi.login('TEACHER'));
   const [activeNav, setActiveNav] = useState('工作台');
@@ -86,6 +93,7 @@ export function App() {
   const rubrics = mockApi.listRubrics();
   const gradingJobs = mockApi.listGradingJobs();
   const ocrJobs = mockApi.listOcrJobs();
+  const gradingResults = mockApi.listGradingResults();
 
   const teacherStats = [
     { label: '进行中任务', value: String(metrics.activeAssignments), trend: '+2 本周', tone: 'blue' },
@@ -185,6 +193,7 @@ export function App() {
             rubrics={rubrics}
             gradingJobs={gradingJobs}
             ocrJobs={ocrJobs}
+            gradingResults={gradingResults}
           />
         )}
       </section>
@@ -208,6 +217,7 @@ function TeacherDashboard({
   rubrics,
   gradingJobs,
   ocrJobs,
+  gradingResults,
 }: {
   assignments: ReturnType<typeof mockApi.listAssignments>;
   classes: ReturnType<typeof mockApi.listClasses>;
@@ -224,12 +234,29 @@ function TeacherDashboard({
   rubrics: ReturnType<typeof mockApi.listRubrics>;
   gradingJobs: ReturnType<typeof mockApi.listGradingJobs>;
   ocrJobs: ReturnType<typeof mockApi.listOcrJobs>;
+  gradingResults: ReturnType<typeof mockApi.listGradingResults>;
 }) {
   const [reminderResult, setReminderResult] = useState<ReturnType<typeof mockApi.remindUnsubmitted> | null>(null);
   const [startedJob, setStartedJob] = useState<ReturnType<typeof mockApi.startGradingJob> | null>(null);
+  const [reviewResults, setReviewResults] = useState(gradingResults);
+  const [selectedReviewId, setSelectedReviewId] = useState(gradingResults[0]?.id ?? 0);
   const submittedRate = Math.round((collectionOverview.submitted / collectionOverview.totalStudents) * 100);
   const rubric = rubrics[0];
   const visibleJobs = startedJob ? [startedJob, ...gradingJobs] : gradingJobs;
+  const selectedReview = reviewResults.find((item) => item.id === selectedReviewId) ?? reviewResults[0]!;
+
+  const syncReviewResult = (updated: NonNullable<typeof selectedReview>) => {
+    setReviewResults((current) => current.map((item) => (item.id === updated.id ? { ...updated } : item)));
+    setSelectedReviewId(updated.id);
+  };
+
+  const handleReviewItemSubmit = (event: FormEvent<HTMLFormElement>, rubricItemId: number) => {
+    event.preventDefault();
+    const formData = new FormData(event.currentTarget);
+    const teacherScore = Number(formData.get('teacherScore'));
+    const teacherComment = String(formData.get('teacherComment') ?? '');
+    syncReviewResult(mockApi.updateReviewItem(selectedReview.id, rubricItemId, teacherScore, teacherComment));
+  };
 
   return (
     <>
@@ -430,6 +457,104 @@ function TeacherDashboard({
               </div>
             ))}
           </div>
+        </article>
+      </section>
+
+      <section className="review-layout">
+        <article className="panel review-preview-panel">
+          <div className="panel-heading">
+            <div>
+              <p className="eyebrow">Manual Review</p>
+              <h3>人工复核工作区</h3>
+            </div>
+            <span className="status-pill">{reviewStatusText[selectedReview.reviewStatus]}</span>
+          </div>
+          <div className="review-switcher">
+            {reviewResults.map((result) => (
+              <button
+                className={selectedReview.id === result.id ? 'selected' : ''}
+                key={result.id}
+                type="button"
+                onClick={() => setSelectedReviewId(result.id)}
+              >
+                <strong>{result.studentName}</strong>
+                <span>{result.studentNo} · {result.teacherScore}/{result.totalScore} 分</span>
+              </button>
+            ))}
+          </div>
+          <div className="pdf-preview">
+            <div className="pdf-page">
+              <div className="pdf-toolbar">
+                <span>{selectedReview.fileName}</span>
+                <b>PDF 预览</b>
+              </div>
+              <h4>Java Web 综合实训报告</h4>
+              <p>需求分析、系统设计、核心功能实现、数据库表结构、测试截图、实训总结。</p>
+              <div className="pdf-highlight">数据库表结构：外键约束说明不完整</div>
+              <div className="pdf-highlight muted">系统运行截图：建议补充失败场景截图</div>
+              <div className="pdf-comment">AI 批注 PDF：{selectedReview.annotationPdfUrl}</div>
+            </div>
+          </div>
+          <div className="annotation-list">
+            {selectedReview.annotations.map((annotation) => (
+              <div className={`annotation-row ${annotation.severity}`} key={annotation.id}>
+                <strong>第 {annotation.page} 页 · {annotation.anchorText}</strong>
+                <span>{annotation.comment}</span>
+              </div>
+            ))}
+          </div>
+        </article>
+
+        <article className="panel review-score-panel">
+          <div className="review-score-summary">
+            <div>
+              <span>AI 初评</span>
+              <strong>{selectedReview.aiScore}</strong>
+            </div>
+            <div>
+              <span>教师复核</span>
+              <strong>{selectedReview.teacherScore}</strong>
+            </div>
+            <div>
+              <span>置信度</span>
+              <strong>{selectedReview.confidence}%</strong>
+            </div>
+          </div>
+          <div className="overall-comment">
+            <span>总评</span>
+            <p>{selectedReview.overallComment}</p>
+          </div>
+          <div className="review-item-list">
+            {selectedReview.items.map((item) => (
+              <form className="review-item-card" key={item.rubricItemId} onSubmit={(event) => handleReviewItemSubmit(event, item.rubricItemId)}>
+                <div className="review-item-heading">
+                  <div>
+                    <strong>{item.title}</strong>
+                    <span>AI {item.aiScore}/{item.maxScore} · 置信度 {item.confidence}%</span>
+                  </div>
+                  <label>
+                    教师分
+                    <input name="teacherScore" type="number" min="0" max={item.maxScore} defaultValue={item.teacherScore} />
+                  </label>
+                </div>
+                <div className="deduction-box">
+                  <span>扣分原因</span>
+                  <p>{item.deductionReason}</p>
+                </div>
+                <div className="evidence-tags">
+                  {item.evidence.map((evidence) => <span key={evidence}>{evidence}</span>)}
+                </div>
+                <label className="comment-field">
+                  教师评语
+                  <textarea name="teacherComment" rows={2} defaultValue={item.teacherComment} />
+                </label>
+                <button className="ghost-button" type="submit">保存分项复核</button>
+              </form>
+            ))}
+          </div>
+          <button className="primary-button full-width" type="button" onClick={() => syncReviewResult(mockApi.approveGradingResult(selectedReview.id))}>
+            <CheckCircle2 size={16} /> 通过复核，等待发布
+          </button>
         </article>
       </section>
 

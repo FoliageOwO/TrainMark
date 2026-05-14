@@ -178,3 +178,46 @@ export type OcrJobSummary = {
   confidence: number;
   blocks: OcrBlock[];
 };
+
+export type ReviewStatus = 'NEEDS_REVIEW' | 'IN_REVIEW' | 'APPROVED' | 'RETURNED';
+
+export type GradingReviewItem = {
+  rubricItemId: number;
+  title: string;
+  maxScore: number;
+  aiScore: number;
+  teacherScore: number;
+  deductionReason: string;
+  teacherComment: string;
+  confidence: number;
+  evidence: string[];
+};
+
+export type GradingAnnotation = {
+  id: number;
+  page: number;
+  anchorText: string;
+  comment: string;
+  severity: 'info' | 'warning' | 'error';
+};
+
+export type GradingResultSummary = {
+  id: number;
+  assignmentId: number;
+  submissionId: number;
+  studentId: number;
+  studentName: string;
+  studentNo: string;
+  fileName: string;
+  previewUrl: string;
+  annotationPdfUrl: string;
+  totalScore: number;
+  aiScore: number;
+  teacherScore: number;
+  confidence: number;
+  reviewStatus: ReviewStatus;
+  overallComment: string;
+  reviewedAt: string | null;
+  items: GradingReviewItem[];
+  annotations: GradingAnnotation[];
+};
