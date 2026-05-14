@@ -2229,6 +2229,17 @@
 - `scripts/verify-mvp.sh`
 - `PROGRESS.md`
 
+### 79. 当前剩余工作清单收口
+
+- 已更新 README “下一步”，移除已经完成的 PostgreSQL/Flyway、前端 HTTP 模式和 Docker Compose 联调旧条目。
+- 已将剩余工作聚焦到真实 AI provider 替换、strict HTTP/JDBC live smoke、测试依赖、前端组件拆分和生产化边界验证。
+- 已同步本文件 “接下来需要做”，避免后续继续按过期任务重复实现已完成模块。
+
+主要代码：
+
+- `README.md`
+- `PROGRESS.md`
+
 ## 已验证
 
 前端构建已通过：
@@ -3357,24 +3368,23 @@ pnpm verify:mvp
 - `feat: connect frontend auth session`
 - `chore: add strict auth smoke`
 - `chore: verify strict auth smoke`
+- `docs: refresh remaining work`
 
 ## 接下来需要做
 
-### 1. 真实 AI / OCR 接入
+### 1. 真实 AI Provider 替换
 
-- 接入 PaddleOCR。
-- 增加 PDF / Word / 图片转换流程。
-- 将本地 OCR provider 替换为 PaddleOCR provider，并持久化 OCR 结果。
-- 将本地规则评分 provider 替换为真实关键词、语义相似度和规则扣分引擎。
-- 实现批注 PDF 生成。
+- 用生产部署的 PaddleOCR 服务替换当前离线 fallback，并保留现有 provider JSON 契约。
+- 用真实关键词、语义相似度和规则扣分引擎替换当前本地语义评分 fallback。
+- 用真实批注 PDF 服务替换本地摘要 PDF 生成，并覆盖教师端/学生端下载链路。
 
-### 2. 持久化与真实联调
+### 2. Strict HTTP/JDBC Live Smoke
 
-- 基于现有 Flyway 迁移补服务层数据库实现。
-- 继续将课程、文件、批改、OCR、查重、通知、统计和管理端内存服务替换为数据库实现。
-- 安装 Docker 后验证 `infra/docker-compose.yml`。
+- 在现有 `dev:mvp:jdbc` 基础上增加可重复运行的 live smoke，覆盖老师端、学生端和管理端核心写操作。
+- 将严格认证、上传、批改、发布、导出、申诉和管理配置写入纳入 live 验证。
 
 ### 3. 工程质量
 
 - 继续拆分老师端/学生端工作台内部组件。
-- 在引入测试依赖后补充单元测试和接口测试。
+- 在不破坏现有无依赖开发路径的前提下补充单元测试和接口测试依赖。
+- 补齐生产化权限、异步队列、对象存储和审计留痕的边界验证。

@@ -445,8 +445,8 @@ BACKUP_DIR=backups/20260514-120000 CONFIRM_RESTORE=trainmark-ai-restore pnpm res
 
 ## 下一步
 
-1. 将当前内存模拟服务接入 PostgreSQL / Flyway。
-2. 将前端 mock API 切换为真实 HTTP API。
-3. 接入真实 OCR、规则评分、语义评分和批注 PDF 生成。
-4. 增加基础单元测试、接口文档和端到端冒烟测试。
-5. 验证 Docker Compose 本地基础设施和多服务联调。
+1. 用真实 PaddleOCR、语义评分和批注 PDF 服务替换当前可离线验证的 provider fallback。
+2. 扩展 strict HTTP/JDBC 模式下的端到端 live smoke，覆盖完整老师端、学生端和管理端写操作。
+3. 在不破坏现有无依赖开发路径的前提下补充单元测试和接口测试依赖。
+4. 持续拆分老师端/学生端大型工作台组件，降低前端维护成本。
+5. 补齐生产化权限、异步队列、对象存储和审计留痕的边界验证。
