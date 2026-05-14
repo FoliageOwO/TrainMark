@@ -717,6 +717,21 @@
 - `scripts/smoke-api.sh`
 - `PROGRESS.md`
 
+### 23.3 前端学生任务数据源联调
+
+- 已扩展前端 HTTP 工作区数据，读取当前学生的 `/api/submissions?studentId=...` 提交摘要。
+- 已将学生端任务卡片从真实任务、提交记录和已发布成绩派生，HTTP 模式下不再固定展示本地 mock 任务。
+- 已将后端提交状态压缩为学生端现有的“未提交 / 已提交 / 批改中 / 已发布成绩”状态，避免扩大 UI 改动范围。
+- Mock 模式仍回退 `mockApi.listStudentTasks()`，保留单前端演示和本地上传回执的原有行为。
+- 本模块已通过前端 lint、生产构建和 MVP 验证脚本。
+
+主要代码：
+
+- `apps/web/src/api/types.ts`
+- `apps/web/src/api/httpApi.ts`
+- `apps/web/src/pages/App.tsx`
+- `PROGRESS.md`
+
 ### 24. Gateway 本地跨域联调
 
 - 已为 gateway 增加本地 Vite 开发端口 CORS 配置。
@@ -1676,6 +1691,14 @@ pnpm verify:mvp
 ```
 
 前端实训任务创建联调后已通过静态检查和构建：
+
+```bash
+pnpm --filter trainmark-ai-web lint
+pnpm --filter trainmark-ai-web build
+pnpm verify:mvp
+```
+
+前端学生任务数据源联调后已通过静态检查、构建和 MVP 验证：
 
 ```bash
 pnpm --filter trainmark-ai-web lint

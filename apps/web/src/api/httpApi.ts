@@ -16,6 +16,8 @@ import type {
   ReminderResult,
   RubricSummary,
   SimilarityJobSummary,
+  SubmissionSummary,
+  SubmissionTask,
   SystemSettingSummary,
   TeachingClassSummary,
   UploadReceipt,
@@ -42,6 +44,8 @@ export type WorkspaceData = {
   ocrJobs: OcrJobSummary[];
   gradingResults: GradingResultSummary[];
   publishedResults: GradingResultSummary[];
+  submissions: SubmissionSummary[];
+  studentTasks: SubmissionTask[];
   gradeStatistics: GradeStatisticsSummary;
   gradeExports: GradeExportSummary[];
   lossPoints: LossPointSummary[];
@@ -97,6 +101,7 @@ export async function loadWorkspaceData(selectedCourseId: number, studentId: num
     gradingJobs,
     ocrJobs,
     gradingResults,
+    submissions,
     gradeExports,
     gradeStatistics,
     lossPoints,
@@ -117,6 +122,7 @@ export async function loadWorkspaceData(selectedCourseId: number, studentId: num
     getOr('/api/grading/jobs', mockApi.listGradingJobs()),
     loadOcrJobs(),
     getOr('/api/grading/results', fallbackGradingResults),
+    getOr(`/api/submissions?studentId=${studentId}`, [] as SubmissionSummary[]),
     getOr('/api/grading/exports?assignmentId=1', mockApi.listGradeExports(1)),
     getOr('/api/analytics/grade-statistics?assignmentId=1', mockApi.getGradeStatistics()),
     getOr('/api/analytics/loss-points?assignmentId=1', mockApi.listLossPoints()),
@@ -126,6 +132,7 @@ export async function loadWorkspaceData(selectedCourseId: number, studentId: num
     getOr('/api/admin/audit-logs', mockApi.listAuditLogs()),
     getOr('/api/admin/settings', mockApi.listSystemSettings()),
   ]);
+  const publishedResults = gradingResults.filter((item) => item.publicationStatus === 'PUBLISHED' && item.studentId === studentId);
 
   return {
     courses,
@@ -139,7 +146,9 @@ export async function loadWorkspaceData(selectedCourseId: number, studentId: num
     gradingJobs,
     ocrJobs,
     gradingResults,
-    publishedResults: gradingResults.filter((item) => item.publicationStatus === 'PUBLISHED' && item.studentId === studentId),
+    publishedResults,
+    submissions,
+    studentTasks: deriveStudentTasks(assignments, courses, submissions, publishedResults, studentId),
     gradeExports,
     gradeStatistics,
     lossPoints,
@@ -149,6 +158,57 @@ export async function loadWorkspaceData(selectedCourseId: number, studentId: num
     auditLogs,
     systemSettings,
   };
+}
+
+function deriveStudentTasks(
+  assignments: AssignmentSummary[],
+  courses: CourseSummary[],
+  submissions: SubmissionSummary[],
+  publishedResults: GradingResultSummary[],
+  studentId: number,
+): SubmissionTask[] {
+  const courseNameById = new Map(courses.map((course) => [course.id, course.name]));
+  const submissionsByAssignment = groupLatestStudentSubmissions(submissions, studentId);
+  const resultByAssignment = new Map(publishedResults.map((result) => [result.assignmentId, result]));
+
+  return assignments.map((assignment) => {
+    const submission = submissionsByAssignment.get(assignment.id);
+    const result = resultByAssignment.get(assignment.id);
+    return {
+      id: assignment.id,
+      title: assignment.title,
+      courseName: courseNameById.get(assignment.courseId) ?? '未知课程',
+      status: deriveTaskStatus(submission?.status, Boolean(result)),
+      deadline: assignment.deadline,
+      ...(result ? { score: result.teacherScore } : {}),
+    };
+  });
+}
+
+function groupLatestStudentSubmissions(submissions: SubmissionSummary[], studentId: number) {
+  return submissions.reduce((latest, submission) => {
+    if (submission.studentId !== studentId) {
+      return latest;
+    }
+    const current = latest.get(submission.assignmentId);
+    if (!current || Date.parse(submission.submittedAt) > Date.parse(current.submittedAt)) {
+      latest.set(submission.assignmentId, submission);
+    }
+    return latest;
+  }, new Map<number, SubmissionSummary>());
+}
+
+function deriveTaskStatus(status: SubmissionSummary['status'] | undefined, hasPublishedResult: boolean): SubmissionTask['status'] {
+  if (hasPublishedResult || status === 'PUBLISHED') {
+    return '已发布成绩';
+  }
+  if (status === 'PROCESSING' || status === 'GRADED' || status === 'REVIEWING' || status === 'REVIEWED') {
+    return '批改中';
+  }
+  if (status === 'SUBMITTED' || status === 'LATE_SUBMITTED' || status === 'RETURNED' || status === 'FAILED') {
+    return '已提交';
+  }
+  return '未提交';
 }
 
 async function getOr<T, R = T>(path: string, fallback: T, normalize?: (value: R) => T): Promise<T> {

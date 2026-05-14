@@ -88,6 +88,30 @@ export type SubmissionTask = {
   score?: number;
 };
 
+export type SubmissionStatus =
+  | 'NOT_SUBMITTED'
+  | 'SUBMITTED'
+  | 'LATE_SUBMITTED'
+  | 'PROCESSING'
+  | 'GRADED'
+  | 'REVIEWING'
+  | 'REVIEWED'
+  | 'PUBLISHED'
+  | 'RETURNED'
+  | 'FAILED';
+
+export type SubmissionSummary = {
+  id: number;
+  assignmentId: number;
+  studentId: number;
+  studentName: string;
+  studentNo: string;
+  fileName: string;
+  version: number;
+  status: SubmissionStatus;
+  submittedAt: string;
+};
+
 export type UploadReceipt = {
   submissionId: number;
   fileName: string;

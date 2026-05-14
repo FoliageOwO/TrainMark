@@ -49,7 +49,7 @@ export function App() {
   const selectedCourse = courses.find((course) => course.id === selectedCourseId) ?? courses[0];
   const classes = workspaceData?.classes ?? mockApi.listClasses(selectedCourse.id);
   const assignments = workspaceData?.assignments ?? mockApi.listAssignments(selectedCourse.id);
-  const studentTasks = mockApi.listStudentTasks();
+  const studentTasks = workspaceData?.studentTasks ?? mockApi.listStudentTasks();
   const organizations = workspaceData?.organizations ?? mockApi.listOrganizations();
   const students = workspaceData?.students ?? mockApi.listUsers('STUDENT');
   const importPreview = mockApi.getStudentImportPreview();
