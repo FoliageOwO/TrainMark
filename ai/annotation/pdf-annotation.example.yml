@@ -1,0 +1,17 @@
+provider: pdf-annotation
+runtime:
+  engine: trainmark-pdf-annotator
+  timeout_seconds: 60
+  max_pages_per_document: 120
+input:
+  source_pdf_required: true
+  supported_formats: [pdf]
+output:
+  format: trainmark-annotation-result-v1
+  stdout_json: true
+  log_to_stderr: true
+  object_storage_prefix: annotations/submissions
+style:
+  warning_color: "#f59e0b"
+  info_color: "#2563eb"
+  error_color: "#dc2626"

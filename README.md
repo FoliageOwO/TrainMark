@@ -31,6 +31,7 @@ TrainMark AI，中文名“智训批”，是面向高校实训教学场景的�
 | PWA 安装、离线外壳与角色快捷入口 | 已实现 |
 | OCR Provider CLI 契约 | 已创建 |
 | 评分 Provider CLI 契约 | 已创建 |
+| 批注 PDF Provider CLI 契约 | 已创建 |
 | 本地 Docker Compose 基础设施 | 已创建 |
 
 ## 目录结构

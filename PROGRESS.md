@@ -638,6 +638,23 @@
 - `README.md`
 - `PROGRESS.md`
 
+### 39. 批注 PDF Provider CLI 契约
+
+- 已补齐 `ai/annotation/` 目录，承接后续 PDF 批注生成能力。
+- 已新增无第三方依赖的 `local_provider.py`，可生成最小可打开的 PDF 批注占位文件。
+- 已让批注 provider 输出包含 `annotationPdfPath`、`annotationPdfUrl`、页数和批注列表的 JSON manifest。
+- 已新增 PDF 批注配置样例，明确生产 provider 的输入格式、对象存储前缀和批注颜色约定。
+- 已新增批注 provider README，记录本地 provider 调用方式和生产迁移边界。
+- 已更新 README 状态表和进度记录。
+
+主要代码：
+
+- `ai/annotation/README.md`
+- `ai/annotation/local_provider.py`
+- `ai/annotation/pdf-annotation.example.yml`
+- `README.md`
+- `PROGRESS.md`
+
 ## 已验证
 
 前端构建已通过：
@@ -813,6 +830,14 @@ python3 ai/scoring/local_provider.py --result-id 2001 --assignment-id 1 --submis
 python3 ai/scoring/local_provider.py --result-id 2002 --assignment-id 1 --submission-id 8 --student-id 3 --student-name 李四 --student-no 2024010102 --rubric-file ai/scoring/sample-rubric.json
 ```
 
+批注 PDF Provider CLI 契约已通过 Python 编译检查、PDF 生成和文件类型验证：
+
+```bash
+python3 -m py_compile ai/annotation/local_provider.py
+python3 ai/annotation/local_provider.py --result-id 3001 --submission-id 7 --student-name 张三 --output-dir "$(mktemp -d)"
+file /tmp/*/annotated-7.pdf
+```
+
 全部后端模块已通过编译：
 
 ```bash
@@ -862,6 +887,7 @@ Docker Compose 已完成配置展开校验，暂未拉起 PostgreSQL、Redis、R
 - `chore: add local deploy bundle`
 - `feat: add ocr provider cli`
 - `feat: add scoring provider cli`
+- `feat: add annotation provider cli`
 
 ## 接下来需要做
 
