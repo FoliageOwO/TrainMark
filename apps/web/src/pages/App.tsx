@@ -616,7 +616,9 @@ function TeacherDashboard({
             <div className="pdf-page">
               <div className="pdf-toolbar">
                 <span>{selectedReview.fileName}</span>
-                <b>PDF 预览</b>
+                <a className="ghost-button compact-link" href={selectedReview.annotationPdfUrl} rel="noreferrer" target="_blank">
+                  <FileText size={14} /> 打开批注
+                </a>
               </div>
               <h4>Java Web 综合实训报告</h4>
               <p>需求分析、系统设计、核心功能实现、数据库表结构、测试截图、实训总结。</p>
@@ -1198,7 +1200,7 @@ function StudentDashboard({
                     ))}
                   </div>
                   <div className="student-result-actions">
-                    <button className="primary-button" type="button">查看批注 PDF</button>
+                    <a className="primary-button" href={result.annotationPdfUrl} rel="noreferrer" target="_blank">查看批注 PDF</a>
                     <button className="ghost-button" type="button" onClick={() => submitAppeal(result.id, null)}>提交申诉</button>
                   </div>
                 </div>

@@ -811,6 +811,20 @@
 - `README.md`
 - `PROGRESS.md`
 
+### 49. 批注 PDF 查看入口
+
+- 已将教师端人工复核预览区的批注 PDF 路径升级为可点击入口，可在新标签页打开当前批注文件。
+- 已将学生端已发布成绩卡片中的“查看批注 PDF”从静态按钮改为真实链接。
+- 已补充紧凑链接样式，复用现有按钮视觉并避免影响复核区工具栏布局。
+- 已更新 README 状态表和进度记录。
+
+主要代码：
+
+- `apps/web/src/pages/App.tsx`
+- `apps/web/src/styles/global.css`
+- `README.md`
+- `PROGRESS.md`
+
 ## 已验证
 
 前端构建已通过：
@@ -1050,6 +1064,13 @@ SMOKE_DRY_RUN=1 pnpm smoke:api
 mvn -f backend/pom.xml -pl grading-service -am package -DskipTests
 ```
 
+批注 PDF 查看入口已通过前端静态检查和构建：
+
+```bash
+pnpm lint:web
+pnpm build:web
+```
+
 全部后端模块已通过编译：
 
 ```bash
@@ -1109,6 +1130,7 @@ Docker Compose 已完成配置展开校验，暂未拉起 PostgreSQL、Redis、R
 - `feat: add ai error responses`
 - `chore: expand smoke coverage`
 - `feat: add annotation provider switch`
+- `feat: link annotation pdfs`
 
 ## 接下来需要做
 

@@ -248,6 +248,7 @@ button:focus-visible {
 
 .primary-button {
   padding: 13px 18px;
+  text-decoration: none;
   white-space: nowrap;
 }
 
@@ -266,6 +267,12 @@ button:focus-visible {
   border: 1px solid #bfdbfe;
   border-radius: 12px;
   background: #eff6ff;
+}
+
+.compact-link {
+  padding: 7px 10px;
+  font-size: 12px;
+  text-decoration: none;
 }
 
 .stats-grid {
