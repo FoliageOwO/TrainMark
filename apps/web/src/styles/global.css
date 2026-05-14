@@ -251,6 +251,11 @@ button:focus-visible {
   white-space: nowrap;
 }
 
+.primary-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
 .ghost-button {
   display: inline-flex;
   gap: 6px;
@@ -1031,6 +1036,43 @@ button:focus-visible {
   background: #eff6ff;
 }
 
+.publication-actions {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: center;
+  padding: 14px;
+  margin-top: 14px;
+  border-radius: 16px;
+  background: #f0fdfa;
+}
+
+.publication-actions span,
+.publication-actions small {
+  display: block;
+  color: #64748b;
+}
+
+.publication-actions strong {
+  display: block;
+  margin-top: 4px;
+  color: #0f766e;
+  font-size: 20px;
+}
+
+.publication-actions small {
+  margin-top: 3px;
+  font-size: 12px;
+}
+
+.publication-buttons,
+.student-result-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
 .overall-comment p,
 .deduction-box p {
   margin: 6px 0 0;
@@ -1107,6 +1149,124 @@ button:focus-visible {
   background: #fff;
 }
 
+.audit-list {
+  display: grid;
+  gap: 10px;
+  margin-top: 14px;
+  padding: 14px;
+  border-radius: 16px;
+  background: #f8fafc;
+}
+
+.audit-list > span {
+  color: #64748b;
+}
+
+.audit-row {
+  display: grid;
+  gap: 3px;
+  padding: 10px;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  background: #fff;
+}
+
+.audit-row span {
+  color: #0f172a;
+  font-weight: 700;
+}
+
+.audit-row small {
+  color: #64748b;
+}
+
+.empty-result {
+  display: grid;
+  gap: 6px;
+  margin-top: 18px;
+  padding: 18px;
+  color: #64748b;
+  border: 1px dashed #cbd5e1;
+  border-radius: 18px;
+  background: #f8fafc;
+}
+
+.empty-result strong {
+  color: #0f172a;
+}
+
+.published-result-list {
+  display: grid;
+  gap: 14px;
+  margin-top: 18px;
+}
+
+.published-result-card {
+  display: grid;
+  grid-template-columns: 150px minmax(0, 1fr);
+  gap: 16px;
+  padding: 16px;
+  border: 1px solid #e2e8f0;
+  border-radius: 18px;
+  background: linear-gradient(180deg, #ffffff, #f8fafc);
+}
+
+.published-score {
+  display: grid;
+  place-items: center;
+  align-content: center;
+  min-height: 150px;
+  text-align: center;
+  border-radius: 16px;
+  background: #0f172a;
+}
+
+.published-score span,
+.published-score small {
+  color: #cbd5e1;
+}
+
+.published-score strong {
+  color: #fff;
+  font-size: 46px;
+  line-height: 1;
+}
+
+.published-detail {
+  min-width: 0;
+}
+
+.published-detail p {
+  color: #475569;
+  line-height: 1.7;
+}
+
+.review-item-list.compact {
+  gap: 8px;
+}
+
+.student-score-row {
+  display: grid;
+  grid-template-columns: minmax(90px, 1fr) auto;
+  gap: 6px 12px;
+  padding: 10px;
+  border-radius: 12px;
+  background: #eff6ff;
+}
+
+.student-score-row span {
+  font-weight: 700;
+}
+
+.student-score-row b {
+  color: #2563eb;
+}
+
+.student-score-row small {
+  grid-column: 1 / -1;
+  color: #64748b;
+}
+
 @media (max-width: 1040px) {
   .app-shell {
     display: block;
@@ -1138,7 +1298,10 @@ button:focus-visible {
   .topbar,
   .hero-card,
   .hero-actions,
-  .student-task-card {
+  .student-task-card,
+  .publication-actions,
+  .published-result-card {
+    grid-template-columns: 1fr;
     align-items: flex-start;
     flex-direction: column;
   }
@@ -1170,6 +1333,11 @@ button:focus-visible {
   .review-item-heading {
     align-items: flex-start;
     flex-direction: column;
+  }
+
+  .publication-buttons,
+  .student-result-actions {
+    justify-content: flex-start;
   }
 
   .import-metrics {

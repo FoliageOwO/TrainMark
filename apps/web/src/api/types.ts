@@ -181,6 +181,8 @@ export type OcrJobSummary = {
 
 export type ReviewStatus = 'NEEDS_REVIEW' | 'IN_REVIEW' | 'APPROVED' | 'RETURNED';
 
+export type PublicationStatus = 'NOT_PUBLISHED' | 'PUBLISHED' | 'WITHDRAWN';
+
 export type GradingReviewItem = {
   rubricItemId: number;
   title: string;
@@ -216,8 +218,19 @@ export type GradingResultSummary = {
   teacherScore: number;
   confidence: number;
   reviewStatus: ReviewStatus;
+  publicationStatus: PublicationStatus;
   overallComment: string;
   reviewedAt: string | null;
+  publishedAt: string | null;
   items: GradingReviewItem[];
   annotations: GradingAnnotation[];
+};
+
+export type GradePublicationAuditEntry = {
+  id: number;
+  resultId: number;
+  action: 'PUBLISH' | 'WITHDRAW';
+  operatorName: string;
+  reason: string;
+  createdAt: string;
 };

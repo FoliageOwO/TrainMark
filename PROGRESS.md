@@ -186,6 +186,30 @@
 - `apps/web/src/api/mockApi.ts`
 - `apps/web/src/styles/global.css`
 
+### 13. 成绩发布与学生查看结果
+
+- 已实现成绩发布状态枚举。
+- 已实现成绩发布摘要、发布请求、撤回请求、发布审计记录 DTO。
+- 已实现成绩发布列表、发布成绩、撤回发布、查看发布审计接口骨架。
+- 已在老师端人工复核工作区加入发布状态、发布成绩、撤回发布和发布审计记录。
+- 已在学生端加入已发布成绩与批注面板，展示最终成绩、总评、分项得分、扣分原因、查看批注 PDF 和提交申诉入口。
+- 当前发布和撤回仍为内存模拟数据，后续需要接入真实提交状态、成绩可见性权限、申诉处理和审计日志持久化。
+
+主要代码：
+
+- `backend/grading-service/src/main/java/com/trainmark/grading/GradingReviewController.java`
+- `backend/grading-service/src/main/java/com/trainmark/grading/GradingService.java`
+- `backend/shared/src/main/java/com/trainmark/shared/PublicationStatus.java`
+- `backend/shared/src/main/java/com/trainmark/shared/dto/GradePublicationSummary.java`
+- `backend/shared/src/main/java/com/trainmark/shared/dto/GradePublicationAuditEntry.java`
+- `backend/shared/src/main/java/com/trainmark/shared/dto/PublishGradeRequest.java`
+- `backend/shared/src/main/java/com/trainmark/shared/dto/WithdrawGradeRequest.java`
+- `backend/shared/src/main/java/com/trainmark/shared/dto/GradingResultSummary.java`
+- `apps/web/src/pages/App.tsx`
+- `apps/web/src/api/types.ts`
+- `apps/web/src/api/mockApi.ts`
+- `apps/web/src/styles/global.css`
+
 ## 已验证
 
 前端构建已通过：
@@ -194,7 +218,7 @@
 pnpm build:web
 ```
 
-人工复核相关后端模块已通过编译：
+人工复核、成绩发布相关后端模块已通过编译：
 
 ```bash
 mvn -f backend/pom.xml -pl grading-service -am package -DskipTests
@@ -217,21 +241,22 @@ Docker Compose 暂未本地验证，因为当前机器没有 Docker。
 - `feat: add grading`
 - `feat: add ocr`
 - `feat: add manual review`
+- `feat: add grade publishing`
 
 ## 接下来需要做
 
-### 1. 成绩发布与学生查看结果
-
-- 实现成绩发布接口。
-- 实现成绩撤回和修改审计。
-- 学生端加入成绩、批注、申诉入口。
-
-### 2. 统计分析
+### 1. 统计分析
 
 - 实现成绩统计接口。
 - 实现失分分析接口。
 - 实现课程目标达成度接口。
 - 前端加入图表展示。
+
+### 2. 学生申诉
+
+- 实现学生申诉提交接口。
+- 实现教师处理申诉接口。
+- 补充申诉处理留痕和学生端状态反馈。
 
 ### 3. 真实 AI / OCR 接入
 

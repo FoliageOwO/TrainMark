@@ -1,18 +1,23 @@
 package com.trainmark.grading;
 
 import com.trainmark.shared.GradingJobStatus;
+import com.trainmark.shared.PublicationStatus;
 import com.trainmark.shared.ReviewStatus;
 import com.trainmark.shared.dto.CreateGradingJobRequest;
 import com.trainmark.shared.dto.CreateRubricRequest;
+import com.trainmark.shared.dto.GradePublicationAuditEntry;
+import com.trainmark.shared.dto.GradePublicationSummary;
 import com.trainmark.shared.dto.GradingAnnotationSummary;
 import com.trainmark.shared.dto.GradingItemReview;
 import com.trainmark.shared.dto.GradingJobSummary;
 import com.trainmark.shared.dto.GradingResultSummary;
+import com.trainmark.shared.dto.PublishGradeRequest;
 import com.trainmark.shared.dto.ReviewDecisionRequest;
 import com.trainmark.shared.dto.RubricItemSummary;
 import com.trainmark.shared.dto.RubricPointSummary;
 import com.trainmark.shared.dto.RubricSummary;
 import com.trainmark.shared.dto.UpdateReviewItemRequest;
+import com.trainmark.shared.dto.WithdrawGradeRequest;
 import java.time.OffsetDateTime;
 import java.util.Collection;
 import java.util.LinkedHashMap;
@@ -27,9 +32,11 @@ public class GradingService {
   private final AtomicLong itemIds = new AtomicLong(10);
   private final AtomicLong pointIds = new AtomicLong(100);
   private final AtomicLong jobIds = new AtomicLong(2);
+  private final AtomicLong auditIds = new AtomicLong(1);
   private final Map<Long, RubricSummary> rubrics = new LinkedHashMap<>();
   private final Map<Long, GradingJobSummary> jobs = new LinkedHashMap<>();
   private final Map<Long, GradingResultSummary> results = new LinkedHashMap<>();
+  private final Map<Long, List<GradePublicationAuditEntry>> publicationAudits = new LinkedHashMap<>();
 
   public GradingService() {
     var points = List.of(
@@ -58,7 +65,9 @@ public class GradingService {
         84,
         88,
         ReviewStatus.NEEDS_REVIEW,
+        PublicationStatus.NOT_PUBLISHED,
         "报告结构完整，核心功能说明较清楚；数据库约束和异常处理说明还需要补强。",
+        null,
         null,
         List.of(
             new GradingItemReview(
@@ -199,6 +208,42 @@ public class GradingService {
     return saveReviewedResult(result, result.items(), ReviewStatus.APPROVED, comment, OffsetDateTime.now());
   }
 
+  public Collection<GradePublicationSummary> listPublications(Long assignmentId, PublicationStatus publicationStatus) {
+    return results.values().stream()
+        .filter(item -> assignmentId == null || assignmentId.equals(item.assignmentId()))
+        .filter(item -> publicationStatus == null || publicationStatus == item.publicationStatus())
+        .map(this::toPublicationSummary)
+        .toList();
+  }
+
+  public GradingResultSummary publishResult(Long resultId, PublishGradeRequest request) {
+    var result = getResult(resultId);
+    if (result.reviewStatus() != ReviewStatus.APPROVED) {
+      throw new IllegalStateException("Only approved grading results can be published: " + resultId);
+    }
+    var publishedAt = OffsetDateTime.now();
+    var updated = saveResultWithPublication(result, PublicationStatus.PUBLISHED, publishedAt);
+    appendPublicationAudit(
+        resultId,
+        "PUBLISH",
+        request.operatorName(),
+        request.message() == null || request.message().isBlank() ? "发布成绩与批注" : request.message()
+    );
+    return updated;
+  }
+
+  public GradingResultSummary withdrawResult(Long resultId, WithdrawGradeRequest request) {
+    var result = getResult(resultId);
+    var updated = saveResultWithPublication(result, PublicationStatus.WITHDRAWN, null);
+    appendPublicationAudit(resultId, "WITHDRAW", request.operatorName(), request.reason());
+    return updated;
+  }
+
+  public Collection<GradePublicationAuditEntry> listPublicationAudits(Long resultId) {
+    getResult(resultId);
+    return publicationAudits.getOrDefault(resultId, List.of());
+  }
+
   private GradingResultSummary saveReviewedResult(
       GradingResultSummary result,
       List<GradingItemReview> items,
@@ -222,12 +267,74 @@ public class GradingService {
         teacherScore,
         result.confidence(),
         reviewStatus,
+        result.publicationStatus(),
         overallComment,
         reviewedAt,
+        result.publishedAt(),
         items,
         result.annotations()
     );
     results.put(result.id(), updated);
     return updated;
+  }
+
+  private GradingResultSummary saveResultWithPublication(
+      GradingResultSummary result,
+      PublicationStatus publicationStatus,
+      OffsetDateTime publishedAt
+  ) {
+    var updated = new GradingResultSummary(
+        result.id(),
+        result.assignmentId(),
+        result.submissionId(),
+        result.studentId(),
+        result.studentName(),
+        result.studentNo(),
+        result.fileName(),
+        result.previewUrl(),
+        result.annotationPdfUrl(),
+        result.totalScore(),
+        result.aiScore(),
+        result.teacherScore(),
+        result.confidence(),
+        result.reviewStatus(),
+        publicationStatus,
+        result.overallComment(),
+        result.reviewedAt(),
+        publishedAt,
+        result.items(),
+        result.annotations()
+    );
+    results.put(result.id(), updated);
+    return updated;
+  }
+
+  private GradePublicationSummary toPublicationSummary(GradingResultSummary result) {
+    return new GradePublicationSummary(
+        result.id(),
+        result.assignmentId(),
+        result.studentId(),
+        result.studentName(),
+        result.studentNo(),
+        result.teacherScore(),
+        result.publicationStatus(),
+        result.publishedAt()
+    );
+  }
+
+  private void appendPublicationAudit(Long resultId, String action, String operatorName, String reason) {
+    var entry = new GradePublicationAuditEntry(
+        auditIds.getAndIncrement(),
+        resultId,
+        action,
+        operatorName,
+        reason,
+        OffsetDateTime.now()
+    );
+    publicationAudits.merge(resultId, List.of(entry), (current, appended) -> {
+      var entries = new java.util.ArrayList<>(current);
+      entries.addAll(appended);
+      return List.copyOf(entries);
+    });
   }
 }

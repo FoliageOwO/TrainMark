@@ -73,6 +73,12 @@ const reviewStatusText = {
   RETURNED: '已退回',
 };
 
+const publicationStatusText = {
+  NOT_PUBLISHED: '未发布',
+  PUBLISHED: '已发布',
+  WITHDRAWN: '已撤回',
+};
+
 export function App() {
   const [user, setUser] = useState<UserProfile>(() => mockApi.login('TEACHER'));
   const [activeNav, setActiveNav] = useState('工作台');
@@ -94,6 +100,7 @@ export function App() {
   const gradingJobs = mockApi.listGradingJobs();
   const ocrJobs = mockApi.listOcrJobs();
   const gradingResults = mockApi.listGradingResults();
+  const publishedResults = mockApi.listPublishedResults(user.id);
 
   const teacherStats = [
     { label: '进行中任务', value: String(metrics.activeAssignments), trend: '+2 本周', tone: 'blue' },
@@ -175,7 +182,7 @@ export function App() {
         </section>
 
         {primaryRole === 'STUDENT' ? (
-          <StudentDashboard tasks={studentTasks} />
+          <StudentDashboard tasks={studentTasks} publishedResults={publishedResults} />
         ) : (
           <TeacherDashboard
             assignments={assignments}
@@ -240,6 +247,7 @@ function TeacherDashboard({
   const [startedJob, setStartedJob] = useState<ReturnType<typeof mockApi.startGradingJob> | null>(null);
   const [reviewResults, setReviewResults] = useState(gradingResults);
   const [selectedReviewId, setSelectedReviewId] = useState(gradingResults[0]?.id ?? 0);
+  const [publicationAudits, setPublicationAudits] = useState(mockApi.listPublicationAudits());
   const submittedRate = Math.round((collectionOverview.submitted / collectionOverview.totalStudents) * 100);
   const rubric = rubrics[0];
   const visibleJobs = startedJob ? [startedJob, ...gradingJobs] : gradingJobs;
@@ -256,6 +264,16 @@ function TeacherDashboard({
     const teacherScore = Number(formData.get('teacherScore'));
     const teacherComment = String(formData.get('teacherComment') ?? '');
     syncReviewResult(mockApi.updateReviewItem(selectedReview.id, rubricItemId, teacherScore, teacherComment));
+  };
+
+  const handlePublishResult = () => {
+    syncReviewResult(mockApi.publishGradingResult(selectedReview.id));
+    setPublicationAudits(mockApi.listPublicationAudits());
+  };
+
+  const handleWithdrawResult = () => {
+    syncReviewResult(mockApi.withdrawGradingResult(selectedReview.id));
+    setPublicationAudits(mockApi.listPublicationAudits());
   };
 
   return (
@@ -520,6 +538,26 @@ function TeacherDashboard({
               <strong>{selectedReview.confidence}%</strong>
             </div>
           </div>
+          <div className="publication-actions">
+            <div>
+              <span>发布状态</span>
+              <strong>{publicationStatusText[selectedReview.publicationStatus]}</strong>
+              {selectedReview.publishedAt && <small>{formatDate(selectedReview.publishedAt)} 发布</small>}
+            </div>
+            <div className="publication-buttons">
+              <button
+                className="primary-button"
+                type="button"
+                onClick={handlePublishResult}
+                disabled={selectedReview.reviewStatus !== 'APPROVED'}
+              >
+                <CheckCircle2 size={16} /> 发布成绩
+              </button>
+              <button className="ghost-button" type="button" onClick={handleWithdrawResult}>
+                撤回发布
+              </button>
+            </div>
+          </div>
           <div className="overall-comment">
             <span>总评</span>
             <p>{selectedReview.overallComment}</p>
@@ -555,6 +593,19 @@ function TeacherDashboard({
           <button className="primary-button full-width" type="button" onClick={() => syncReviewResult(mockApi.approveGradingResult(selectedReview.id))}>
             <CheckCircle2 size={16} /> 通过复核，等待发布
           </button>
+          <div className="audit-list">
+            <strong>发布审计</strong>
+            {publicationAudits.filter((item) => item.resultId === selectedReview.id).length === 0 ? (
+              <span>暂无发布操作记录</span>
+            ) : (
+              publicationAudits.filter((item) => item.resultId === selectedReview.id).map((audit) => (
+                <div className="audit-row" key={audit.id}>
+                  <span>{audit.action === 'PUBLISH' ? '发布' : '撤回'} · {audit.operatorName}</span>
+                  <small>{audit.reason} · {formatDate(audit.createdAt)}</small>
+                </div>
+              ))
+            )}
+          </div>
         </article>
       </section>
 
@@ -698,7 +749,13 @@ function TeacherDashboard({
   );
 }
 
-function StudentDashboard({ tasks }: { tasks: ReturnType<typeof mockApi.listStudentTasks> }) {
+function StudentDashboard({
+  tasks,
+  publishedResults,
+}: {
+  tasks: ReturnType<typeof mockApi.listStudentTasks>;
+  publishedResults: ReturnType<typeof mockApi.listPublishedResults>;
+}) {
   const [selectedFileName, setSelectedFileName] = useState('JavaWeb综合实训报告-张三-2024010101.pdf');
   const [uploadProgress, setUploadProgress] = useState(72);
   const [receipt, setReceipt] = useState<ReturnType<typeof mockApi.createUploadReceipt> | null>(null);
@@ -736,6 +793,51 @@ function StudentDashboard({ tasks }: { tasks: ReturnType<typeof mockApi.listStud
             </div>
           ))}
         </div>
+      </article>
+
+      <article className="panel wide-panel">
+        <div className="panel-heading">
+          <div>
+            <p className="eyebrow">Published Results</p>
+            <h3>成绩与批注</h3>
+          </div>
+          <FileCheck2 size={22} />
+        </div>
+        {publishedResults.length === 0 ? (
+          <div className="empty-result">
+            <strong>暂无已发布成绩</strong>
+            <span>教师发布后会在这里显示总分、分项扣分和批注入口。</span>
+          </div>
+        ) : (
+          <div className="published-result-list">
+            {publishedResults.map((result) => (
+              <div className="published-result-card" key={result.id}>
+                <div className="published-score">
+                  <span>最终成绩</span>
+                  <strong>{result.teacherScore}</strong>
+                  <small>{result.studentName} · {result.studentNo}</small>
+                </div>
+                <div className="published-detail">
+                  <strong>{result.fileName}</strong>
+                  <p>{result.overallComment}</p>
+                  <div className="review-item-list compact">
+                    {result.items.map((item) => (
+                      <div className="student-score-row" key={item.rubricItemId}>
+                        <span>{item.title}</span>
+                        <b>{item.teacherScore}/{item.maxScore}</b>
+                        <small>{item.deductionReason}</small>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="student-result-actions">
+                    <button className="primary-button" type="button">查看批注 PDF</button>
+                    <button className="ghost-button" type="button">提交申诉</button>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </article>
 
       <article className="panel">

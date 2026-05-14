@@ -1,10 +1,15 @@
 package com.trainmark.grading;
 
 import com.trainmark.shared.ApiResponse;
+import com.trainmark.shared.PublicationStatus;
 import com.trainmark.shared.ReviewStatus;
+import com.trainmark.shared.dto.GradePublicationAuditEntry;
+import com.trainmark.shared.dto.GradePublicationSummary;
 import com.trainmark.shared.dto.GradingResultSummary;
+import com.trainmark.shared.dto.PublishGradeRequest;
 import com.trainmark.shared.dto.ReviewDecisionRequest;
 import com.trainmark.shared.dto.UpdateReviewItemRequest;
+import com.trainmark.shared.dto.WithdrawGradeRequest;
 import jakarta.validation.Valid;
 import java.util.Collection;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -52,5 +57,34 @@ public class GradingReviewController {
       @Valid @RequestBody ReviewDecisionRequest request
   ) {
     return ApiResponse.ok(gradingService.approveResult(resultId, request));
+  }
+
+  @GetMapping("/publications")
+  public ApiResponse<Collection<GradePublicationSummary>> listPublications(
+      @RequestParam(required = false) Long assignmentId,
+      @RequestParam(required = false) PublicationStatus publicationStatus
+  ) {
+    return ApiResponse.ok(gradingService.listPublications(assignmentId, publicationStatus));
+  }
+
+  @PostMapping("/{resultId}/publish")
+  public ApiResponse<GradingResultSummary> publish(
+      @PathVariable Long resultId,
+      @Valid @RequestBody PublishGradeRequest request
+  ) {
+    return ApiResponse.ok(gradingService.publishResult(resultId, request));
+  }
+
+  @PostMapping("/{resultId}/withdraw")
+  public ApiResponse<GradingResultSummary> withdraw(
+      @PathVariable Long resultId,
+      @Valid @RequestBody WithdrawGradeRequest request
+  ) {
+    return ApiResponse.ok(gradingService.withdrawResult(resultId, request));
+  }
+
+  @GetMapping("/{resultId}/publication-audits")
+  public ApiResponse<Collection<GradePublicationAuditEntry>> listPublicationAudits(@PathVariable Long resultId) {
+    return ApiResponse.ok(gradingService.listPublicationAudits(resultId));
   }
 }

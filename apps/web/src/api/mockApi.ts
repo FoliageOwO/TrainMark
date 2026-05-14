@@ -3,6 +3,7 @@ import type {
   CourseSummary,
   CollectionOverview,
   DashboardMetrics,
+  GradePublicationAuditEntry,
   GradingResultSummary,
   GradingJobSummary,
   OcrJobSummary,
@@ -137,9 +138,11 @@ const gradingResults: GradingResultSummary[] = [
     aiScore: 84,
     teacherScore: 84,
     confidence: 88,
-    reviewStatus: 'NEEDS_REVIEW',
+    reviewStatus: 'APPROVED',
+    publicationStatus: 'NOT_PUBLISHED',
     overallComment: '报告结构完整，核心功能说明较清楚；数据库约束和异常处理说明还需要补强。',
-    reviewedAt: null,
+    reviewedAt: '2026-05-13T16:30:00+08:00',
+    publishedAt: null,
     items: [
       {
         rubricItemId: 1,
@@ -182,6 +185,8 @@ const gradingResults: GradingResultSummary[] = [
     ],
   },
 ];
+
+const publicationAudits: GradePublicationAuditEntry[] = [];
 
 export const mockApi = {
   login(role: RoleCode): UserProfile {
@@ -258,6 +263,58 @@ export const mockApi = {
     result.reviewStatus = 'APPROVED';
     result.reviewedAt = new Date().toISOString();
     return result;
+  },
+  publishGradingResult(resultId: number): GradingResultSummary {
+    const result = gradingResults.find((item) => item.id === resultId);
+    if (!result) {
+      throw new Error(`Grading result not found: ${resultId}`);
+    }
+    result.publicationStatus = 'PUBLISHED';
+    result.publishedAt = new Date().toISOString();
+    publicationAudits.push({
+      id: publicationAudits.length + 1,
+      resultId,
+      action: 'PUBLISH',
+      operatorName: '王老师',
+      reason: '发布成绩与批注',
+      createdAt: result.publishedAt,
+    });
+    studentTasks[0] = {
+      ...studentTasks[0],
+      status: '已发布成绩',
+      score: result.teacherScore,
+    };
+    return result;
+  },
+  withdrawGradingResult(resultId: number, reason = '复核后重新发布'): GradingResultSummary {
+    const result = gradingResults.find((item) => item.id === resultId);
+    if (!result) {
+      throw new Error(`Grading result not found: ${resultId}`);
+    }
+    result.publicationStatus = 'WITHDRAWN';
+    result.publishedAt = null;
+    publicationAudits.push({
+      id: publicationAudits.length + 1,
+      resultId,
+      action: 'WITHDRAW',
+      operatorName: '王老师',
+      reason,
+      createdAt: new Date().toISOString(),
+    });
+    studentTasks[0] = {
+      ...studentTasks[0],
+      status: '批改中',
+      score: undefined,
+    };
+    return result;
+  },
+  listPublicationAudits(resultId?: number): GradePublicationAuditEntry[] {
+    return publicationAudits.filter((item) => resultId === undefined || item.resultId === resultId);
+  },
+  listPublishedResults(studentId?: number): GradingResultSummary[] {
+    return gradingResults.filter((item) => (
+      item.publicationStatus === 'PUBLISHED' && (studentId === undefined || item.studentId === studentId)
+    ));
   },
   startGradingJob(): GradingJobSummary {
     return { id: 2, assignmentId: 1, rubricId: 1, totalSubmissions: 18, completedSubmissions: 0, status: 'PENDING', confidence: 0, createdAt: new Date().toISOString() };
