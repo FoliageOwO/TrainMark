@@ -71,11 +71,33 @@ export function App() {
     '系统管理': 'roster',
   };
 
+  const sectionToNavLabel: Record<string, string> = {
+    overview: '工作台',
+    courses: '课程与班级',
+    assignments: '实训任务',
+    collection: '报告收集',
+    'ai-pipeline': 'AI 批改中心',
+    review: '人工复核',
+    analytics: '失分分析',
+    roster: '工作台',
+    appeals: '人工复核',
+    similarity: 'AI 批改中心',
+    operations: '工作台',
+  };
+
   const handleNavChange = (label: string) => {
     setActiveNav(label);
     const mapped = teacherNavMap[label];
     if (mapped && primaryRole !== 'STUDENT' && primaryRole !== 'ADMIN') {
       setTeacherSection(mapped);
+    }
+  };
+
+  const handleSectionChange = (section: string) => {
+    setTeacherSection(section);
+    const label = sectionToNavLabel[section];
+    if (label) {
+      setActiveNav(label);
     }
   };
 
@@ -282,7 +304,7 @@ export function App() {
           similarityJobs={similarityJobs}
           onWorkspaceRefresh={refreshWorkspaceData}
           activeSection={teacherSection}
-          onSectionChange={setTeacherSection}
+          onSectionChange={handleSectionChange}
         />
       )}
     </AppChrome>
