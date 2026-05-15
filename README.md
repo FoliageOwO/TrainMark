@@ -425,6 +425,7 @@ OCR_PROVIDER=paddleocr
 ```
 
 该适配器会优先调用 PaddleOCR 3.x Python API，并在本地未安装 PaddleOCR 或找不到归一化文件时回退为确定性结果，便于离线 MVP 验证。
+生产或验收环境需要禁止静默回退时，同时设置 `OCR_REQUIRE_REAL=true`；此时 PaddleOCR 运行失败或输入文件缺失会让 OCR provider 直接失败。
 
 评分服务默认使用本地 Java 规则 provider。需要切换到内置语义评分适配器时，可设置：
 
@@ -433,6 +434,7 @@ SCORING_PROVIDER=semantic
 ```
 
 该适配器会优先调用 SentenceTransformers 语义相似度模型，并在本地未安装模型库时回退为确定性相似度结果。
+生产或验收环境需要禁止静默回退时，同时设置 `SCORING_REQUIRE_REAL=true`；此时模型库或模型加载失败会让评分 provider 直接失败。
 
 批注 PDF 地址 `/annotations/submissions/{submissionId}/annotated.pdf` 会根据当前批改结果生成本地摘要 PDF，包含成绩、复核状态、批注和分项证据。ZIP 格式的成绩导出会在 `annotations/` 目录内附带当前作业的批注 PDF。
 

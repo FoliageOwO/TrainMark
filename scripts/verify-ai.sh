@@ -4,6 +4,10 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 TMP_DIR="$(mktemp -d)"
 trap 'rm -rf "$TMP_DIR"' EXIT
+REAL_AI_ARGS=()
+if [[ "${TRAINMARK_REQUIRE_REAL_AI:-0}" == "1" ]]; then
+  REAL_AI_ARGS=(--require-real)
+fi
 
 cd "$ROOT_DIR"
 
@@ -88,7 +92,8 @@ python3 ai/ocr/paddleocr_provider.py \
   --job-id 1002 \
   --submission-id 2 \
   --object-key assignments/1/students/3/screenshot.png \
-  --normalized-object-key converted/assignments/1/students/3/screenshot.png > "$TMP_DIR/paddleocr-result.json"
+  --normalized-object-key converted/assignments/1/students/3/screenshot.png \
+  "${REAL_AI_ARGS[@]}" > "$TMP_DIR/paddleocr-result.json"
 python3 -m json.tool "$TMP_DIR/paddleocr-result.json" >/dev/null
 if [[ "${TRAINMARK_REQUIRE_REAL_AI:-0}" == "1" ]]; then
   require_no_ai_fallback "PaddleOCR provider" "$TMP_DIR/paddleocr-result.json"
@@ -117,7 +122,8 @@ python3 ai/scoring/semantic_provider.py \
   --student-name 李四 \
   --student-no 2024010102 \
   --file-name database-report.pdf \
-  --rubric-file ai/scoring/sample-rubric.json > "$TMP_DIR/semantic-grading-result.json"
+  --rubric-file ai/scoring/sample-rubric.json \
+  "${REAL_AI_ARGS[@]}" > "$TMP_DIR/semantic-grading-result.json"
 python3 -m json.tool "$TMP_DIR/semantic-grading-result.json" >/dev/null
 grep -q '语义评分已完成初评' "$TMP_DIR/semantic-grading-result.json"
 grep -q '语义相似度' "$TMP_DIR/semantic-grading-result.json"

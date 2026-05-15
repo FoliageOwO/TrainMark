@@ -23,6 +23,7 @@ public class ScoringProviderConfig {
   ScoringProvider scoringProvider(
       @Value("${trainmark.scoring.provider:local}") String provider,
       @Value("${trainmark.scoring.command:}") String command,
+      @Value("${trainmark.scoring.require-real:false}") boolean requireReal,
       @Value("${trainmark.scoring.timeout-seconds:90}") long timeoutSeconds,
       ObjectMapper objectMapper
   ) {
@@ -34,6 +35,9 @@ public class ScoringProviderConfig {
     }
     if ("semantic".equalsIgnoreCase(provider)) {
       var semanticCommand = command == null || command.isBlank() ? DEFAULT_SEMANTIC_COMMAND : command;
+      if (requireReal && (command == null || command.isBlank())) {
+        semanticCommand += " --require-real";
+      }
       return new CommandScoringProvider(semanticCommand, Duration.ofSeconds(timeoutSeconds), objectMapper);
     }
     return new LocalScoringProvider();

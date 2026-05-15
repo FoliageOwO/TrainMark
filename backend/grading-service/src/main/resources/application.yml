@@ -34,6 +34,7 @@ trainmark:
   scoring:
     provider: ${SCORING_PROVIDER:local}
     command: ${SCORING_COMMAND:}
+    require-real: ${SCORING_REQUIRE_REAL:false}
     timeout-seconds: ${SCORING_TIMEOUT_SECONDS:90}
   annotation:
     provider: ${ANNOTATION_PROVIDER:local}

@@ -19,6 +19,7 @@ public class OcrProviderConfig {
   OcrProvider ocrProvider(
       @Value("${trainmark.ocr.provider:local}") String provider,
       @Value("${trainmark.ocr.command:}") String command,
+      @Value("${trainmark.ocr.require-real:false}") boolean requireReal,
       @Value("${trainmark.ocr.timeout-seconds:60}") long timeoutSeconds,
       ObjectMapper objectMapper
   ) {
@@ -30,6 +31,9 @@ public class OcrProviderConfig {
     }
     if ("paddleocr".equalsIgnoreCase(provider)) {
       var paddleCommand = command == null || command.isBlank() ? DEFAULT_PADDLEOCR_COMMAND : command;
+      if (requireReal && (command == null || command.isBlank())) {
+        paddleCommand += " --require-real";
+      }
       return new CommandOcrProvider(paddleCommand, Duration.ofSeconds(timeoutSeconds), objectMapper);
     }
     return new LocalOcrProvider();

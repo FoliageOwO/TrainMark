@@ -119,5 +119,11 @@ python3 ai/scoring/semantic_provider.py \
   --rubric-json {rubricJson}
 ```
 
+Set `SCORING_REQUIRE_REAL=true` when the built-in adapter must fail instead of
+using lexical fallback. The backend appends `--require-real` to the default
+semantic command in that mode. If you override `SCORING_COMMAND`, include
+`--require-real` in your custom command when the same production gate is
+required.
+
 You can still override the full command with `SCORING_COMMAND` when production
 deployment needs a specific model path, Python environment or scoring wrapper.

@@ -2,7 +2,8 @@
 """Semantic scoring provider for TrainMark AI.
 
 This provider uses SentenceTransformers when it is installed locally and falls
-back to deterministic lexical similarity when the model runtime is unavailable.
+back to deterministic lexical similarity when the model runtime is unavailable
+unless --require-real is set.
 It emits the same GradingResultSummary-compatible JSON as the local provider.
 """
 
@@ -52,6 +53,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--keyword-weight", type=float, default=0.35)
     parser.add_argument("--semantic-weight", type=float, default=0.45)
     parser.add_argument("--structure-weight", type=float, default=0.20)
+    parser.add_argument("--require-real", action="store_true", help="fail instead of using lexical fallback when the model cannot load")
     return parser.parse_args()
 
 
@@ -126,7 +128,7 @@ def tokenize(value: str) -> set[str]:
 
 
 class SemanticScorer:
-    def __init__(self, model_name: str) -> None:
+    def __init__(self, model_name: str, require_real: bool) -> None:
         self.source = "semantic fallback"
         self.model = None
         try:
@@ -135,6 +137,8 @@ class SemanticScorer:
             self.model = SentenceTransformer(model_name)
             self.source = "SentenceTransformers"
         except Exception as error:  # noqa: BLE001 - model runtime is optional.
+            if require_real:
+                raise RuntimeError(f"SentenceTransformers model is required but unavailable: {error}") from error
             print(f"[semantic-provider] SentenceTransformers unavailable, using fallback: {error}", file=sys.stderr)
 
     def similarity(self, evidence_text: str, expected_text: str) -> float:
@@ -273,7 +277,7 @@ def main() -> None:
     args = parse_args()
     rubric = load_rubric(args)
     evidence_text = load_evidence_text(args, rubric)
-    scorer = SemanticScorer(args.model)
+    scorer = SemanticScorer(args.model, args.require_real)
     print(json.dumps(build_result(args, rubric, scorer, evidence_text), ensure_ascii=False, indent=2))
 
 

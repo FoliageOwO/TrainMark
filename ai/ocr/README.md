@@ -77,5 +77,10 @@ python3 ai/ocr/paddleocr_provider.py \
   --normalized-object-key {normalizedObjectKey}
 ```
 
+Set `OCR_REQUIRE_REAL=true` when the built-in adapter must fail instead of
+falling back. The backend appends `--require-real` to the default PaddleOCR
+command in that mode. If you override `OCR_COMMAND`, include `--require-real`
+in your custom command when the same production gate is required.
+
 You can still override the full command with `OCR_COMMAND` when production
 deployment needs a different Python environment, model path or wrapper script.

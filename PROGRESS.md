@@ -3463,6 +3463,24 @@ TRAINMARK_SKIP_INFRA=1 SMOKE_INCLUDE_WRITES=1 pnpm smoke:mvp:async
 pnpm verify:mvp
 ```
 
+真实 AI Provider 严格运行边界已补齐：
+
+- PaddleOCR 适配器新增 `--require-real`，生产/验收模式下 PaddleOCR 依赖不可用、输入文件缺失或识别结果为空会直接失败，不再回退确定性 OCR 结果。
+- 语义评分适配器新增 `--require-real`，生产/验收模式下 SentenceTransformers 或模型加载失败会直接失败，不再回退词项相似度。
+- ocr-service 新增 `OCR_REQUIRE_REAL` 配置，内置 `OCR_PROVIDER=paddleocr` 命令会自动追加 `--require-real`。
+- grading-service 新增 `SCORING_REQUIRE_REAL` 配置，内置 `SCORING_PROVIDER=semantic` 命令会自动追加 `--require-real`。
+- 已更新 `.env.example`、README 和 AI provider 文档，明确本地 fallback MVP 与真实 AI 验收边界。
+
+验证命令：
+
+```bash
+python3 -m py_compile ai/ocr/paddleocr_provider.py ai/scoring/semantic_provider.py
+pnpm verify:ai
+TRAINMARK_REQUIRE_REAL_AI=1 pnpm verify:ai # 当前无 PaddleOCR/SentenceTransformers 环境时应失败
+mvn -f backend/pom.xml -pl ocr-service,grading-service -am package -DskipTests
+pnpm verify:mvp
+```
+
 ## 已提交记录
 
 主要提交：

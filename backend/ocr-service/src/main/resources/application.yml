@@ -19,6 +19,7 @@ trainmark:
     store: ${TRAINMARK_OCR_STORE:memory}
     provider: ${OCR_PROVIDER:local}
     command: ${OCR_COMMAND:}
+    require-real: ${OCR_REQUIRE_REAL:false}
     timeout-seconds: ${OCR_TIMEOUT_SECONDS:60}
     jdbc:
       url: ${TRAINMARK_OCR_JDBC_URL:}
