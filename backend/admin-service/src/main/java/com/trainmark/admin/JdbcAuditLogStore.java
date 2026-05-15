@@ -83,6 +83,41 @@ public class JdbcAuditLogStore implements AuditLogStore {
     }
   }
 
+  @Override
+  public AuditLogSummary add(String actorName, String action, String resourceType, String resourceId, String detail, String ipAddress) {
+    var sql = """
+        INSERT INTO audit_logs (actor_name, action, resource_type, resource_id, detail, ip_address, created_at)
+        VALUES (?, ?, ?, ?, ?, ?, now())
+        """;
+    try (var connection = connect();
+        var statement = connection.prepareStatement(sql, java.sql.Statement.RETURN_GENERATED_KEYS)) {
+      statement.setString(1, actorName);
+      statement.setString(2, action);
+      statement.setString(3, resourceType);
+      statement.setString(4, resourceId);
+      statement.setString(5, detail);
+      statement.setString(6, ipAddress);
+      statement.executeUpdate();
+      try (var keys = statement.getGeneratedKeys()) {
+        if (keys.next()) {
+          return new AuditLogSummary(
+              keys.getLong(1),
+              actorName,
+              action,
+              resourceType,
+              resourceId,
+              detail,
+              ipAddress,
+              OffsetDateTime.now()
+          );
+        }
+      }
+    } catch (SQLException error) {
+      throw new IllegalStateException("Failed to write audit log", error);
+    }
+    throw new IllegalStateException("Insert did not return a generated audit log id");
+  }
+
   private java.sql.Connection connect() throws SQLException {
     if (username == null || username.isBlank()) {
       return DriverManager.getConnection(url);

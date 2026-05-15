@@ -39,6 +39,7 @@ public class GradingService {
   private final GradingResultStore gradingResultStore;
   private final ScoringProvider scoringProvider;
   private final AnnotationProvider annotationProvider;
+  private final AuditLogClient auditLog;
   private final boolean asyncEnabled;
   @Autowired(required = false)
   private GradingJobPublisher jobPublisher;
@@ -52,6 +53,7 @@ public class GradingService {
       GradingResultStore gradingResultStore,
       ScoringProvider scoringProvider,
       AnnotationProvider annotationProvider,
+      AuditLogClient auditLog,
       @Value("${trainmark.grading.async-enabled:false}") boolean asyncEnabled
   ) {
     this.rubricStore = rubricStore;
@@ -62,6 +64,7 @@ public class GradingService {
     this.gradingResultStore = gradingResultStore;
     this.scoringProvider = scoringProvider;
     this.annotationProvider = annotationProvider;
+    this.auditLog = auditLog;
     this.asyncEnabled = asyncEnabled;
   }
 
@@ -79,6 +82,8 @@ public class GradingService {
 
   public GradingJobSummary createJob(CreateGradingJobRequest request) {
     var job = gradingJobStore.createJob(request);
+    auditLog.log("系统任务", "GRADING_START", "GRADING_JOB", String.valueOf(job.id()),
+        "启动 AI 批改，作业 " + request.assignmentId() + "，" + request.submissionIds().size() + " 份报告", null);
 
     if (asyncEnabled && jobPublisher != null) {
       // Async mode: publish to RabbitMQ, processing happens in consumer
@@ -128,6 +133,8 @@ public class GradingService {
             )
             : item)
         .toList();
+    auditLog.log("教师", "REVIEW_UPDATE", "GRADING_RESULT", String.valueOf(resultId),
+        "复核评分项 " + request.rubricItemId() + "，得分 " + request.teacherScore(), null);
     return saveReviewedResult(result, updatedItems, ReviewStatus.IN_REVIEW, result.overallComment(), null);
   }
 
@@ -136,6 +143,8 @@ public class GradingService {
     var comment = request.overallComment() == null || request.overallComment().isBlank()
         ? result.overallComment()
         : request.overallComment();
+    auditLog.log(request.reviewerName() != null ? request.reviewerName() : "教师", "REVIEW_APPROVE", "GRADING_RESULT",
+        String.valueOf(resultId), "复核通过，等待发布", null);
     return saveReviewedResult(result, result.items(), ReviewStatus.APPROVED, comment, OffsetDateTime.now());
   }
 
@@ -160,6 +169,8 @@ public class GradingService {
         request.operatorName(),
         request.message() == null || request.message().isBlank() ? "发布成绩与批注" : request.message()
     );
+    auditLog.log(request.operatorName(), "GRADE_PUBLISH", "GRADING_RESULT", String.valueOf(resultId),
+        request.message() == null || request.message().isBlank() ? "发布成绩与批注" : request.message(), null);
     return updated;
   }
 
@@ -167,6 +178,8 @@ public class GradingService {
     var result = getResult(resultId);
     var updated = saveResultWithPublication(result, PublicationStatus.WITHDRAWN, null);
     appendPublicationAudit(resultId, "WITHDRAW", request.operatorName(), request.reason());
+    auditLog.log(request.operatorName(), "GRADE_WITHDRAW", "GRADING_RESULT", String.valueOf(resultId),
+        request.reason(), null);
     return updated;
   }
 
@@ -184,14 +197,20 @@ public class GradingService {
     if (result.publicationStatus() != PublicationStatus.PUBLISHED) {
       throw new IllegalStateException("Only published grading results can be appealed: " + request.resultId());
     }
-    return appealStore.createAppeal(request, result.studentName());
+    var appeal = appealStore.createAppeal(request, result.studentName());
+    auditLog.log(result.studentName(), "APPEAL_SUBMIT", "APPEAL", String.valueOf(appeal.id()),
+        request.reason(), null);
+    return appeal;
   }
 
   public AppealSummary resolveAppeal(Long appealId, ResolveAppealRequest request) {
     if (request.status() == AppealStatus.SUBMITTED) {
       throw new IllegalArgumentException("Resolved appeal status must be ACCEPTED or REJECTED");
     }
-    return appealStore.resolveAppeal(appealId, request);
+    var appeal = appealStore.resolveAppeal(appealId, request);
+    auditLog.log("教师", "APPEAL_RESOLVE", "APPEAL", String.valueOf(appealId),
+        request.status() == AppealStatus.ACCEPTED ? "采纳申诉" : "驳回申诉", null);
+    return appeal;
   }
 
   public Collection<GradeExportSummary> listGradeExports(Long assignmentId) {
@@ -203,7 +222,10 @@ public class GradingService {
         .filter(item -> request.assignmentId().equals(item.assignmentId()))
         .filter(item -> item.publicationStatus() == PublicationStatus.PUBLISHED)
         .count();
-    return gradeExportStore.createGradeExport(request, rowCount);
+    var export = gradeExportStore.createGradeExport(request, rowCount);
+    auditLog.log(request.operatorName(), "GRADE_EXPORT", "GRADE_EXPORT", String.valueOf(export.id()),
+        "导出成绩表 " + request.format() + "，" + rowCount + " 行", null);
+    return export;
   }
 
   private GradingResultSummary saveReviewedResult(

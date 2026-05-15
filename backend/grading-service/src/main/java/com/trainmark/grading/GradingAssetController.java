@@ -104,7 +104,7 @@ public class GradingAssetController {
 
       var margin = 72f;
       var pageWidth = page.getMediaBox().getWidth();
-      var y = page.getMediaBox().getTop() - margin;
+      var y = page.getMediaBox().getUpperRightY() - margin;
       var contentWidth = pageWidth - 2 * margin;
 
       try (var contentStream = new PDPageContentStream(document, page)) {
