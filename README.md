@@ -140,6 +140,14 @@ AI provider 契约验证：
 pnpm verify:ai
 ```
 
+默认验证允许本地环境缺少 PaddleOCR / SentenceTransformers 时走离线 fallback，便于无模型环境回归 provider JSON 契约。需要验收真实 AI Provider 是否已经替换 fallback 时，使用严格模式：
+
+```bash
+TRAINMARK_REQUIRE_REAL_AI=1 pnpm verify:ai
+```
+
+严格模式会在 PaddleOCR 或语义评分输出仍包含 fallback 来源时失败。
+
 ### 4. 启动本地基础设施
 
 ```bash

@@ -3384,6 +3384,19 @@ pnpm verify:mvp
 - AI provider 语法和本地 OCR/评分/批注 provider 验证
 - API smoke dry-run 端点清单和后端路由面检查
 
+真实 AI Provider 验收边界已补齐：
+
+- 已为 `scripts/verify-ai.sh` 增加 `TRAINMARK_REQUIRE_REAL_AI=1` 严格模式。
+- 默认 `pnpm verify:ai` 继续允许离线 fallback，保证无模型环境能验证 provider JSON 契约。
+- 严格模式会检查 PaddleOCR 与语义评分输出，一旦仍包含 fallback 来源就失败，避免把本地确定性 fallback 误判为真实 AI 接入完成。
+
+验证命令：
+
+```bash
+pnpm verify:ai
+TRAINMARK_REQUIRE_REAL_AI=1 pnpm verify:ai
+```
+
 ## 已提交记录
 
 主要提交：

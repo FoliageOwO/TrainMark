@@ -7,6 +7,53 @@ trap 'rm -rf "$TMP_DIR"' EXIT
 
 cd "$ROOT_DIR"
 
+require_no_ai_fallback() {
+  local label="$1"
+  local json_file="$2"
+  if [[ "${TRAINMARK_REQUIRE_REAL_AI:-0}" != "1" ]]; then
+    return 0
+  fi
+  python3 - "$label" "$json_file" <<'PY'
+import json
+import sys
+
+label = sys.argv[1]
+path = sys.argv[2]
+
+with open(path, "r", encoding="utf-8") as file:
+    payload = json.load(file)
+
+fallback_terms = (
+    "fallback",
+    "回退",
+    "deterministic",
+    "确定性",
+)
+
+
+def strings(value):
+    if isinstance(value, str):
+        yield value
+    elif isinstance(value, dict):
+        for item in value.values():
+            yield from strings(item)
+    elif isinstance(value, list):
+        for item in value:
+            yield from strings(item)
+
+
+matches = [
+    value for value in strings(payload)
+    if any(term in value.casefold() for term in fallback_terms)
+]
+if matches:
+    print(f"[verify:ai] {label} is still using fallback output", file=sys.stderr)
+    for value in matches[:5]:
+        print(f"  - {value}", file=sys.stderr)
+    sys.exit(1)
+PY
+}
+
 echo "[verify:ai] Python syntax"
 python3 -m py_compile \
   ai/document/local_converter.py \
@@ -43,7 +90,11 @@ python3 ai/ocr/paddleocr_provider.py \
   --object-key assignments/1/students/3/screenshot.png \
   --normalized-object-key converted/assignments/1/students/3/screenshot.png > "$TMP_DIR/paddleocr-result.json"
 python3 -m json.tool "$TMP_DIR/paddleocr-result.json" >/dev/null
-grep -q 'PaddleOCR fallback' "$TMP_DIR/paddleocr-result.json"
+if [[ "${TRAINMARK_REQUIRE_REAL_AI:-0}" == "1" ]]; then
+  require_no_ai_fallback "PaddleOCR provider" "$TMP_DIR/paddleocr-result.json"
+else
+  grep -q 'PaddleOCR fallback' "$TMP_DIR/paddleocr-result.json"
+fi
 
 echo "[verify:ai] Scoring provider"
 python3 ai/scoring/local_provider.py \
@@ -70,6 +121,7 @@ python3 ai/scoring/semantic_provider.py \
 python3 -m json.tool "$TMP_DIR/semantic-grading-result.json" >/dev/null
 grep -q '语义评分已完成初评' "$TMP_DIR/semantic-grading-result.json"
 grep -q '语义相似度' "$TMP_DIR/semantic-grading-result.json"
+require_no_ai_fallback "Semantic scoring provider" "$TMP_DIR/semantic-grading-result.json"
 
 echo "[verify:ai] Annotation provider"
 python3 ai/annotation/local_provider.py \
