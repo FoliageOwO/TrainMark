@@ -3,19 +3,41 @@ package com.trainmark.auth;
 import com.trainmark.shared.RoleCode;
 import com.trainmark.shared.dto.LoginRequest;
 import com.trainmark.shared.dto.LoginResponse;
+import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.Jwts;
+import io.jsonwebtoken.security.Keys;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.util.Base64;
+import java.util.Date;
 import java.util.List;
 import java.util.Optional;
+import javax.crypto.SecretKey;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 @Service
 public class AuthService {
   private final AuthUserStore authUserStore;
+  private final SecretKey signingKey;
+  private final long accessTokenTtlSeconds;
+  private final long refreshTokenTtlSeconds;
 
-  public AuthService(AuthUserStore authUserStore) {
+  public AuthService(
+      AuthUserStore authUserStore,
+      @Value("${trainmark.auth.jwt-secret:}") String jwtSecret,
+      @Value("${trainmark.auth.access-token-ttl-seconds:3600}") long accessTokenTtlSeconds,
+      @Value("${trainmark.auth.refresh-token-ttl-seconds:86400}") long refreshTokenTtlSeconds
+  ) {
     this.authUserStore = authUserStore;
+    this.accessTokenTtlSeconds = accessTokenTtlSeconds;
+    this.refreshTokenTtlSeconds = refreshTokenTtlSeconds;
+    if (jwtSecret != null && !jwtSecret.isBlank()) {
+      this.signingKey = Keys.hmacShaKeyFor(jwtSecret.getBytes(StandardCharsets.UTF_8));
+    } else {
+      // Generate a default key for development. Production should always set trainmark.auth.jwt-secret.
+      this.signingKey = Keys.secretKeyFor(io.jsonwebtoken.SignatureAlgorithm.HS256);
+    }
   }
 
   public LoginResponse login(LoginRequest request) {
@@ -56,14 +78,19 @@ public class AuthService {
     var role = roleFor(username);
     var name = nameFor(role);
     var user = new LoginResponse.UserProfile(idFor(role), name, username, List.of(role));
-    var issuedAt = Instant.now().toString();
-    return new LoginResponse(token("access", username, issuedAt), token("refresh", username, issuedAt), user);
+    var now = new Date();
+    var accessToken = jwtToken("access", username, user.roles(), now, accessTokenTtlSeconds);
+    var refreshToken = jwtToken("refresh", username, user.roles(), now, refreshTokenTtlSeconds);
+    return new LoginResponse(accessToken, refreshToken, user);
   }
 
   private LoginResponse loginUser(AuthUserStore.AuthUser authUser) {
-    var issuedAt = Instant.now().toString();
+    var now = new Date();
     var username = authUser.username();
-    return new LoginResponse(token("access", username, issuedAt), token("refresh", username, issuedAt), profile(authUser));
+    var roles = authUser.roles();
+    var accessToken = jwtToken("access", username, roles, now, accessTokenTtlSeconds);
+    var refreshToken = jwtToken("refresh", username, roles, now, refreshTokenTtlSeconds);
+    return new LoginResponse(accessToken, refreshToken, profile(authUser));
   }
 
   private LoginResponse fallbackLogin(String username) {
@@ -91,15 +118,38 @@ public class AuthService {
     }
     try {
       var token = authorizationHeader.substring("Bearer ".length());
-      var decoded = new String(Base64.getUrlDecoder().decode(token), StandardCharsets.UTF_8);
-      var parts = decoded.split(":", 3);
-      if (parts.length < 3 || !"access".equals(parts[0]) || parts[1].isBlank()) {
+      var claims = Jwts.parser()
+          .verifyWith(signingKey)
+          .build()
+          .parseSignedClaims(token)
+          .getPayload();
+      var username = claims.get("username", String.class);
+      var type = claims.getSubject();
+      if (username == null || username.isBlank() || !"access".equals(type)) {
         return Optional.empty();
       }
-      return Optional.of(parts[1]);
-    } catch (IllegalArgumentException error) {
+      // Check expiration
+      var exp = claims.getExpiration();
+      if (exp != null && exp.before(new Date())) {
+        return Optional.empty();
+      }
+      return Optional.of(username);
+    } catch (Exception error) {
       return Optional.empty();
     }
+  }
+
+  private String jwtToken(String type, String username, List<RoleCode> roles, Date issuedAt, long ttlSeconds) {
+    var expiresAt = new Date(issuedAt.getTime() + ttlSeconds * 1000);
+    var rolesStr = roles.stream().map(Enum::name).reduce((a, b) -> a + "," + b).orElse("");
+    return Jwts.builder()
+        .subject(type)
+        .claim("username", username)
+        .claim("roles", rolesStr)
+        .issuedAt(issuedAt)
+        .expiration(expiresAt)
+        .signWith(signingKey)
+        .compact();
   }
 
   private RoleCode roleFor(String username) {
@@ -144,10 +194,5 @@ public class AuthService {
       case SUPERVISOR -> 4L;
       case ADMIN -> 5L;
     };
-  }
-
-  private String token(String type, String username, String issuedAt) {
-    var payload = "%s:%s:%s".formatted(type, username, issuedAt);
-    return Base64.getUrlEncoder().withoutPadding().encodeToString(payload.getBytes(StandardCharsets.UTF_8));
   }
 }

@@ -11,6 +11,9 @@ management:
 trainmark:
   auth:
     store: ${TRAINMARK_AUTH_STORE:memory}
+    jwt-secret: ${AUTH_JWT_SECRET:}
+    access-token-ttl-seconds: ${AUTH_ACCESS_TOKEN_TTL:3600}
+    refresh-token-ttl-seconds: ${AUTH_REFRESH_TOKEN_TTL:86400}
     jdbc:
       url: ${TRAINMARK_AUTH_JDBC_URL:}
       username: ${TRAINMARK_AUTH_JDBC_USERNAME:}
