@@ -33,8 +33,8 @@ public class JdbcAuditLogStore implements AuditLogStore {
   @Override
   public Collection<AuditLogSummary> list(String action, String resourceType) {
     var sql = """
-        SELECT al.id, COALESCE(u.name, '系统任务') AS actor_name, al.action, al.resource_type,
-               al.resource_id, COALESCE(al.detail::text, '') AS detail, al.ip_address, al.created_at
+        SELECT al.id, COALESCE(u.name, al.actor_name, '系统任务') AS actor_name, al.action, al.resource_type,
+               al.resource_id, COALESCE(al.detail, '') AS detail, al.ip_address, al.created_at
         FROM audit_logs al
         LEFT JOIN users u ON u.id = al.actor_id
         """;

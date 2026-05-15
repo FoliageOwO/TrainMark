@@ -20,14 +20,17 @@ apply_sql() {
     psql -v ON_ERROR_STOP=1 -U "$POSTGRES_USER" -d "$POSTGRES_DB" < "$sql_file"
 }
 
-ensure_extended_demo_roles() {
+ensure_incremental_migrations() {
   docker exec -i "$POSTGRES_CONTAINER" \
     psql -v ON_ERROR_STOP=1 -U "$POSTGRES_USER" -d "$POSTGRES_DB" < "$ROOT_DIR/backend/db/migration/V12__seed_extended_demo_roles.sql" \
+    >/dev/null
+  docker exec -i "$POSTGRES_CONTAINER" \
+    psql -v ON_ERROR_STOP=1 -U "$POSTGRES_USER" -d "$POSTGRES_DB" < "$ROOT_DIR/backend/db/migration/V13__audit_log_actor_name_detail.sql" \
     >/dev/null
 }
 
 if [[ "$(table_exists users)" == "t" ]]; then
-  ensure_extended_demo_roles
+  ensure_incremental_migrations
   echo "[db:migrate] core schema already present"
   exit 0
 fi
@@ -37,7 +40,7 @@ while IFS= read -r sql_file; do
   apply_sql "$sql_file"
 done < <(find "$ROOT_DIR/backend/db/migration" -maxdepth 1 -name 'V*.sql' | sort -V)
 
-ensure_extended_demo_roles
+ensure_incremental_migrations
 
 docker exec "$POSTGRES_CONTAINER" \
   psql -v ON_ERROR_STOP=1 -U "$POSTGRES_USER" -d "$POSTGRES_DB" -c \

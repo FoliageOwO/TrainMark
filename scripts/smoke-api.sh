@@ -324,6 +324,32 @@ assert_jdbc_scalar_equals() {
   fi
 }
 
+assert_jdbc_audit_exists() {
+  local action="$1"
+  local resource_type="$2"
+  local resource_id="$3"
+  local attempt=1
+  local actual
+
+  if ! jdbc_assertions_enabled; then
+    return
+  fi
+
+  echo "[smoke] JDBC audit $action $resource_type $resource_id" >&2
+  while true; do
+    actual="$(jdbc_scalar "SELECT count(*) FROM audit_logs WHERE action = '$action' AND resource_type = '$resource_type' AND resource_id = '$resource_id'")"
+    if [[ "$actual" != "0" ]]; then
+      return
+    fi
+    if ((attempt >= SMOKE_RETRIES)); then
+      echo "[smoke] JDBC audit assertion failed for $action/$resource_type/$resource_id" >&2
+      return 1
+    fi
+    attempt=$((attempt + 1))
+    sleep "$SMOKE_RETRY_DELAY_SECONDS"
+  done
+}
+
 assert_profile_role() {
   local expected_role="$1"
   python3 -c 'import json, sys; expected = sys.argv[1]; payload = json.load(sys.stdin); data = payload.get("data", {}); roles = data.get("user", data).get("roles", []); raise SystemExit(0 if expected in roles else 1)' "$expected_role"
@@ -493,6 +519,7 @@ if [[ "$SMOKE_INCLUDE_WRITES" == "1" ]]; then
     grading_job_id="$(json_field id <<< "$grading_job_response")"
     assert_json_field_equals data.status COMPLETED <<< "$grading_job_response"
     assert_jdbc_scalar_equals "grading job persisted" "SELECT status FROM grading_jobs WHERE id = $grading_job_id" "COMPLETED"
+    assert_jdbc_audit_exists "GRADING_START" "GRADING_JOB" "$grading_job_id"
   fi
   if [[ "$SMOKE_DRY_RUN" == "1" ]]; then
     post_json "ocr job" "$GATEWAY_URL/api/ocr/jobs" '{"submissionId":1,"objectKey":"assignments/1/students/2/database-report.docx","mode":"STRUCTURE"}'
@@ -510,11 +537,14 @@ if [[ "$SMOKE_INCLUDE_WRITES" == "1" ]]; then
   else
     review_response="$(patch_json "review item" "$GATEWAY_URL/api/grading/results/1/items" '{"rubricItemId":1,"teacherScore":18,"teacherComment":"Smoke review comment"}')"
     assert_json_field_equals data.reviewStatus IN_REVIEW <<< "$review_response"
+    assert_jdbc_audit_exists "REVIEW_UPDATE" "GRADING_RESULT" "1"
     approve_response="$(post_json "approve result" "$GATEWAY_URL/api/grading/results/1/approve" '{"reviewerName":"Smoke Reviewer","overallComment":"Smoke approved"}')"
     assert_json_field_equals data.reviewStatus APPROVED <<< "$approve_response"
+    assert_jdbc_audit_exists "REVIEW_APPROVE" "GRADING_RESULT" "1"
     publish_response="$(post_json "publish result" "$GATEWAY_URL/api/grading/results/1/publish" '{"operatorName":"Smoke","message":"Smoke publish"}')"
     assert_json_field_equals data.publicationStatus PUBLISHED <<< "$publish_response"
     assert_jdbc_scalar_equals "grading result published" "SELECT publication_status FROM grading_results WHERE id = 1" "PUBLISHED"
+    assert_jdbc_audit_exists "GRADE_PUBLISH" "GRADING_RESULT" "1"
   fi
   check_api "gateway publications" "$GATEWAY_URL/api/grading/results/publications?assignmentId=1"
   check_api "gateway publication audits" "$GATEWAY_URL/api/grading/results/1/publication-audits"
@@ -524,9 +554,11 @@ if [[ "$SMOKE_INCLUDE_WRITES" == "1" ]]; then
   else
     appeal_response="$(post_json "grade appeal" "$GATEWAY_URL/api/grading/results/appeals" '{"resultId":1,"rubricItemId":1,"studentId":2,"reason":"Smoke appeal reason","requestedChange":"Smoke requested change"}')"
     appeal_id="$(json_field id <<< "$appeal_response")"
+    assert_jdbc_audit_exists "APPEAL_SUBMIT" "APPEAL" "$appeal_id"
     resolved_appeal_response="$(post_json "resolve grade appeal" "$GATEWAY_URL/api/grading/results/appeals/$appeal_id/resolve" '{"status":"REJECTED","teacherReply":"Smoke appeal reply"}')"
     assert_json_field_equals data.status REJECTED <<< "$resolved_appeal_response"
     assert_jdbc_scalar_equals "grade appeal persisted" "SELECT status FROM grade_appeals WHERE id = $appeal_id" "REJECTED"
+    assert_jdbc_audit_exists "APPEAL_RESOLVE" "APPEAL" "$appeal_id"
   fi
   check_api "gateway grade appeals" "$GATEWAY_URL/api/grading/results/appeals?resultId=1"
   if [[ "$SMOKE_DRY_RUN" == "1" ]]; then
@@ -538,6 +570,7 @@ if [[ "$SMOKE_INCLUDE_WRITES" == "1" ]]; then
     grade_export_id="$(json_field id <<< "$grade_export_response")"
     assert_json_field_equals data.status READY <<< "$grade_export_response"
     assert_jdbc_scalar_equals "grade export persisted" "SELECT status FROM grade_exports WHERE id = $grade_export_id" "READY"
+    assert_jdbc_audit_exists "GRADE_EXPORT" "GRADE_EXPORT" "$grade_export_id"
     reminder_response="$(post_json "remind unsubmitted" "$GATEWAY_URL/api/notifications/remind-unsubmitted" '{"assignmentId":1,"studentIds":[2],"channels":["IN_APP"],"message":"Smoke reminder"}')"
     assert_json_field_equals data.status SENT <<< "$reminder_response"
     assert_jdbc_scalar_equals "reminder persisted" "SELECT CASE WHEN EXISTS (SELECT 1 FROM notification_events WHERE assignment_id = 1 AND recipient_id = 2 AND status = 'SENT' AND message = 'Smoke reminder') THEN 1 ELSE 0 END" "1"

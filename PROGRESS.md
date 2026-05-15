@@ -3428,6 +3428,23 @@ mvn -f backend/pom.xml -pl gateway-service -am package -DskipTests
 pnpm verify:mvp
 ```
 
+审计日志 JDBC 写入边界已补齐：
+
+- 已新增迁移 `V13__audit_log_actor_name_detail.sql`，为 `audit_logs` 补充 `actor_name`，并将 `detail` 统一为文本字段，匹配现有 `CreateAuditLogRequest` 和 JDBC 写入逻辑。
+- 已让 Docker 初始化脚本和本地迁移脚本应用 V12/V13 增量迁移，避免旧库缺列导致 grading-service 的 best-effort 审计写入静默失败。
+- 已修正 admin-service JDBC 审计读取，优先显示用户表姓名，其次显示审计事件自带 actorName。
+- API smoke 已增加审计落库断言，覆盖 `GRADING_START`、`REVIEW_UPDATE`、`REVIEW_APPROVE`、`GRADE_PUBLISH`、`APPEAL_SUBMIT`、`APPEAL_RESOLVE` 和 `GRADE_EXPORT`。
+
+验证命令：
+
+```bash
+bash -n scripts/apply-db-migrations.sh
+bash -n scripts/smoke-api.sh
+mvn -f backend/pom.xml -pl admin-service,grading-service -am package -DskipTests
+TRAINMARK_SKIP_INFRA=1 SMOKE_INCLUDE_WRITES=1 pnpm smoke:mvp:minio
+pnpm verify:mvp
+```
+
 ## 已提交记录
 
 主要提交：
@@ -3539,4 +3556,4 @@ pnpm verify:mvp
 
 - 继续拆分老师端/学生端工作台内部组件。
 - 在不破坏现有无依赖开发路径的前提下补充单元测试和接口测试依赖。
-- 补齐异步队列和审计留痕的边界验证。
+- 补齐异步队列边界验证。
