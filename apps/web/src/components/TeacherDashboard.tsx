@@ -30,6 +30,18 @@ import { TeacherRosterPanel } from './TeacherRosterPanel';
 import { TeacherReviewWorkspace } from './TeacherReviewWorkspace';
 import { TeacherSimilarityPanel } from './TeacherSimilarityPanel';
 
+const teacherNavSections = [
+  { key: 'overview', label: '工作台' },
+  { key: 'collection', label: '报告收集' },
+  { key: 'ai-pipeline', label: 'AI 批改' },
+  { key: 'review', label: '人工复核' },
+  { key: 'analytics', label: '失分分析' },
+  { key: 'roster', label: '名单管理' },
+  { key: 'appeals', label: '申诉处理' },
+  { key: 'similarity', label: '查重检测' },
+  { key: 'operations', label: '运维能力' },
+];
+
 type TeacherDashboardProps = {
   assignments: ReturnType<typeof mockApi.listAssignments>;
   classes: ReturnType<typeof mockApi.listClasses>;
@@ -57,6 +69,8 @@ type TeacherDashboardProps = {
   appeals: ReturnType<typeof mockApi.listAppeals>;
   similarityJobs: ReturnType<typeof mockApi.listSimilarityJobs>;
   onWorkspaceRefresh: () => Promise<void>;
+  activeSection?: string;
+  onSectionChange?: (section: string) => void;
 };
 
 export function TeacherDashboard({
@@ -86,7 +100,15 @@ export function TeacherDashboard({
   appeals,
   similarityJobs,
   onWorkspaceRefresh,
+  activeSection: externalSection,
+  onSectionChange: externalOnChange,
 }: TeacherDashboardProps) {
+  const [activeSection, setActiveSection] = useState(externalSection ?? 'overview');
+  const section = externalSection ?? activeSection;
+  const setSection = (s: string) => {
+    setActiveSection(s);
+    externalOnChange?.(s);
+  };
   const [reminderResult, setReminderResult] = useState<ReturnType<typeof mockApi.remindUnsubmitted> | null>(null);
   const [startedJob, setStartedJob] = useState<ReturnType<typeof mockApi.startGradingJob> | null>(null);
   const [reviewResults, setReviewResults] = useState(gradingResults);
@@ -163,6 +185,12 @@ export function TeacherDashboard({
   useEffect(() => {
     setPublicationAuditRows(publicationAudits);
   }, [publicationAudits]);
+
+  useEffect(() => {
+    if (externalSection && externalSection !== activeSection) {
+      setActiveSection(externalSection);
+    }
+  }, [externalSection, activeSection]);
 
   const syncReviewResult = (updated: GradingResultSummary) => {
     setReviewResults((current) => current.map((item) => (item.id === updated.id ? { ...updated } : item)));
@@ -285,92 +313,130 @@ export function TeacherDashboard({
     await onWorkspaceRefresh();
   };
 
+  const isOverview = section === 'overview';
+
   return (
     <>
-      <TeacherCoursePanel
-        assignments={assignmentRows}
-        classes={classes}
-        courses={courses}
-        selectedCourse={selectedCourse}
-        selectedCourseId={selectedCourseId}
-        stats={stats}
-        assignmentNotice={assignmentNotice}
-        onCreateAssignment={handleCreateAssignment}
-        onSelectCourse={setSelectedCourseId}
-      />
+      <nav className="teacher-section-tabs">
+        {teacherNavSections.map((item) => (
+          <button
+            className={section === item.key ? 'active' : ''}
+            key={item.key}
+            type="button"
+            onClick={() => setSection(item.key)}
+          >
+            {item.label}
+          </button>
+        ))}
+      </nav>
 
-      <TeacherAiPipeline
-        assignments={assignmentRows}
-        rubric={rubric}
-        rubricNotice={rubricNotice}
-        gradingJobs={visibleJobs}
-        ocrJobs={ocrRows}
-        canStartOcr={Boolean(ocrCandidate)}
-        onCreateRubric={handleCreateRubric}
-        onStartGrading={handleStartGrading}
-        onStartOcr={handleStartOcr}
-      />
-
-      <TeacherSimilarityPanel similarityJobs={similarityRows} onStartSimilarity={handleStartSimilarity} />
-
-      {selectedReview ? (
-        <TeacherReviewWorkspace
-          reviewResults={reviewResults}
-          selectedReview={selectedReview}
-          publicationAudits={publicationAuditRows}
-          onSelectReview={setSelectedReviewId}
-          onReviewItemSubmit={handleReviewItemSubmit}
-          onApproveResult={handleApproveResult}
-          onPublishResult={handlePublishResult}
-          onWithdrawResult={handleWithdrawResult}
+      {isOverview || section === 'collection' ? (
+        <TeacherCollectionPanel
+          collectionOverview={collectionOverview}
+          submissions={submissions}
+          selectedAssignmentId={selectedAssignmentId}
+          unsubmittedStudents={unsubmittedStudents}
+          reminderResult={reminderResult}
+          onRemindUnsubmitted={handleRemindUnsubmitted}
         />
-      ) : (
-        <section className="review-layout">
-          <article className="panel wide-panel">
-            <div className="panel-heading">
-              <div>
-                <p className="eyebrow">Manual Review</p>
-                <h3>人工复核工作区</h3>
+      ) : null}
+
+      {isOverview || section === 'ai-pipeline' ? (
+        <>
+          <TeacherAiPipeline
+            assignments={assignmentRows}
+            rubric={rubric}
+            rubricNotice={rubricNotice}
+            gradingJobs={visibleJobs}
+            ocrJobs={ocrRows}
+            canStartOcr={Boolean(ocrCandidate)}
+            onCreateRubric={handleCreateRubric}
+            onStartGrading={handleStartGrading}
+            onStartOcr={handleStartOcr}
+          />
+          {isOverview ? (
+            <TeacherSimilarityPanel similarityJobs={similarityRows} onStartSimilarity={handleStartSimilarity} />
+          ) : null}
+        </>
+      ) : null}
+
+      {section === 'similarity' ? (
+        <TeacherSimilarityPanel similarityJobs={similarityRows} onStartSimilarity={handleStartSimilarity} />
+      ) : null}
+
+      {isOverview || section === 'review' ? (
+        selectedReview ? (
+          <TeacherReviewWorkspace
+            reviewResults={reviewResults}
+            selectedReview={selectedReview}
+            publicationAudits={publicationAuditRows}
+            onSelectReview={setSelectedReviewId}
+            onReviewItemSubmit={handleReviewItemSubmit}
+            onApproveResult={handleApproveResult}
+            onPublishResult={handlePublishResult}
+            onWithdrawResult={handleWithdrawResult}
+          />
+        ) : (
+          <section className="review-layout">
+            <article className="panel wide-panel">
+              <div className="panel-heading">
+                <div>
+                  <p className="eyebrow">Manual Review</p>
+                  <h3>人工复核工作区</h3>
+                </div>
+                <span className="status-pill">暂无结果</span>
               </div>
-              <span className="status-pill">暂无结果</span>
-            </div>
-            <div className="empty-result">
-              <strong>暂无复核结果</strong>
-              <span>当前作业还没有可复核的批改结果。启动 AI 批改后，结果会出现在这里。</span>
-            </div>
-          </article>
-        </section>
-      )}
+              <div className="empty-result">
+                <strong>暂无复核结果</strong>
+                <span>当前作业还没有可复核的批改结果。启动 AI 批改后，结果会出现在这里。</span>
+              </div>
+            </article>
+          </section>
+        )
+      ) : null}
 
-      <TeacherAnalyticsPanel
-        gradeExports={exportRows}
-        gradeStatistics={gradeStatistics}
-        lossPoints={lossPoints}
-        courseOutcomes={courseOutcomes}
-        onCreateGradeExport={handleCreateGradeExport}
-      />
+      {isOverview || section === 'analytics' ? (
+        <TeacherAnalyticsPanel
+          gradeExports={exportRows}
+          gradeStatistics={gradeStatistics}
+          lossPoints={lossPoints}
+          courseOutcomes={courseOutcomes}
+          onCreateGradeExport={handleCreateGradeExport}
+        />
+      ) : null}
 
-      <TeacherAppealPanel appeals={appealRows} onResolveAppeal={handleResolveAppeal} />
+      {isOverview || section === 'appeals' ? (
+        <TeacherAppealPanel appeals={appealRows} onResolveAppeal={handleResolveAppeal} />
+      ) : null}
 
-      <TeacherCollectionPanel
-        collectionOverview={collectionOverview}
-        submissions={submissions}
-        selectedAssignmentId={selectedAssignmentId}
-        unsubmittedStudents={unsubmittedStudents}
-        reminderResult={reminderResult}
-        onRemindUnsubmitted={handleRemindUnsubmitted}
-      />
+      {isOverview || section === 'roster' ? (
+        <TeacherRosterPanel
+          classes={classes}
+          importPreview={importPreview}
+          importResult={studentImportResult}
+          organizations={organizations}
+          students={studentRows}
+          onImportStudents={handleImportStudents}
+        />
+      ) : null}
 
-      <TeacherRosterPanel
-        classes={classes}
-        importPreview={importPreview}
-        importResult={studentImportResult}
-        organizations={organizations}
-        students={studentRows}
-        onImportStudents={handleImportStudents}
-      />
+      {isOverview || section === 'operations' ? (
+        <TeacherOperationsPanel />
+      ) : null}
 
-      <TeacherOperationsPanel />
+      {isOverview ? (
+        <TeacherCoursePanel
+          assignments={assignmentRows}
+          classes={classes}
+          courses={courses}
+          selectedCourse={selectedCourse}
+          selectedCourseId={selectedCourseId}
+          stats={stats}
+          assignmentNotice={assignmentNotice}
+          onCreateAssignment={handleCreateAssignment}
+          onSelectCourse={setSelectedCourseId}
+        />
+      ) : null}
     </>
   );
 }

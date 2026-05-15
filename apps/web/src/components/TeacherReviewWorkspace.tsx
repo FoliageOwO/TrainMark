@@ -64,18 +64,23 @@ export function TeacherReviewWorkspace({
           ))}
         </div>
         <div className="pdf-preview">
-          <div className="pdf-page">
-            <div className="pdf-toolbar">
-              <span>{selectedReview.fileName}</span>
-              <a className="ghost-button compact-link" href={resolveApiAssetUrl(selectedReview.annotationPdfUrl)} rel="noreferrer" target="_blank">
-                <FileText size={14} /> 打开批注
-              </a>
+          <div className="pdf-toolbar">
+            <span>{selectedReview.fileName ?? '未命名报告'}</span>
+            <div className="pdf-toolbar-actions">
+              {selectedReview.annotationPdfUrl ? (
+                <a className="ghost-button compact-link" href={resolveApiAssetUrl(selectedReview.annotationPdfUrl)} rel="noreferrer" target="_blank">
+                  <FileText size={14} /> 打开批注
+                </a>
+              ) : null}
             </div>
-            <h4>Java Web 综合实训报告</h4>
-            <p>需求分析、系统设计、核心功能实现、数据库表结构、测试截图、实训总结。</p>
-            <div className="pdf-highlight">数据库表结构：外键约束说明不完整</div>
-            <div className="pdf-highlight muted">系统运行截图：建议补充失败场景截图</div>
-            <div className="pdf-comment">AI 批注 PDF：{selectedReview.annotationPdfUrl}</div>
+          </div>
+          <div className="pdf-viewer">
+            <iframe
+              className="pdf-iframe"
+              src={resolveApiAssetUrl(selectedReview.annotationPdfUrl) ?? undefined}
+              title={`批注 PDF - ${selectedReview.studentName}`}
+              sandbox="allow-scripts allow-same-origin"
+            />
           </div>
         </div>
         <div className="annotation-list">

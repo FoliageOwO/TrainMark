@@ -54,10 +54,30 @@ function writeRoleToLocation(role: RoleCode) {
 export function App() {
   const [user, setUser] = useState<UserProfile>(() => mockApi.login(getRoleFromLocation()));
   const [activeNav, setActiveNav] = useState('工作台');
+  const [teacherSection, setTeacherSection] = useState('overview');
   const [selectedCourseId, setSelectedCourseId] = useState(1);
   const [workspaceData, setWorkspaceData] = useState<WorkspaceData | null>(null);
   const [apiModeLabel, setApiModeLabel] = useState(shouldUseHttpApi() ? 'HTTP API' : 'Mock 数据');
   const [apiError, setApiError] = useState<string | null>(null);
+
+  const teacherNavMap: Record<string, string> = {
+    '工作台': 'overview',
+    '课程与班级': 'overview',
+    '实训任务': 'overview',
+    '报告收集': 'collection',
+    'AI 批改中心': 'ai-pipeline',
+    '人工复核': 'review',
+    '失分分析': 'analytics',
+    '系统管理': 'roster',
+  };
+
+  const handleNavChange = (label: string) => {
+    setActiveNav(label);
+    const mapped = teacherNavMap[label];
+    if (mapped && primaryRole !== 'STUDENT' && primaryRole !== 'ADMIN') {
+      setTeacherSection(mapped);
+    }
+  };
 
   const primaryRole = user.roles[0];
   const courses = workspaceData?.courses ?? mockApi.listCourses();
@@ -200,7 +220,7 @@ export function App() {
       apiModeLabel={apiModeLabel}
       primaryRole={primaryRole}
       user={user}
-      onNavChange={setActiveNav}
+      onNavChange={handleNavChange}
       onLogout={handleLogout}
       onRoleChange={handleRoleChange}
     >
@@ -259,6 +279,8 @@ export function App() {
           appeals={allAppeals}
           similarityJobs={similarityJobs}
           onWorkspaceRefresh={refreshWorkspaceData}
+          activeSection={teacherSection}
+          onSectionChange={setTeacherSection}
         />
       )}
     </AppChrome>
