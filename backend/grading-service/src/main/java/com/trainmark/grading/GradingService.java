@@ -25,6 +25,8 @@ import java.time.OffsetDateTime;
 import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -37,6 +39,9 @@ public class GradingService {
   private final GradingResultStore gradingResultStore;
   private final ScoringProvider scoringProvider;
   private final AnnotationProvider annotationProvider;
+  private final boolean asyncEnabled;
+  @Autowired(required = false)
+  private GradingJobPublisher jobPublisher;
 
   public GradingService(
       RubricStore rubricStore,
@@ -46,7 +51,8 @@ public class GradingService {
       GradingJobStore gradingJobStore,
       GradingResultStore gradingResultStore,
       ScoringProvider scoringProvider,
-      AnnotationProvider annotationProvider
+      AnnotationProvider annotationProvider,
+      @Value("${trainmark.grading.async-enabled:false}") boolean asyncEnabled
   ) {
     this.rubricStore = rubricStore;
     this.gradeExportStore = gradeExportStore;
@@ -56,6 +62,7 @@ public class GradingService {
     this.gradingResultStore = gradingResultStore;
     this.scoringProvider = scoringProvider;
     this.annotationProvider = annotationProvider;
+    this.asyncEnabled = asyncEnabled;
   }
 
   public Collection<RubricSummary> listRubrics(Long assignmentId) {
@@ -71,8 +78,22 @@ public class GradingService {
   }
 
   public GradingJobSummary createJob(CreateGradingJobRequest request) {
-    request.submissionIds().forEach(submissionId -> ensureScoredResult(request.assignmentId(), submissionId));
-    return gradingJobStore.createJob(request);
+    var job = gradingJobStore.createJob(request);
+
+    if (asyncEnabled && jobPublisher != null) {
+      // Async mode: publish to RabbitMQ, processing happens in consumer
+      jobPublisher.publish(new GradingJobMessage(
+          job.id(),
+          request.assignmentId(),
+          request.rubricId(),
+          request.submissionIds()
+      ));
+    } else {
+      // Sync mode: process immediately (default for local/demo)
+      request.submissionIds().forEach(submissionId -> ensureScoredResult(request.assignmentId(), submissionId));
+    }
+
+    return job;
   }
 
   public Collection<GradingResultSummary> listResults(Long assignmentId, ReviewStatus reviewStatus) {
@@ -243,7 +264,7 @@ public class GradingService {
     publicationAuditStore.appendPublicationAudit(resultId, action, operatorName, reason);
   }
 
-  private void ensureScoredResult(Long assignmentId, Long submissionId) {
+  void ensureScoredResult(Long assignmentId, Long submissionId) {
     if (gradingResultStore.hasSubmissionResult(submissionId)) {
       return;
     }

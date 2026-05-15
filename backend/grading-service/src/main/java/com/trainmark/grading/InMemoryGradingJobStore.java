@@ -45,12 +45,48 @@ public class InMemoryGradingJobStore implements GradingJobStore {
         request.assignmentId(),
         request.rubricId(),
         request.submissionIds().size(),
-        request.submissionIds().size(),
-        GradingJobStatus.COMPLETED,
-        86,
+        0,
+        GradingJobStatus.PENDING,
+        0,
         OffsetDateTime.now()
     );
     jobs.put(id, job);
     return job;
+  }
+
+  @Override
+  public void updateJobStatus(Long jobId, GradingJobStatus status) {
+    var current = jobs.get(jobId);
+    if (current != null) {
+      jobs.put(jobId, new GradingJobSummary(
+          current.id(),
+          current.assignmentId(),
+          current.rubricId(),
+          current.totalSubmissions(),
+          current.completedSubmissions(),
+          status,
+          current.confidence(),
+          current.createdAt()
+      ));
+    }
+  }
+
+  @Override
+  public void incrementJobProgress(Long jobId) {
+    var current = jobs.get(jobId);
+    if (current != null) {
+      var completed = Math.min(current.completedSubmissions() + 1, current.totalSubmissions());
+      var status = completed >= current.totalSubmissions() ? GradingJobStatus.COMPLETED : current.status();
+      jobs.put(jobId, new GradingJobSummary(
+          current.id(),
+          current.assignmentId(),
+          current.rubricId(),
+          current.totalSubmissions(),
+          completed,
+          status,
+          current.confidence(),
+          current.createdAt()
+      ));
+    }
   }
 }

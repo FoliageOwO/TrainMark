@@ -3,6 +3,11 @@ server:
 spring:
   application:
     name: grading-service
+  rabbitmq:
+    host: ${RABBITMQ_HOST:localhost}
+    port: ${RABBITMQ_PORT:5672}
+    username: ${RABBITMQ_USERNAME:guest}
+    password: ${RABBITMQ_PASSWORD:guest}
 management:
   endpoints:
     web:
@@ -11,12 +16,17 @@ management:
 
 trainmark:
   grading:
+    async-enabled: ${GRADING_ASYNC_ENABLED:false}
     rubric-store: ${TRAINMARK_GRADING_RUBRIC_STORE:memory}
     export-store: ${TRAINMARK_GRADING_EXPORT_STORE:memory}
     publication-audit-store: ${TRAINMARK_GRADING_PUBLICATION_AUDIT_STORE:memory}
     appeal-store: ${TRAINMARK_GRADING_APPEAL_STORE:memory}
     job-store: ${TRAINMARK_GRADING_JOB_STORE:memory}
     result-store: ${TRAINMARK_GRADING_RESULT_STORE:memory}
+    queue:
+      name: ${GRADING_QUEUE_NAME:trainmark-grading-jobs}
+    exchange:
+      name: ${GRADING_EXCHANGE_NAME:trainmark-grading-exchange}
     jdbc:
       url: ${TRAINMARK_GRADING_JDBC_URL:}
       username: ${TRAINMARK_GRADING_JDBC_USERNAME:}

@@ -67,16 +67,16 @@ public class JdbcGradingJobStore implements GradingJobStore {
     var sql = """
         INSERT INTO grading_jobs (
           assignment_id, rubric_id, status, total_submission_count,
-          processed_submission_count, failed_submission_count, started_at, finished_at
-        ) VALUES (?, ?, ?, ?, ?, ?, now(), now())
+          processed_submission_count, failed_submission_count
+        ) VALUES (?, ?, ?, ?, ?, ?)
         """;
     try (var connection = connect();
         var statement = connection.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
       statement.setLong(1, request.assignmentId());
       statement.setLong(2, request.rubricId());
-      statement.setString(3, GradingJobStatus.COMPLETED.name());
+      statement.setString(3, GradingJobStatus.PENDING.name());
       statement.setInt(4, request.submissionIds().size());
-      statement.setInt(5, request.submissionIds().size());
+      statement.setInt(5, 0);
       statement.setInt(6, 0);
       statement.executeUpdate();
       try (var keys = statement.getGeneratedKeys()) {
@@ -88,6 +88,39 @@ public class JdbcGradingJobStore implements GradingJobStore {
       throw new IllegalStateException("Failed to create grading job", error);
     }
     throw new IllegalStateException("Insert did not return a generated grading job id");
+  }
+
+  @Override
+  public void updateJobStatus(Long jobId, GradingJobStatus status) {
+    var sql = "UPDATE grading_jobs SET status = ? WHERE id = ?";
+    try (var connection = connect();
+        var statement = connection.prepareStatement(sql)) {
+      statement.setString(1, status.name());
+      statement.setLong(2, jobId);
+      statement.executeUpdate();
+    } catch (SQLException error) {
+      throw new IllegalStateException("Failed to update grading job status", error);
+    }
+  }
+
+  @Override
+  public void incrementJobProgress(Long jobId) {
+    var sql = """
+        UPDATE grading_jobs
+        SET processed_submission_count = processed_submission_count + 1,
+            status = CASE
+              WHEN processed_submission_count + 1 >= total_submission_count THEN 'COMPLETED'
+              ELSE status
+            END
+        WHERE id = ?
+        """;
+    try (var connection = connect();
+        var statement = connection.prepareStatement(sql)) {
+      statement.setLong(1, jobId);
+      statement.executeUpdate();
+    } catch (SQLException error) {
+      throw new IllegalStateException("Failed to increment grading job progress", error);
+    }
   }
 
   private GradingJobSummary getJob(Long jobId) throws SQLException {
