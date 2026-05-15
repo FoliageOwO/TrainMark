@@ -3478,6 +3478,7 @@ pnpm verify:mvp
 - 补齐缺失的 CSS 变量（`--border`、`--text-primary`、`--text-secondary`、`--bg-elevated`、`--brand-blue`、`--brand-teal`），Section Tabs 现在正确渲染高亮状态。
 - 侧边栏品牌图标替换为与网站 favicon 一致的 SVG 图标（`/icons/icon.svg`）。
 - 所有操作按钮（一键催交、新建标准、启动批改、启动查重、发布成绩、导出成绩、采纳/驳回申诉、导入名单、创建任务等）均可正常点击并触发对应操作。
+- 学生端"查看批注"按钮改为点击后滚动到成绩与批注区域，并新增内联批注预览模态框，支持放大/缩小、Esc 键关闭、无障碍访问。
 
 验证命令：
 
