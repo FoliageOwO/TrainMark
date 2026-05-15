@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Bell, CheckCheck, ExternalLink } from 'lucide-react';
 import { formatDate } from '../utils/formatDate';
 import { listNotifications, markNotificationAsRead, markAllNotificationsAsRead } from '../api/httpApi';
@@ -25,12 +25,7 @@ export function NotificationPanel({ userId, isOpen, onClose }: NotificationPanel
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
 
-  useEffect(() => {
-    if (!isOpen) return;
-    loadNotifications();
-  }, [isOpen]);
-
-  const loadNotifications = async () => {
+  const loadNotifications = useCallback(async () => {
     let items: NotificationItem[];
     if (shouldUseHttpApi()) {
       items = await listNotifications(userId);
@@ -39,9 +34,18 @@ export function NotificationPanel({ userId, isOpen, onClose }: NotificationPanel
     }
     setNotifications(items);
     setUnreadCount(items.filter((n) => !n.isRead).length);
-  };
+  }, [userId]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    loadNotifications();
+  }, [isOpen, loadNotifications]);
 
   const handleMarkRead = async (id: number) => {
+    const item = notifications.find((n) => n.id === id);
+    if (!item || item.isRead) {
+      return;
+    }
     if (shouldUseHttpApi()) {
       await markNotificationAsRead(id, userId);
     } else {

@@ -3335,6 +3335,19 @@ pnpm verify:mvp
 
 > 本地验证时使用 `TRAINMARK_SKIP_INFRA=1`，因为当前 Windows/WSL 环境已有其他 Redis 容器占用 `127.0.0.1:6379`；TrainMark 的 Postgres、RabbitMQ、MinIO 和 Nginx 容器已在运行。
 
+前端通知面板工程质量收敛已完成：
+
+- 已将通知加载函数改为稳定回调，消除 `react-hooks/exhaustive-deps` warning。
+- 已修复点击已读通知仍递减未读数的问题，只有未读通知成功标记后才更新 badge。
+
+验证命令：
+
+```bash
+pnpm lint:web
+pnpm build:web
+pnpm verify:mvp
+```
+
 覆盖内容：
 
 - 前端 `pnpm lint:web`
