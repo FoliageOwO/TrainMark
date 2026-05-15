@@ -11,6 +11,7 @@ import type {
   GradeStatisticsSummary,
   GradingResultSummary,
   GradingJobSummary,
+  NotificationItem,
   OcrJobSummary,
   OrganizationSummary,
   ReminderResult,
@@ -700,4 +701,28 @@ export const mockApi = {
       status: '已提交',
     };
   },
+  listNotifications(userId: number, unreadOnly = false): NotificationItem[] {
+    return demoNotifications
+      .filter((n) => !unreadOnly || !n.isRead)
+      .map((n) => ({ ...n }));
+  },
+  markNotificationAsRead(notificationId: number): void {
+    const notification = demoNotifications.find((n) => n.id === notificationId);
+    if (notification) {
+      notification.isRead = true;
+    }
+  },
+  markAllNotificationsAsRead(): void {
+    demoNotifications.forEach((n) => {
+      n.isRead = true;
+    });
+  },
 };
+
+const demoNotifications: NotificationItem[] = [
+  { id: 1, title: '任务发布', message: 'Java Web 综合实训报告已发布，请及时查看要求。', type: 'ASSIGNMENT_PUBLISHED', isRead: false, targetUrl: '/tasks/1', createdAt: new Date(Date.now() - 75 * 60_000).toISOString() },
+  { id: 2, title: '催交提醒', message: '您有 31 名学生未提交实训报告，请及时催交。', type: 'REMINDER', isRead: false, targetUrl: '/collection/1', createdAt: new Date(Date.now() - 60 * 60_000).toISOString() },
+  { id: 3, title: '批改完成', message: 'AI 已完成 65 份报告的批改，请前往复核。', type: 'GRADING_COMPLETE', isRead: false, targetUrl: '/review/1', createdAt: new Date(Date.now() - 45 * 60_000).toISOString() },
+  { id: 4, title: '成绩发布', message: '您的实训报告成绩已发布，请查看详情。', type: 'GRADE_PUBLISHED', isRead: true, targetUrl: '/results/1', createdAt: new Date(Date.now() - 30 * 60_000).toISOString() },
+  { id: 5, title: '申诉处理', message: '您有一条申诉需要处理。', type: 'APPEAL', isRead: true, targetUrl: '/appeals/1', createdAt: new Date(Date.now() - 15 * 60_000).toISOString() },
+];

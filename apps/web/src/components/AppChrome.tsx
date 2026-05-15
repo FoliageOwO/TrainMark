@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import type { ReactNode } from 'react';
 import {
   BarChart3,
@@ -13,6 +14,7 @@ import {
   UploadCloud,
 } from 'lucide-react';
 import type { RoleCode, UserProfile } from '../api/types';
+import { NotificationPanel } from './NotificationPanel';
 
 type RoleOption = {
   role: RoleCode;
@@ -60,6 +62,7 @@ export function AppChrome({
   onNavChange,
   onRoleChange,
 }: AppChromeProps) {
+  const [notifOpen, setNotifOpen] = useState(false);
   const roleHint = roleOptions.find((item) => item.role === primaryRole)?.hint;
   const isStudent = primaryRole === 'STUDENT';
   const hero = heroCopy(primaryRole);
@@ -108,7 +111,7 @@ export function AppChrome({
                 </button>
               ))}
             </div>
-            <button className="icon-button" type="button" aria-label="通知">
+            <button className="icon-button" type="button" aria-label="通知" onClick={() => setNotifOpen(!notifOpen)}>
               <Bell size={18} />
             </button>
             <button className="icon-button" type="button" aria-label="退出登录" title="退出登录" onClick={() => onLogout()}>
@@ -137,6 +140,8 @@ export function AppChrome({
 
         {children}
       </section>
+
+      <NotificationPanel userId={user.id} isOpen={notifOpen} onClose={() => setNotifOpen(false)} />
     </main>
   );
 }

@@ -385,3 +385,13 @@ export type SystemSettingSummary = {
   category: 'AI' | 'FILE' | 'EXPORT' | 'NOTIFICATION' | 'SECURITY';
   sensitive: boolean;
 };
+
+export type NotificationItem = {
+  id: number;
+  title: string;
+  message: string;
+  type: string;
+  isRead: boolean;
+  targetUrl: string;
+  createdAt: string;
+};

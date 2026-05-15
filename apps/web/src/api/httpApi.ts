@@ -13,6 +13,7 @@ import type {
   GradingJobSummary,
   LossPointSummary,
   LoginResponse,
+  NotificationItem,
   OcrJobSummary,
   OrganizationType,
   OrganizationSummary,
@@ -771,4 +772,18 @@ function guessContentType(fileName: string) {
     return 'image/jpeg';
   }
   return 'application/octet-stream';
+}
+
+export async function listNotifications(userId: number, unreadOnly = false): Promise<NotificationItem[]> {
+  return getOr(`/api/notifications?userId=${userId}&unreadOnly=${unreadOnly}`, []);
+}
+
+export async function markNotificationAsRead(notificationId: number, userId: number): Promise<void> {
+  if (!shouldUseHttpApi()) return;
+  await request(`/api/notifications/${notificationId}/read?userId=${userId}`, 'PATCH', null);
+}
+
+export async function markAllNotificationsAsRead(userId: number): Promise<void> {
+  if (!shouldUseHttpApi()) return;
+  await request(`/api/notifications/read-all?userId=${userId}`, 'PATCH', null);
 }
