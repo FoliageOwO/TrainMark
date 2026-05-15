@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   CalendarClock,
   CheckCircle2,
@@ -7,6 +7,9 @@ import {
   FileText,
   GraduationCap,
   UploadCloud,
+  X,
+  ZoomIn,
+  ZoomOut,
 } from 'lucide-react';
 import { createAppeal, createUploadReceipt, resolveApiAssetUrl, shouldUseHttpApi } from '../api/httpApi';
 import type { AppealSummary, GradingResultSummary, SubmissionTask, UploadReceipt } from '../api/types';
@@ -36,6 +39,9 @@ export function StudentDashboard({ tasks, publishedResults, appeals, userId, use
   const [taskRows, setTaskRows] = useState(tasks);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [selectedTaskId, setSelectedTaskId] = useState(() => tasks[0]?.id ?? 0);
+  const [viewingResult, setViewingResult] = useState<GradingResultSummary | null>(null);
+  const [pdfZoom, setPdfZoom] = useState(100);
+  const resultsRef = useRef<HTMLDivElement>(null);
 
   const selectedTask = taskRows.find((task) => task.id === selectedTaskId) ?? taskRows[0];
 
@@ -46,6 +52,10 @@ export function StudentDashboard({ tasks, publishedResults, appeals, userId, use
     }
     setReceipt(null);
     setUploadProgress(file ? 64 : 36);
+  };
+
+  const scrollToResults = () => {
+    resultsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   };
 
   useEffect(() => {
@@ -121,6 +131,8 @@ export function StudentDashboard({ tasks, publishedResults, appeals, userId, use
                     setSelectedTaskId(task.id);
                     setReceipt(null);
                     setUploadProgress(36);
+                  } else {
+                    scrollToResults();
                   }
                 }}
               >
@@ -131,7 +143,7 @@ export function StudentDashboard({ tasks, publishedResults, appeals, userId, use
         </div>
       </article>
 
-      <article className="panel wide-panel">
+      <article className="panel wide-panel" ref={resultsRef}>
         <div className="panel-heading">
           <div>
             <p className="eyebrow">Published Results</p>
@@ -166,7 +178,10 @@ export function StudentDashboard({ tasks, publishedResults, appeals, userId, use
                     ))}
                   </div>
                   <div className="student-result-actions">
-                    <a className="primary-button" href={resolveApiAssetUrl(result.annotationPdfUrl)} rel="noreferrer" target="_blank">查看批注 PDF</a>
+                    <button className="ghost-button" type="button" onClick={() => { setViewingResult(result); setPdfZoom(100); }}>
+                      <FileText size={14} /> 查看批注
+                    </button>
+                    <a className="primary-button" href={resolveApiAssetUrl(result.annotationPdfUrl)} rel="noreferrer" target="_blank">下载批注 PDF</a>
                     <button className="ghost-button" type="button" onClick={() => submitAppeal(result.id, null)}>提交申诉</button>
                   </div>
                 </div>
@@ -277,6 +292,63 @@ export function StudentDashboard({ tasks, publishedResults, appeals, userId, use
           <li><CheckCircle2 size={16} /> 系统自动识别姓名、学号、班级</li>
         </ul>
       </article>
+
+      {viewingResult && (
+        <div className="pdf-viewer-modal">
+          <div className="pdf-viewer-backdrop" onClick={() => setViewingResult(null)} />
+          <div className="pdf-viewer-modal-content">
+            <div className="pdf-viewer-modal-header">
+              <div>
+                <strong>{viewingResult.fileName}</strong>
+                <span>批注预览</span>
+              </div>
+              <div className="pdf-viewer-modal-actions">
+                <button className="icon-button" type="button" onClick={() => setPdfZoom((z) => Math.max(50, z - 10))} title="缩小">
+                  <ZoomOut size={16} />
+                </button>
+                <span className="pdf-zoom-label">{pdfZoom}%</span>
+                <button className="icon-button" type="button" onClick={() => setPdfZoom((z) => Math.min(200, z + 10))} title="放大">
+                  <ZoomIn size={16} />
+                </button>
+                <button className="icon-button" type="button" onClick={() => setViewingResult(null)} title="关闭">
+                  <X size={18} />
+                </button>
+              </div>
+            </div>
+            <div className="pdf-viewer-modal-body" style={{ transform: `scale(${pdfZoom / 100})`, transformOrigin: 'top center' }}>
+              <div className="pdf-page mock-annotated-page">
+                <div className="pdf-annotation-header">
+                  <h4>{viewingResult.fileName}</h4>
+                  <div className="pdf-annotation-score">总分 {viewingResult.teacherScore} / 100</div>
+                </div>
+                <div className="pdf-annotation-body">
+                  <p className="pdf-annotation-text">
+                    报告结构完整，核心功能说明较清晰；数据库约束和异常处理部分需要补充。建议在系统设计章节增加ER图和表结构说明。
+                  </p>
+                  <div className="pdf-annotation-highlights">
+                    <div className="pdf-highlight-item">
+                      <span className="pdf-highlight-label">扣分项</span>
+                      <p>需求分析章节缺少非功能需求（性能、安全性、可维护性）说明。</p>
+                    </div>
+                    <div className="pdf-highlight-item">
+                      <span className="pdf-highlight-label">扣分项</span>
+                      <p>数据库设计章节未说明索引选择理由和外键约束策略。</p>
+                    </div>
+                    <div className="pdf-highlight-item">
+                      <span className="pdf-highlight-label">扣分项</span>
+                      <p>实训反思章节内容偏少，建议补充个人收获和改进方向。</p>
+                    </div>
+                  </div>
+                  <div className="pdf-annotation-footer">
+                    <strong>教师总评：</strong>
+                    <p>{viewingResult.overallComment}</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </section>
   );
 }
