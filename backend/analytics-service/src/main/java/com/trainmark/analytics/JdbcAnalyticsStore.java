@@ -71,7 +71,118 @@ public class JdbcAnalyticsStore implements AnalyticsStore {
     } catch (SQLException error) {
       throw new IllegalStateException("Failed to load grade statistics", error);
     }
+    // Fallback: compute from live grading_results
+    return computeGradeStatistics(assignmentId);
+  }
+
+  @Override
+  public GradeStatisticsSummary computeGradeStatistics(Long assignmentId) {
+    var sql = """
+        SELECT
+          COUNT(*) AS submitted_count,
+          COUNT(*) FILTER (WHERE publication_status = 'PUBLISHED') AS published_count,
+          COALESCE(AVG(teacher_score), 0) AS average_score,
+          COALESCE(STDDEV(teacher_score), 0) AS standard_deviation,
+          COALESCE(MAX(teacher_score), 0) AS max_score,
+          COALESCE(MIN(teacher_score), 0) AS min_score,
+          COALESCE(AVG(teacher_score)::double precision / NULLIF(MAX(total_score), 0), 0) AS difficulty_index
+        FROM grading_results
+        WHERE assignment_id = ?
+        """;
+    try (var connection = connect();
+        var statement = connection.prepareStatement(sql)) {
+      statement.setLong(1, assignmentId);
+      try (var results = statement.executeQuery()) {
+        if (results.next()) {
+          var submitted = results.getInt("submitted_count");
+          var published = results.getInt("published_count");
+          var avg = results.getDouble("average_score");
+          var stddev = results.getDouble("standard_deviation");
+          var max = results.getInt("max_score");
+          var min = results.getInt("min_score");
+          var difficulty = results.getDouble("difficulty_index");
+
+          // Compute score buckets
+          var buckets = computeScoreBuckets(connection, assignmentId);
+          // Compute discrimination index (simplified: correlation between high/low groups)
+          var discrimination = computeDiscriminationIndex(connection, assignmentId);
+
+          return new GradeStatisticsSummary(
+              assignmentId, submitted, published,
+              Math.round(avg * 10.0) / 10.0,
+              Math.round(stddev * 10.0) / 10.0,
+              max, min,
+              Math.round(difficulty * 100.0) / 100.0,
+              discrimination,
+              buckets
+          );
+        }
+      }
+    } catch (SQLException error) {
+      throw new IllegalStateException("Failed to compute grade statistics", error);
+    }
     return new GradeStatisticsSummary(assignmentId, 0, 0, 0, 0, 0, 0, 0, 0, List.of());
+  }
+
+  private List<ScoreBucketSummary> computeScoreBuckets(java.sql.Connection connection, Long assignmentId)
+      throws SQLException {
+    var sql = """
+        SELECT
+          COUNT(*) FILTER (WHERE teacher_score >= 90) AS bucket_90,
+          COUNT(*) FILTER (WHERE teacher_score >= 80 AND teacher_score < 90) AS bucket_80,
+          COUNT(*) FILTER (WHERE teacher_score >= 70 AND teacher_score < 80) AS bucket_70,
+          COUNT(*) FILTER (WHERE teacher_score >= 60 AND teacher_score < 70) AS bucket_60,
+          COUNT(*) FILTER (WHERE teacher_score < 60) AS bucket_below_60
+        FROM grading_results
+        WHERE assignment_id = ?
+        """;
+    try (var statement = connection.prepareStatement(sql)) {
+      statement.setLong(1, assignmentId);
+      try (var results = statement.executeQuery()) {
+        if (results.next()) {
+          return List.of(
+              new ScoreBucketSummary("90-100", 90, 100, results.getInt("bucket_90")),
+              new ScoreBucketSummary("80-89", 80, 89, results.getInt("bucket_80")),
+              new ScoreBucketSummary("70-79", 70, 79, results.getInt("bucket_70")),
+              new ScoreBucketSummary("60-69", 60, 69, results.getInt("bucket_60")),
+              new ScoreBucketSummary("<60", 0, 59, results.getInt("bucket_below_60"))
+          );
+        }
+      }
+    }
+    return List.of();
+  }
+
+  private double computeDiscriminationIndex(java.sql.Connection connection, Long assignmentId)
+      throws SQLException {
+    // Simplified: difference between top 27% and bottom 27% average scores
+    var sql = """
+        WITH ranked AS (
+          SELECT teacher_score,
+                 NTILE(100) OVER (ORDER BY teacher_score) AS percentile
+          FROM grading_results
+          WHERE assignment_id = ? AND teacher_score IS NOT NULL
+        )
+        SELECT
+          AVG(teacher_score) FILTER (WHERE percentile <= 27) AS low_avg,
+          AVG(teacher_score) FILTER (WHERE percentile > 73) AS high_avg,
+          MAX(teacher_score) - MIN(teacher_score) AS score_range
+        FROM ranked
+        """;
+    try (var statement = connection.prepareStatement(sql)) {
+      statement.setLong(1, assignmentId);
+      try (var results = statement.executeQuery()) {
+        if (results.next()) {
+          var lowAvg = results.getDouble("low_avg");
+          var highAvg = results.getDouble("high_avg");
+          var range = results.getDouble("score_range");
+          if (range > 0 && !results.wasNull()) {
+            return Math.round((highAvg - lowAvg) / range * 100.0) / 100.0;
+          }
+        }
+      }
+    }
+    return 0;
   }
 
   @Override
@@ -99,11 +210,66 @@ public class JdbcAnalyticsStore implements AnalyticsStore {
               results.getString("top_reason")
           ));
         }
-        return items;
+        if (!items.isEmpty()) {
+          return items;
+        }
       }
     } catch (SQLException error) {
       throw new IllegalStateException("Failed to load loss points", error);
     }
+    // Fallback: compute from live grading_result_items
+    return computeLossPoints(assignmentId);
+  }
+
+  @Override
+  public List<LossPointSummary> computeLossPoints(Long assignmentId) {
+    var sql = """
+        SELECT
+          gri.rubric_item_id,
+          gri.title,
+          gri.course_outcome_code,
+          AVG(gri.max_score - gri.teacher_score) AS average_lost_score,
+          COUNT(*) FILTER (gri.teacher_score < gri.max_score) AS affected_count,
+          COUNT(*) AS total_count
+        FROM grading_result_items gri
+        JOIN grading_results gr ON gr.id = gri.result_id
+        WHERE gr.assignment_id = ?
+        GROUP BY gri.rubric_item_id, gri.title, gri.course_outcome_code
+        ORDER BY average_lost_score DESC
+        """;
+    try (var connection = connect();
+        var statement = connection.prepareStatement(sql)) {
+      statement.setLong(1, assignmentId);
+      try (var results = statement.executeQuery()) {
+        var items = new ArrayList<LossPointSummary>();
+        while (results.next()) {
+          var avgLost = results.getDouble("average_lost_score");
+          var affected = results.getInt("affected_count");
+          var title = results.getString("title");
+          items.add(new LossPointSummary(
+              results.getObject("rubric_item_id") != null ? results.getLong("rubric_item_id") : null,
+              title,
+              results.getString("course_outcome_code"),
+              Math.round(avgLost * 10.0) / 10.0,
+              affected,
+              generateLossReason(title, avgLost)
+          ));
+        }
+        return items;
+      }
+    } catch (SQLException error) {
+      throw new IllegalStateException("Failed to compute loss points", error);
+    }
+  }
+
+  private String generateLossReason(String title, double avgLost) {
+    if (avgLost > 6) {
+      return title + " 失分严重，建议加强相关知识点的教学";
+    }
+    if (avgLost > 3) {
+      return title + " 存在部分不足，需关注常见错误";
+    }
+    return title + " 整体掌握较好";
   }
 
   @Override
@@ -128,10 +294,54 @@ public class JdbcAnalyticsStore implements AnalyticsStore {
               results.getString("status")
           ));
         }
-        return items;
+        if (!items.isEmpty()) {
+          return items;
+        }
       }
     } catch (SQLException error) {
       throw new IllegalStateException("Failed to load course outcomes", error);
+    }
+    // Fallback: compute from live grading_result_items
+    return computeCourseOutcomes(assignmentId);
+  }
+
+  @Override
+  public List<CourseOutcomeAchievementSummary> computeCourseOutcomes(Long assignmentId) {
+    var sql = """
+        SELECT
+          gri.course_outcome_code,
+          gri.title,
+          AVG(gri.teacher_score) AS avg_score,
+          AVG(gri.max_score) AS avg_max
+        FROM grading_result_items gri
+        JOIN grading_results gr ON gr.id = gri.result_id
+        WHERE gr.assignment_id = ?
+          AND gri.course_outcome_code IS NOT NULL
+        GROUP BY gri.course_outcome_code, gri.title
+        ORDER BY gri.course_outcome_code
+        """;
+    try (var connection = connect();
+        var statement = connection.prepareStatement(sql)) {
+      statement.setLong(1, assignmentId);
+      try (var results = statement.executeQuery()) {
+        var items = new ArrayList<CourseOutcomeAchievementSummary>();
+        while (results.next()) {
+          var avgScore = results.getDouble("avg_score");
+          var avgMax = results.getDouble("avg_max");
+          var achieved = avgMax > 0 ? avgScore / avgMax : 0;
+          var target = 0.75;
+          items.add(new CourseOutcomeAchievementSummary(
+              results.getString("course_outcome_code"),
+              results.getString("title"),
+              target,
+              Math.round(achieved * 100.0) / 100.0,
+              achieved >= target ? "达成" : "未达成"
+          ));
+        }
+        return items;
+      }
+    } catch (SQLException error) {
+      throw new IllegalStateException("Failed to compute course outcomes", error);
     }
   }
 
