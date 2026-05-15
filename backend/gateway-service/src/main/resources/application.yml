@@ -65,6 +65,10 @@ spring:
           predicates:
             - Path=/api/admin/**
 
+trainmark:
+  auth-service:
+    url: ${TRAINMARK_AUTH_SERVICE_URL:http://localhost:8081}
+
 management:
   endpoints:
     web:

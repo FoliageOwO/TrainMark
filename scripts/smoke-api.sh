@@ -7,11 +7,17 @@ SMOKE_RETRIES="${SMOKE_RETRIES:-1}"
 SMOKE_RETRY_DELAY_SECONDS="${SMOKE_RETRY_DELAY_SECONDS:-2}"
 SMOKE_INCLUDE_WRITES="${SMOKE_INCLUDE_WRITES:-0}"
 TRAINMARK_JDBC_ASSERTIONS="${TRAINMARK_JDBC_ASSERTIONS:-0}"
+SMOKE_ACCESS_TOKEN=""
 
 check_url() {
   local label="$1"
   local url="$2"
   local attempt=1
+  local auth_args=()
+
+  if [[ -n "$SMOKE_ACCESS_TOKEN" ]]; then
+    auth_args=(-H "Authorization: Bearer $SMOKE_ACCESS_TOKEN")
+  fi
 
   if [[ "$SMOKE_DRY_RUN" == "1" ]]; then
     echo "[smoke:dry-run] $label -> $url"
@@ -20,7 +26,7 @@ check_url() {
 
   while true; do
     echo "[smoke] $label (attempt $attempt/$SMOKE_RETRIES)"
-    if curl --noproxy '*' --fail --silent --show-error --max-time 5 "$url" >/dev/null; then
+    if curl --noproxy '*' --fail --silent --show-error --max-time 5 "${auth_args[@]}" "$url" >/dev/null; then
       return
     fi
     if ((attempt >= SMOKE_RETRIES)); then
@@ -36,6 +42,11 @@ check_api() {
   local url="$2"
   local attempt=1
   local response
+  local auth_args=()
+
+  if [[ -n "$SMOKE_ACCESS_TOKEN" ]]; then
+    auth_args=(-H "Authorization: Bearer $SMOKE_ACCESS_TOKEN")
+  fi
 
   if [[ "$SMOKE_DRY_RUN" == "1" ]]; then
     echo "[smoke:dry-run] API $label -> $url"
@@ -44,7 +55,7 @@ check_api() {
 
   while true; do
     echo "[smoke] API $label (attempt $attempt/$SMOKE_RETRIES)"
-    if response="$(curl --noproxy '*' --fail --silent --show-error --max-time 5 "$url")" && api_success "$response"; then
+    if response="$(curl --noproxy '*' --fail --silent --show-error --max-time 5 "${auth_args[@]}" "$url")" && api_success "$response"; then
       return
     fi
     if ((attempt >= SMOKE_RETRIES)); then
@@ -82,12 +93,33 @@ check_api_auth() {
   done
 }
 
+expect_gateway_auth_failure() {
+  local label="$1"
+  local url="$2"
+  local expected_message="$3"
+  local response
+
+  if [[ "$SMOKE_DRY_RUN" == "1" ]]; then
+    echo "[smoke:dry-run] EXPECT gateway auth failure $label -> $url :: $expected_message"
+    return
+  fi
+
+  echo "[smoke] EXPECT gateway auth failure $label" >&2
+  response="$(curl --noproxy '*' --silent --show-error --max-time 5 -w '\n%{http_code}' "$url")"
+  python3 -c 'import json, sys; body, code = sys.stdin.read().rstrip("\n").rsplit("\n", 1); payload = json.loads(body); expected = sys.argv[1]; ok = code == "401" and payload.get("success") is False and expected in payload.get("message", ""); raise SystemExit(0 if ok else 1)' "$expected_message" <<< "$response"
+}
+
 post_json() {
   local label="$1"
   local url="$2"
   local body="$3"
   local attempt=1
   local response
+  local auth_args=()
+
+  if [[ -n "$SMOKE_ACCESS_TOKEN" ]]; then
+    auth_args=(-H "Authorization: Bearer $SMOKE_ACCESS_TOKEN")
+  fi
 
   if [[ "$SMOKE_DRY_RUN" == "1" ]]; then
     echo "[smoke:dry-run] POST $label -> $url :: $body"
@@ -97,6 +129,7 @@ post_json() {
   while true; do
     echo "[smoke] POST $label (attempt $attempt/$SMOKE_RETRIES)" >&2
     if response="$(curl --noproxy '*' --fail --silent --show-error --max-time 5 \
+      "${auth_args[@]}" \
       -H 'Content-Type: application/json' \
       -d "$body" \
       "$url")" && api_success "$response"; then
@@ -117,6 +150,11 @@ patch_json() {
   local body="$3"
   local attempt=1
   local response
+  local auth_args=()
+
+  if [[ -n "$SMOKE_ACCESS_TOKEN" ]]; then
+    auth_args=(-H "Authorization: Bearer $SMOKE_ACCESS_TOKEN")
+  fi
 
   if [[ "$SMOKE_DRY_RUN" == "1" ]]; then
     echo "[smoke:dry-run] PATCH $label -> $url :: $body"
@@ -127,6 +165,7 @@ patch_json() {
     echo "[smoke] PATCH $label (attempt $attempt/$SMOKE_RETRIES)" >&2
     if response="$(curl --noproxy '*' --fail --silent --show-error --max-time 5 \
       -X PATCH \
+      "${auth_args[@]}" \
       -H 'Content-Type: application/json' \
       -d "$body" \
       "$url")" && api_success "$response"; then
@@ -178,6 +217,11 @@ put_upload_content() {
   local file_path="$5"
   local attempt=1
   local response
+  local auth_args=()
+
+  if [[ -n "$SMOKE_ACCESS_TOKEN" ]]; then
+    auth_args=(-H "Authorization: Bearer $SMOKE_ACCESS_TOKEN")
+  fi
 
   if [[ "$SMOKE_DRY_RUN" == "1" ]]; then
     echo "[smoke:dry-run] PUT multipart $label -> $url :: uploadId=$upload_id objectKey=$object_key file=@$file_path"
@@ -188,6 +232,7 @@ put_upload_content() {
     echo "[smoke] PUT multipart $label (attempt $attempt/$SMOKE_RETRIES)" >&2
     if response="$(curl --noproxy '*' --fail --silent --show-error --max-time 5 \
       -X PUT \
+      "${auth_args[@]}" \
       -F "uploadId=$upload_id" \
       -F "objectKey=$object_key" \
       -F "file=@$file_path;type=application/pdf" \
@@ -311,6 +356,16 @@ check_login_role "student" "student" "STUDENT"
 check_login_role "course owner" "owner" "COURSE_OWNER"
 check_login_role "supervisor" "supervisor" "SUPERVISOR"
 check_login_role "admin" "admin" "ADMIN"
+
+expect_gateway_auth_failure "organizations without token" "$GATEWAY_URL/api/organizations" "Authentication is required"
+
+if [[ "$SMOKE_DRY_RUN" == "1" ]]; then
+  post_json "gateway smoke session login" "$GATEWAY_URL/api/auth/login" '{"username":"teacher","password":"trainmark"}'
+else
+  smoke_session_response="$(post_json "gateway smoke session login" "$GATEWAY_URL/api/auth/login" '{"username":"teacher","password":"trainmark"}')"
+  SMOKE_ACCESS_TOKEN="$(json_field accessToken <<< "$smoke_session_response")"
+fi
+
 check_api "gateway organizations" "$GATEWAY_URL/api/organizations"
 check_api "gateway users" "$GATEWAY_URL/api/users"
 check_api "gateway courses" "$GATEWAY_URL/api/courses"

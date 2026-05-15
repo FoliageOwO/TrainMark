@@ -3361,6 +3361,21 @@ pnpm build:web
 pnpm verify:mvp
 ```
 
+Gateway MVP 权限边界已补齐：
+
+- 已新增 gateway 全局认证过滤器，除 `/actuator/**` 与 `/api/auth/**` 外，业务 API、批注 PDF 和导出资源都需要 Bearer token。
+- gateway 会调用 auth-service `/api/auth/me` 校验 token，并把 `X-TrainMark-User-Id`、`X-TrainMark-Username`、`X-TrainMark-Roles` 转发给下游服务，为后续数据权限收敛提供统一入口。
+- API smoke 已增加 gateway 无 token 访问组织接口的 401 负向断言，并在后续 gateway 读写路径统一携带 teacher token。
+
+验证命令：
+
+```bash
+bash -n scripts/smoke-api.sh
+SMOKE_DRY_RUN=1 SMOKE_INCLUDE_WRITES=1 pnpm smoke:api
+mvn -f backend/pom.xml -pl gateway-service -am package -DskipTests
+pnpm verify:mvp
+```
+
 覆盖内容：
 
 - 前端 `pnpm lint:web`
