@@ -3471,6 +3471,14 @@ pnpm verify:mvp
 - grading-service 新增 `SCORING_REQUIRE_REAL` 配置，内置 `SCORING_PROVIDER=semantic` 命令会自动追加 `--require-real`。
 - 已更新 `.env.example`、README 和 AI provider 文档，明确本地 fallback MVP 与真实 AI 验收边界。
 
+前端交互与 UI 问题已修复：
+
+- 侧边栏导航项（工作台、课程与班级、实训任务、报告收集、AI 批改中心、人工复核、失分分析、系统管理）全部可点击，点击后正确切换内容区域。
+- 侧边栏导航项与二级 Section Tabs 双向同步，点击 Section Tab 时侧边栏高亮对应父级导航项。
+- 补齐缺失的 CSS 变量（`--border`、`--text-primary`、`--text-secondary`、`--bg-elevated`、`--brand-blue`、`--brand-teal`），Section Tabs 现在正确渲染高亮状态。
+- 侧边栏品牌图标替换为与网站 favicon 一致的 SVG 图标（`/icons/icon.svg`）。
+- 所有操作按钮（一键催交、新建标准、启动批改、启动查重、发布成绩、导出成绩、采纳/驳回申诉、导入名单、创建任务等）均可正常点击并触发对应操作。
+
 验证命令：
 
 ```bash
@@ -3479,6 +3487,7 @@ pnpm verify:ai
 TRAINMARK_REQUIRE_REAL_AI=1 pnpm verify:ai # 当前无 PaddleOCR/SentenceTransformers 环境时应失败
 mvn -f backend/pom.xml -pl ocr-service,grading-service -am package -DskipTests
 pnpm verify:mvp
+pnpm lint:web
 ```
 
 ## 已提交记录
