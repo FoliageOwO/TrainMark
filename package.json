@@ -14,6 +14,7 @@
     "smoke:auth:strict": "bash scripts/smoke-auth-strict.sh",
     "smoke:mvp:jdbc": "TRAINMARK_MVP_SMOKE_ONLY=1 TRAINMARK_STRICT_AUTH_SMOKE=1 TRAINMARK_JDBC_ASSERTIONS=1 bash scripts/dev-mvp-jdbc.sh",
     "smoke:mvp:minio": "TRAINMARK_MVP_SMOKE_ONLY=1 TRAINMARK_STRICT_AUTH_SMOKE=1 TRAINMARK_JDBC_ASSERTIONS=1 UPLOAD_OBJECT_STORE=minio UPLOAD_REQUIRE_OBJECT_CONTENT=true bash scripts/dev-mvp-jdbc.sh",
+    "smoke:mvp:async": "TRAINMARK_MVP_SMOKE_ONLY=1 TRAINMARK_STRICT_AUTH_SMOKE=1 TRAINMARK_JDBC_ASSERTIONS=1 GRADING_ASYNC_ENABLED=true bash scripts/dev-mvp-jdbc.sh",
     "dev:infra": "docker compose -f infra/docker-compose.yml up -d",
     "stop:infra": "docker compose -f infra/docker-compose.yml down",
     "db:migrate:local": "bash scripts/apply-db-migrations.sh",

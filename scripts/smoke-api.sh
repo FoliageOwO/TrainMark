@@ -290,6 +290,19 @@ actual = "true" if value is True else "false" if value is False else "null" if v
 raise SystemExit(0 if actual == expected else 1)' "$path" "$expected"
 }
 
+assert_json_field_in() {
+  if [[ "$SMOKE_DRY_RUN" == "1" ]]; then
+    return
+  fi
+  local path="$1"
+  shift
+  python3 -c 'import json, sys; path = sys.argv[1].split("."); expected = set(sys.argv[2:]); value = json.load(sys.stdin);
+for part in path:
+    value = value[int(part)] if isinstance(value, list) else value[part]
+actual = "true" if value is True else "false" if value is False else "null" if value is None else str(value)
+raise SystemExit(0 if actual in expected else 1)' "$path" "$@"
+}
+
 jdbc_assertions_enabled() {
   [[ "$SMOKE_DRY_RUN" != "1" && "$TRAINMARK_JDBC_ASSERTIONS" == "1" ]]
 }
@@ -322,6 +335,32 @@ assert_jdbc_scalar_equals() {
     echo "[smoke] JDBC assertion failed for $label: expected '$expected', got '$actual'" >&2
     return 1
   fi
+}
+
+assert_jdbc_scalar_eventually_equals() {
+  local label="$1"
+  local sql="$2"
+  local expected="$3"
+  local attempt=1
+  local actual
+
+  if ! jdbc_assertions_enabled; then
+    return
+  fi
+
+  echo "[smoke] JDBC $label" >&2
+  while true; do
+    actual="$(jdbc_scalar "$sql")"
+    if [[ "$actual" == "$expected" ]]; then
+      return
+    fi
+    if ((attempt >= SMOKE_RETRIES)); then
+      echo "[smoke] JDBC assertion failed for $label: expected '$expected', got '$actual'" >&2
+      return 1
+    fi
+    attempt=$((attempt + 1))
+    sleep "$SMOKE_RETRY_DELAY_SECONDS"
+  done
 }
 
 assert_jdbc_audit_exists() {
@@ -517,8 +556,13 @@ if [[ "$SMOKE_INCLUDE_WRITES" == "1" ]]; then
     assert_jdbc_scalar_equals "rubric persisted" "SELECT count(*) FROM rubrics WHERE id = $rubric_id AND total_score = 100" "1"
     grading_job_response="$(post_json "grading job" "$GATEWAY_URL/api/grading/jobs" '{"assignmentId":1,"rubricId":1,"submissionIds":[1]}')"
     grading_job_id="$(json_field id <<< "$grading_job_response")"
-    assert_json_field_equals data.status COMPLETED <<< "$grading_job_response"
-    assert_jdbc_scalar_equals "grading job persisted" "SELECT status FROM grading_jobs WHERE id = $grading_job_id" "COMPLETED"
+    if [[ "${GRADING_ASYNC_ENABLED:-false}" == "true" || "${GRADING_ASYNC_ENABLED:-0}" == "1" ]]; then
+      assert_json_field_in data.status PENDING SCORING COMPLETED <<< "$grading_job_response"
+      assert_jdbc_scalar_eventually_equals "async grading job completed" "SELECT status FROM grading_jobs WHERE id = $grading_job_id" "COMPLETED"
+    else
+      assert_json_field_equals data.status COMPLETED <<< "$grading_job_response"
+      assert_jdbc_scalar_equals "grading job persisted" "SELECT status FROM grading_jobs WHERE id = $grading_job_id" "COMPLETED"
+    fi
     assert_jdbc_audit_exists "GRADING_START" "GRADING_JOB" "$grading_job_id"
   fi
   if [[ "$SMOKE_DRY_RUN" == "1" ]]; then

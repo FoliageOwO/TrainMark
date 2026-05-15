@@ -355,6 +355,14 @@ pnpm smoke:mvp:jdbc
 
 该入口复用 `dev:mvp:jdbc` 的基础设施、迁移和 JDBC 环境变量，默认运行 API smoke、严格认证 token 正负路径和数据库落库断言；需要同时覆盖提交、OCR、批改、发布、导出、申诉、催交和查重写接口时，可设置 `SMOKE_INCLUDE_WRITES=1 pnpm smoke:mvp:jdbc`。
 
+需要把批改任务切换到 RabbitMQ 异步队列并验证任务最终完成时：
+
+```bash
+SMOKE_INCLUDE_WRITES=1 pnpm smoke:mvp:async
+```
+
+该入口会启用 `GRADING_ASYNC_ENABLED=true`，写接口 smoke 会允许批改任务创建接口先返回 `PENDING` / `SCORING`，随后通过 PostgreSQL 轮询断言任务最终变为 `COMPLETED`。
+
 示例接口：
 
 | 接口 | 说明 |

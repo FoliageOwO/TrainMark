@@ -3445,6 +3445,24 @@ TRAINMARK_SKIP_INFRA=1 SMOKE_INCLUDE_WRITES=1 pnpm smoke:mvp:minio
 pnpm verify:mvp
 ```
 
+异步批改队列边界已补齐：
+
+- 已为 grading-service 的 RabbitMQ 批改队列配置 JSON 消息转换器，避免异步模式下 `GradingJobMessage` 依赖默认 Java 序列化。
+- 已新增 `pnpm smoke:mvp:async`，在 JDBC MVP smoke 基础上启用 `GRADING_ASYNC_ENABLED=true`。
+- 写接口 smoke 已适配异步批改创建响应，允许任务先返回 `PENDING` / `SCORING`，并通过 PostgreSQL 轮询确认任务最终进入 `COMPLETED`。
+- 已修正 `V13__audit_log_actor_name_detail.sql`，只在 `audit_logs.detail` 仍为 `jsonb` 时执行类型转换，避免重复迁移旧库时失败。
+
+验证命令：
+
+```bash
+bash -n scripts/smoke-api.sh
+node -e "JSON.parse(require('fs').readFileSync('package.json', 'utf8'))"
+mvn -f backend/pom.xml -pl grading-service -am package -DskipTests
+SMOKE_DRY_RUN=1 SMOKE_INCLUDE_WRITES=1 pnpm smoke:api
+TRAINMARK_SKIP_INFRA=1 SMOKE_INCLUDE_WRITES=1 pnpm smoke:mvp:async
+pnpm verify:mvp
+```
+
 ## 已提交记录
 
 主要提交：
@@ -3556,4 +3574,4 @@ pnpm verify:mvp
 
 - 继续拆分老师端/学生端工作台内部组件。
 - 在不破坏现有无依赖开发路径的前提下补充单元测试和接口测试依赖。
-- 补齐异步队列边界验证。
+- 用生产部署形态补齐 RabbitMQ 异步 OCR、导出和通知任务消费者。

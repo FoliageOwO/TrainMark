@@ -4,6 +4,8 @@ import org.springframework.amqp.core.Binding;
 import org.springframework.amqp.core.BindingBuilder;
 import org.springframework.amqp.core.Queue;
 import org.springframework.amqp.core.TopicExchange;
+import org.springframework.amqp.support.converter.Jackson2JsonMessageConverter;
+import org.springframework.amqp.support.converter.MessageConverter;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
@@ -35,6 +37,11 @@ public class GradingQueueConfig {
     @Bean
     public Binding gradingBinding(Queue gradingQueue, TopicExchange gradingExchange) {
         return BindingBuilder.bind(gradingQueue).to(gradingExchange).with(routingKey);
+    }
+
+    @Bean
+    public MessageConverter gradingMessageConverter() {
+        return new Jackson2JsonMessageConverter();
     }
 
     public String getRoutingKey() {
