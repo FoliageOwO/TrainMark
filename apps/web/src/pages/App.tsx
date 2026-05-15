@@ -62,8 +62,8 @@ export function App() {
 
   const teacherNavMap: Record<string, string> = {
     '工作台': 'overview',
-    '课程与班级': 'overview',
-    '实训任务': 'overview',
+    '课程与班级': 'courses',
+    '实训任务': 'assignments',
     '报告收集': 'collection',
     'AI 批改中心': 'ai-pipeline',
     '人工复核': 'review',

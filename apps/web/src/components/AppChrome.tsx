@@ -74,7 +74,7 @@ export function AppChrome({
     <main className="app-shell">
       <aside className="sidebar">
         <div className="brand">
-          <div className="brand-mark">智</div>
+          <img src="/icons/icon.svg" alt="智训批" className="brand-logo" width="44" height="44" />
           <div>
             <strong>智训批</strong>
             <span>TrainMark AI</span>

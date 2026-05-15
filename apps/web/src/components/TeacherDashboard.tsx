@@ -402,7 +402,7 @@ export function TeacherDashboard({
         <TeacherOperationsPanel />
       ) : null}
 
-      {isOverview ? (
+      {isOverview || section === 'courses' || section === 'assignments' ? (
         <TeacherCoursePanel
           assignments={assignmentRows}
           classes={classes}

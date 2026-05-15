@@ -4,6 +4,14 @@
   font-family: "PingFang SC", "Microsoft YaHei", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
   font-synthesis: none;
   text-rendering: optimizeLegibility;
+
+  /* Design tokens */
+  --border: rgba(148, 163, 184, 0.22);
+  --text-primary: #0f172a;
+  --text-secondary: #64748b;
+  --bg-elevated: #f1f5f9;
+  --brand-blue: #2563eb;
+  --brand-teal: #14b8a6;
 }
 
 * {
@@ -46,6 +54,12 @@ button:focus-visible {
   gap: 12px;
   align-items: center;
   margin-bottom: 32px;
+}
+
+.brand-logo {
+  width: 44px;
+  height: 44px;
+  border-radius: 14px;
 }
 
 .brand-mark {

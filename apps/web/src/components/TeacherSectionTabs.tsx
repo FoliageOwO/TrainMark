@@ -1,5 +1,7 @@
 const teacherNavSections = [
   { key: 'overview', label: '工作台' },
+  { key: 'courses', label: '课程与班级' },
+  { key: 'assignments', label: '实训任务' },
   { key: 'collection', label: '报告收集' },
   { key: 'ai-pipeline', label: 'AI 批改' },
   { key: 'review', label: '人工复核' },
