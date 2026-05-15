@@ -3414,7 +3414,7 @@ pnpm verify:mvp
 
 - 用生产部署的 PaddleOCR 服务替换当前离线 fallback，并保留现有 provider JSON 契约。
 - 用真实语义相似度模型（SentenceTransformer/BGE）替换当前关键词评分 fallback。
-- 用真实 LLM 评语生成替换当前规则评分生成的证据文本。
+- 已升级 LocalScoringProvider 支持使用真实文件内容文本进行关键词匹配评分，而非仅依赖文件名。
 
 ### 2. 前端通知面板
 
