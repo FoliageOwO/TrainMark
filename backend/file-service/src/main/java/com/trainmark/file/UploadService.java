@@ -89,7 +89,7 @@ public class UploadService {
   public UploadObjectSummary storeContent(String uploadId, String objectKey, String contentType, long size, java.io.InputStream content) {
     validateObjectContent(objectKey, contentType, size);
     try {
-      objectStore.put(objectKey, content);
+      objectStore.put(objectKey, content, size, contentType);
       return new UploadObjectSummary(uploadId, objectKey, size, java.time.OffsetDateTime.now());
     } catch (IOException error) {
       throw new UncheckedIOException("Failed to store upload object", error);

@@ -59,14 +59,14 @@ public class MinioUploadObjectStore implements UploadObjectStore {
     }
 
     @Override
-    public void put(String objectKey, InputStream content) throws IOException {
+    public void put(String objectKey, InputStream content, long size, String contentType) throws IOException {
         try {
             client.putObject(
                     PutObjectArgs.builder()
                             .bucket(bucket)
                             .object(objectKey)
-                            .stream(content, content.available(), -1)
-                            .contentType("application/octet-stream")
+                            .stream(content, size, -1)
+                            .contentType(contentType == null ? "application/octet-stream" : contentType)
                             .build()
             );
             log.debug("Stored object in MinIO: {}/{}", bucket, objectKey);

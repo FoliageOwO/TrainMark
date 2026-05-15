@@ -3397,6 +3397,22 @@ pnpm verify:ai
 TRAINMARK_REQUIRE_REAL_AI=1 pnpm verify:ai
 ```
 
+对象存储上传边界已收敛：
+
+- 已将 `UploadObjectStore.put(...)` 改为接收上传对象的真实 size 与 content type，MinIO/S3 写入不再依赖 `InputStream.available()` 推断对象长度。
+- 已让 MinIO 默认连接参数与 `.env.example` / Docker Compose 对齐：`trainmark`、`trainmark_dev_password`、`trainmark-reports`。
+- JDBC MVP 启动脚本默认启用 `UPLOAD_REQUIRE_OBJECT_CONTENT=true`，完成提交前必须能在对象存储中查到报告内容。
+- 已新增 `pnpm smoke:mvp:minio`，用于在 JDBC live smoke 中切换 `UPLOAD_OBJECT_STORE=minio` 并覆盖上传、下载与落库断言。
+
+验证命令：
+
+```bash
+bash -n scripts/dev-mvp-jdbc.sh
+mvn -f backend/pom.xml -pl file-service -am package -DskipTests
+SMOKE_DRY_RUN=1 SMOKE_INCLUDE_WRITES=1 pnpm smoke:api
+pnpm smoke:mvp:minio
+```
+
 ## 已提交记录
 
 主要提交：
@@ -3508,4 +3524,4 @@ TRAINMARK_REQUIRE_REAL_AI=1 pnpm verify:ai
 
 - 继续拆分老师端/学生端工作台内部组件。
 - 在不破坏现有无依赖开发路径的前提下补充单元测试和接口测试依赖。
-- 补齐生产化权限、异步队列、对象存储和审计留痕的边界验证。
+- 补齐生产化权限、异步队列和审计留痕的边界验证。

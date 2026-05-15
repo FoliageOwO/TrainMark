@@ -19,7 +19,7 @@ public class LocalUploadObjectStore implements UploadObjectStore {
   }
 
   @Override
-  public void put(String objectKey, InputStream content) throws IOException {
+  public void put(String objectKey, InputStream content, long size, String contentType) throws IOException {
     var target = resolveObjectPath(objectKey);
     Files.createDirectories(target.getParent());
     Files.copy(content, target, StandardCopyOption.REPLACE_EXISTING);

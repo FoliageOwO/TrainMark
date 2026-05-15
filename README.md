@@ -222,7 +222,23 @@ TRAINMARK_FILE_JDBC_PASSWORD=trainmark_dev \
 pnpm dev:backend:file
 ```
 
-HTTP 模式下学生端会先初始化上传会话，再将报告文件以 multipart 写入本地对象目录，最后完成提交。提交成功后可通过 `/api/submissions/{submissionId}/file` 取回原文件。默认对象目录为 `.data/uploads`，可通过 `UPLOAD_OBJECT_ROOT` 调整；如需强制完成提交前必须存在对象内容，可设置 `UPLOAD_REQUIRE_OBJECT_CONTENT=true`。
+HTTP 模式下学生端会先初始化上传会话，再将报告文件以 multipart 写入对象存储，最后完成提交。提交成功后可通过 `/api/submissions/{submissionId}/file` 取回原文件。默认对象存储为本地目录 `.data/uploads`，可通过 `UPLOAD_OBJECT_ROOT` 调整；如需强制完成提交前必须存在对象内容，可设置 `UPLOAD_REQUIRE_OBJECT_CONTENT=true`。JDBC MVP 启动脚本默认启用该检查，避免只落库文件元数据而没有真实报告内容。
+
+需要用 MinIO / S3 兼容对象存储验证上传链路时，可设置：
+
+```bash
+UPLOAD_OBJECT_STORE=minio \
+MINIO_ENDPOINT=http://localhost:9000 \
+MINIO_ACCESS_KEY=trainmark \
+MINIO_SECRET_KEY=trainmark_dev_password \
+MINIO_BUCKET=trainmark-reports
+```
+
+或直接运行包含 MinIO 对象存储的 live smoke：
+
+```bash
+pnpm smoke:mvp:minio
+```
 
 OCR 服务默认使用内存任务结果。需要让 OCR 任务和结构化块写入 PostgreSQL 时，设置：
 
