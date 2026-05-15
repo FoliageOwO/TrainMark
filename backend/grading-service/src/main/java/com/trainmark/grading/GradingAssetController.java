@@ -2,6 +2,7 @@ package com.trainmark.grading;
 
 import com.trainmark.shared.dto.GradingResultSummary;
 import java.io.ByteArrayOutputStream;
+import java.io.File;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
@@ -11,6 +12,8 @@ import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.pdmodel.PDPage;
 import org.apache.pdfbox.pdmodel.PDPageContentStream;
 import org.apache.pdfbox.pdmodel.common.PDRectangle;
+import org.apache.pdfbox.pdmodel.font.PDFont;
+import org.apache.pdfbox.pdmodel.font.PDType0Font;
 import org.apache.pdfbox.pdmodel.font.PDType1Font;
 import org.apache.pdfbox.pdmodel.font.Standard14Fonts;
 import org.springframework.http.ContentDisposition;
@@ -106,26 +109,27 @@ public class GradingAssetController {
       var pageWidth = page.getMediaBox().getWidth();
       var y = page.getMediaBox().getUpperRightY() - margin;
       var contentWidth = pageWidth - 2 * margin;
+      var fonts = loadFonts(document);
 
       try (var contentStream = new PDPageContentStream(document, page)) {
         // Title
         contentStream.beginText();
-        contentStream.setFont(new PDType1Font(Standard14Fonts.FontName.HELVETICA_BOLD), 18);
+        contentStream.setFont(fonts.heading(), 18);
         contentStream.newLineAtOffset(margin, y);
-        contentStream.showText("TrainMark AI 批改批注报告");
+        contentStream.showText(fonts.text("TrainMark AI 批改批注报告"));
         contentStream.endText();
         y -= 36;
 
         if (result == null) {
           // Placeholder for no result
           contentStream.beginText();
-          contentStream.setFont(new PDType1Font(Standard14Fonts.FontName.HELVETICA), 12);
+          contentStream.setFont(fonts.body(), 12);
           contentStream.newLineAtOffset(margin, y);
-          contentStream.showText("暂无批改结果");
+          contentStream.showText(fonts.text("暂无批改结果"));
           contentStream.endText();
         } else {
           // Score summary
-          y = drawSection(contentStream, margin, y, contentWidth, "成绩总览", List.of(
+          y = drawSection(contentStream, fonts, margin, y, contentWidth, "成绩总览", List.of(
               "学生: " + result.studentName() + " (" + result.studentNo() + ")",
               "总分: " + result.teacherScore() + " / " + result.totalScore(),
               "AI 初评: " + result.aiScore() + " / " + result.totalScore(),
@@ -136,13 +140,13 @@ public class GradingAssetController {
 
           // Overall comment
           if (result.overallComment() != null && !result.overallComment().isBlank()) {
-            y = drawSection(contentStream, margin, y, contentWidth, "总评", List.of(
+            y = drawSection(contentStream, fonts, margin, y, contentWidth, "总评", List.of(
                 result.overallComment()
             ));
           }
 
           // Per-item scores
-          y = drawSection(contentStream, margin, y, contentWidth, "分项得分",
+          y = drawSection(contentStream, fonts, margin, y, contentWidth, "分项得分",
               result.items().stream()
                   .map(item -> item.title() + ": " + item.teacherScore() + "/" + item.maxScore()
                       + (item.deductionReason() != null && !item.deductionReason().isBlank()
@@ -152,7 +156,7 @@ public class GradingAssetController {
 
           // Annotations
           if (!result.annotations().isEmpty()) {
-            y = drawSection(contentStream, margin, y, contentWidth, "批注详情",
+            y = drawSection(contentStream, fonts, margin, y, contentWidth, "批注详情",
                 result.annotations().stream()
                     .limit(10)
                     .map(a -> "[" + a.severity() + "] 第" + a.page() + "页 - " + a.comment())
@@ -172,7 +176,7 @@ public class GradingAssetController {
   /**
    * Draws a section with heading and bullet points. Returns the new Y position.
    */
-  private float drawSection(PDPageContentStream cs, float margin, float y, float width,
+  private float drawSection(PDPageContentStream cs, PdfFonts fonts, float margin, float y, float width,
                             String heading, List<String> items) throws IOException {
     var gap = 18f;
     if (y < margin + 60) {
@@ -182,9 +186,9 @@ public class GradingAssetController {
 
     // Section heading with underline
     cs.beginText();
-    cs.setFont(new PDType1Font(Standard14Fonts.FontName.HELVETICA_BOLD), 14);
+    cs.setFont(fonts.heading(), 14);
     cs.newLineAtOffset(margin, y);
-    cs.showText(heading);
+    cs.showText(fonts.text(heading));
     cs.endText();
     y -= 20;
 
@@ -198,16 +202,66 @@ public class GradingAssetController {
     for (var item : items) {
       if (y < margin + 30) break;
       cs.beginText();
-      cs.setFont(new PDType1Font(Standard14Fonts.FontName.HELVETICA), 10);
+      cs.setFont(fonts.body(), 10);
       cs.newLineAtOffset(margin + 8, y);
       // Truncate very long lines
       var display = item.length() > 100 ? item.substring(0, 97) + "..." : item;
-      cs.showText("- " + display);
+      cs.showText(fonts.text("- " + display));
       cs.endText();
       y -= 16;
     }
 
     return y - gap;
+  }
+
+  private PdfFonts loadFonts(PDDocument document) throws IOException {
+    var configuredFont = System.getenv("ANNOTATION_PDF_FONT_PATH");
+    var bodyFont = loadFirstExistingFont(document, configuredFont, List.of(
+        "/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc",
+        "/usr/share/fonts/truetype/wqy/wqy-microhei.ttc",
+        "/mnt/c/Windows/Fonts/simhei.ttf",
+        "/mnt/c/Windows/Fonts/msyh.ttc"
+    ));
+    var headingFont = loadFirstExistingFont(document, configuredFont, List.of(
+        "/usr/share/fonts/opentype/noto/NotoSansCJK-Bold.ttc",
+        "/mnt/c/Windows/Fonts/simhei.ttf",
+        "/mnt/c/Windows/Fonts/msyhbd.ttc",
+        "/usr/share/fonts/truetype/wqy/wqy-microhei.ttc"
+    ));
+    if (bodyFont != null && headingFont != null) {
+      return new PdfFonts(headingFont, bodyFont, true);
+    }
+    return new PdfFonts(
+        new PDType1Font(Standard14Fonts.FontName.HELVETICA_BOLD),
+        new PDType1Font(Standard14Fonts.FontName.HELVETICA),
+        false
+    );
+  }
+
+  private PDFont loadFirstExistingFont(PDDocument document, String configuredFont, List<String> fallbackPaths)
+      throws IOException {
+    if (configuredFont != null && !configuredFont.isBlank()) {
+      var font = new File(configuredFont);
+      if (font.isFile()) {
+        return PDType0Font.load(document, font);
+      }
+    }
+    for (var path : fallbackPaths) {
+      var font = new File(path);
+      if (font.isFile()) {
+        return PDType0Font.load(document, font);
+      }
+    }
+    return null;
+  }
+
+  private record PdfFonts(PDFont heading, PDFont body, boolean unicode) {
+    String text(String value) {
+      if (unicode) {
+        return value;
+      }
+      return value.replaceAll("[^\\x00-\\x7F]", "?");
+    }
   }
 
   private String shorten(String value, int maxLength) {

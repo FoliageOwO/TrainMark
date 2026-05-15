@@ -24,6 +24,9 @@ trainmark:
       username: ${TRAINMARK_NOTIFICATION_JDBC_USERNAME:}
       password: ${TRAINMARK_NOTIFICATION_JDBC_PASSWORD:}
 management:
+  health:
+    mail:
+      enabled: ${MAIL_HEALTH_ENABLED:false}
   endpoints:
     web:
       exposure:

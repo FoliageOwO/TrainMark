@@ -75,7 +75,6 @@ public class JdbcAnalyticsStore implements AnalyticsStore {
     return computeGradeStatistics(assignmentId);
   }
 
-  @Override
   public GradeStatisticsSummary computeGradeStatistics(Long assignmentId) {
     var sql = """
         SELECT

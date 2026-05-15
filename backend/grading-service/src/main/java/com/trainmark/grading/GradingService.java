@@ -1,6 +1,7 @@
 package com.trainmark.grading;
 
 import com.trainmark.shared.AppealStatus;
+import com.trainmark.shared.GradingJobStatus;
 import com.trainmark.shared.PublicationStatus;
 import com.trainmark.shared.ReviewStatus;
 import com.trainmark.shared.dto.AppealSummary;
@@ -95,10 +96,26 @@ public class GradingService {
       ));
     } else {
       // Sync mode: process immediately (default for local/demo)
-      request.submissionIds().forEach(submissionId -> ensureScoredResult(request.assignmentId(), submissionId));
+      processJobSynchronously(job, request);
     }
 
-    return job;
+    return gradingJobStore.listJobs(request.assignmentId()).stream()
+        .filter(item -> item.id().equals(job.id()))
+        .findFirst()
+        .orElse(job);
+  }
+
+  private void processJobSynchronously(GradingJobSummary job, CreateGradingJobRequest request) {
+    gradingJobStore.updateJobStatus(job.id(), GradingJobStatus.SCORING);
+    try {
+      for (Long submissionId : request.submissionIds()) {
+        ensureScoredResult(request.assignmentId(), submissionId);
+        gradingJobStore.incrementJobProgress(job.id());
+      }
+    } catch (RuntimeException error) {
+      gradingJobStore.updateJobStatus(job.id(), GradingJobStatus.FAILED);
+      throw error;
+    }
   }
 
   public Collection<GradingResultSummary> listResults(Long assignmentId, ReviewStatus reviewStatus) {

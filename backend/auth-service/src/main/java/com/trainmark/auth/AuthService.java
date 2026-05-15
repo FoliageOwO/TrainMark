@@ -63,12 +63,18 @@ public class AuthService {
   }
 
   private Optional<AuthUserStore.AuthUser> currentAuthUser(String authorizationHeader) {
+    if (authorizationHeader == null || !authorizationHeader.startsWith("Bearer ")) {
+      if (authUserStore.allowsMockFallback()) {
+        return Optional.empty();
+      }
+      throw new IllegalArgumentException("Authentication is required");
+    }
     var username = usernameFromBearer(authorizationHeader);
     if (username.isEmpty()) {
       if (authUserStore.allowsMockFallback()) {
         return Optional.empty();
       }
-      throw new IllegalArgumentException("Authentication is required");
+      throw new IllegalArgumentException("Invalid access token");
     }
     return authUserStore.findByLogin(username.get())
         .or(() -> fallbackAuthUser(username.get()));
@@ -113,9 +119,6 @@ public class AuthService {
   }
 
   private Optional<String> usernameFromBearer(String authorizationHeader) {
-    if (authorizationHeader == null || !authorizationHeader.startsWith("Bearer ")) {
-      return Optional.empty();
-    }
     try {
       var token = authorizationHeader.substring("Bearer ".length());
       var claims = Jwts.parser()

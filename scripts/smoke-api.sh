@@ -6,6 +6,7 @@ SMOKE_DRY_RUN="${SMOKE_DRY_RUN:-0}"
 SMOKE_RETRIES="${SMOKE_RETRIES:-1}"
 SMOKE_RETRY_DELAY_SECONDS="${SMOKE_RETRY_DELAY_SECONDS:-2}"
 SMOKE_INCLUDE_WRITES="${SMOKE_INCLUDE_WRITES:-0}"
+TRAINMARK_JDBC_ASSERTIONS="${TRAINMARK_JDBC_ASSERTIONS:-0}"
 
 check_url() {
   local label="$1"
@@ -224,6 +225,40 @@ actual = "true" if value is True else "false" if value is False else "null" if v
 raise SystemExit(0 if actual == expected else 1)' "$path" "$expected"
 }
 
+jdbc_assertions_enabled() {
+  [[ "$SMOKE_DRY_RUN" != "1" && "$TRAINMARK_JDBC_ASSERTIONS" == "1" ]]
+}
+
+jdbc_scalar() {
+  local sql="$1"
+  PGPASSWORD="${POSTGRES_PASSWORD:-trainmark_dev}" psql \
+    -h "${POSTGRES_HOST:-localhost}" \
+    -p "${POSTGRES_PORT:-55432}" \
+    -U "${POSTGRES_USER:-trainmark}" \
+    -d "${POSTGRES_DB:-trainmark_ai}" \
+    -v ON_ERROR_STOP=1 \
+    -At \
+    -c "$sql" | tr -d '\r'
+}
+
+assert_jdbc_scalar_equals() {
+  local label="$1"
+  local sql="$2"
+  local expected="$3"
+  local actual
+
+  if ! jdbc_assertions_enabled; then
+    return
+  fi
+
+  echo "[smoke] JDBC $label" >&2
+  actual="$(jdbc_scalar "$sql")"
+  if [[ "$actual" != "$expected" ]]; then
+    echo "[smoke] JDBC assertion failed for $label: expected '$expected', got '$actual'" >&2
+    return 1
+  fi
+}
+
 assert_profile_role() {
   local expected_role="$1"
   python3 -c 'import json, sys; expected = sys.argv[1]; payload = json.load(sys.stdin); data = payload.get("data", {}); roles = data.get("user", data).get("roles", []); raise SystemExit(0 if expected in roles else 1)' "$expected_role"
@@ -305,13 +340,16 @@ if [[ "$SMOKE_INCLUDE_WRITES" == "1" ]]; then
     organization_response="$(post_json "organization" "$GATEWAY_URL/api/organizations" "{\"parentId\":2,\"name\":\"Smoke 软件测试班 $smoke_suffix\",\"type\":\"CLASS\"}")"
     organization_id="$(json_field id <<< "$organization_response")"
     assert_json_field_equals data.type CLASS <<< "$organization_response"
+    assert_jdbc_scalar_equals "organization persisted" "SELECT count(*) FROM organizations WHERE id = $organization_id AND type = 'CLASS'" "1"
     user_response="$(post_json "user" "$GATEWAY_URL/api/users" "{\"organizationId\":$organization_id,\"username\":\"smoke-student-$smoke_suffix\",\"name\":\"Smoke 学生\",\"studentNo\":\"SMOKE$smoke_suffix\",\"email\":\"smoke.student.$smoke_suffix@trainmark.local\",\"phone\":\"13800000000\",\"roles\":[\"STUDENT\"]}")"
     smoke_student_id="$(json_field id <<< "$user_response")"
     assert_json_field_equals data.roles.0 STUDENT <<< "$user_response"
+    assert_jdbc_scalar_equals "student role persisted" "SELECT count(*) FROM user_roles ur JOIN roles r ON r.id = ur.role_id WHERE ur.user_id = $smoke_student_id AND r.code = 'STUDENT'" "1"
     student_import_response="$(post_json "student import" "$GATEWAY_URL/api/users/students/import" "{\"classId\":$organization_id,\"rows\":[{\"studentNo\":\"SMOKE-IMPORT-$smoke_suffix\",\"name\":\"Smoke 导入学生\",\"email\":\"smoke.import.$smoke_suffix@trainmark.local\",\"phone\":\"13800000001\"}]}")"
     assert_json_field_equals data.created 1 <<< "$student_import_response"
     admin_setting_response="$(patch_json "admin setting" "$GATEWAY_URL/api/admin/settings/export.retention-days" '{"value":"45"}')"
     assert_json_field_equals data.value 45 <<< "$admin_setting_response"
+    assert_jdbc_scalar_equals "admin setting persisted" "SELECT setting_value FROM system_settings WHERE setting_key = 'export.retention-days'" "45"
   fi
   if [[ "$SMOKE_DRY_RUN" == "1" ]]; then
     post_json "upload init" "$GATEWAY_URL/api/submissions/upload/init" '{"assignmentId":1,"studentId":2,"fileName":"smoke-report.pdf","contentType":"application/pdf","fileSize":1048576,"checksum":null}'
@@ -334,6 +372,9 @@ if [[ "$SMOKE_INCLUDE_WRITES" == "1" ]]; then
     submission_id="$(json_field submissionId <<< "$complete_response")"
     assert_json_field_equals data.assignmentId 1 <<< "$complete_response"
     assert_json_field_equals data.studentId 2 <<< "$complete_response"
+    assert_jdbc_scalar_equals "upload session completed" "SELECT status FROM upload_sessions WHERE upload_id = '$upload_id'::uuid" "COMPLETED"
+    assert_jdbc_scalar_equals "submission persisted" "SELECT count(*) FROM submissions WHERE id = $submission_id AND assignment_id = 1 AND student_id = 2" "1"
+    assert_jdbc_scalar_equals "submission file metadata persisted" "SELECT count(*) FROM submissions WHERE id = $submission_id AND object_key = '$object_key' AND file_name = 'smoke-report.pdf'" "1"
     check_url "uploaded report file" "$GATEWAY_URL/api/submissions/$submission_id/file"
 
     peer_init_response="$(post_json "peer upload init" "$GATEWAY_URL/api/submissions/upload/init" "{\"assignmentId\":1,\"studentId\":$smoke_student_id,\"fileName\":\"smoke-peer-report.pdf\",\"contentType\":\"application/pdf\",\"fileSize\":1048576,\"checksum\":null}")"
@@ -347,6 +388,9 @@ if [[ "$SMOKE_INCLUDE_WRITES" == "1" ]]; then
     peer_submission_id="$(json_field submissionId <<< "$peer_complete_response")"
     assert_json_field_equals data.assignmentId 1 <<< "$peer_complete_response"
     assert_json_field_equals data.studentId "$smoke_student_id" <<< "$peer_complete_response"
+    assert_jdbc_scalar_equals "peer upload session completed" "SELECT status FROM upload_sessions WHERE upload_id = '$peer_upload_id'::uuid" "COMPLETED"
+    assert_jdbc_scalar_equals "peer submission persisted" "SELECT count(*) FROM submissions WHERE id = $peer_submission_id AND assignment_id = 1 AND student_id = $smoke_student_id" "1"
+    assert_jdbc_scalar_equals "peer submission file metadata persisted" "SELECT count(*) FROM submissions WHERE id = $peer_submission_id AND object_key = '$peer_object_key' AND file_name = 'smoke-peer-report.pdf'" "1"
     check_url "peer uploaded report file" "$GATEWAY_URL/api/submissions/$peer_submission_id/file"
   fi
   if [[ "$SMOKE_DRY_RUN" == "1" ]]; then
@@ -355,11 +399,17 @@ if [[ "$SMOKE_INCLUDE_WRITES" == "1" ]]; then
     post_json "grading job" "$GATEWAY_URL/api/grading/jobs" '{"assignmentId":1,"rubricId":1,"submissionIds":[1]}'
   else
     assignment_response="$(post_json "assignment" "$GATEWAY_URL/api/assignments" '{"courseId":1,"title":"Smoke 实训任务","description":"Smoke assignment creation","deadline":"2030-05-20T23:59:00+08:00","totalScore":100,"classIds":[1,2],"similarityCheckEnabled":true,"aiGradingEnabled":true}')"
+    assignment_id="$(json_field id <<< "$assignment_response")"
     assert_json_field_equals data.status DRAFT <<< "$assignment_response"
+    assert_jdbc_scalar_equals "assignment persisted" "SELECT status FROM assignments WHERE id = $assignment_id" "DRAFT"
     rubric_response="$(post_json "rubric" "$GATEWAY_URL/api/rubrics" '{"assignmentId":1,"name":"Smoke 评分标准","totalScore":100,"items":[{"title":"需求与设计","score":20,"courseOutcomeCode":"CO1","points":[{"title":"需求完整","description":"覆盖需求、设计和约束","score":20,"keywords":["需求","设计"],"synonyms":[]}]},{"title":"系统实现","score":50,"courseOutcomeCode":"CO2","points":[{"title":"实现完整","description":"覆盖核心功能和异常处理","score":50,"keywords":["功能","接口"],"synonyms":[]}]},{"title":"报告规范","score":30,"courseOutcomeCode":"CO3","points":[{"title":"报告规范","description":"覆盖截图、总结","score":30,"keywords":["截图","总结"],"synonyms":[]}]}]}')"
+    rubric_id="$(json_field id <<< "$rubric_response")"
     assert_json_field_equals data.totalScore 100 <<< "$rubric_response"
+    assert_jdbc_scalar_equals "rubric persisted" "SELECT count(*) FROM rubrics WHERE id = $rubric_id AND total_score = 100" "1"
     grading_job_response="$(post_json "grading job" "$GATEWAY_URL/api/grading/jobs" '{"assignmentId":1,"rubricId":1,"submissionIds":[1]}')"
+    grading_job_id="$(json_field id <<< "$grading_job_response")"
     assert_json_field_equals data.status COMPLETED <<< "$grading_job_response"
+    assert_jdbc_scalar_equals "grading job persisted" "SELECT status FROM grading_jobs WHERE id = $grading_job_id" "COMPLETED"
   fi
   if [[ "$SMOKE_DRY_RUN" == "1" ]]; then
     post_json "ocr job" "$GATEWAY_URL/api/ocr/jobs" '{"submissionId":1,"objectKey":"assignments/1/students/2/database-report.docx","mode":"STRUCTURE"}'
@@ -367,6 +417,7 @@ if [[ "$SMOKE_INCLUDE_WRITES" == "1" ]]; then
   else
     ocr_response="$(post_json "ocr job" "$GATEWAY_URL/api/ocr/jobs" '{"submissionId":1,"objectKey":"assignments/1/students/2/database-report.docx","mode":"STRUCTURE"}')"
     ocr_job_id="$(json_field id <<< "$ocr_response")"
+    assert_jdbc_scalar_equals "ocr job persisted" "SELECT status FROM ocr_jobs WHERE id = $ocr_job_id" "COMPLETED"
     check_api "gateway OCR result" "$GATEWAY_URL/api/ocr/jobs/$ocr_job_id/result"
   fi
   if [[ "$SMOKE_DRY_RUN" == "1" ]]; then
@@ -380,6 +431,7 @@ if [[ "$SMOKE_INCLUDE_WRITES" == "1" ]]; then
     assert_json_field_equals data.reviewStatus APPROVED <<< "$approve_response"
     publish_response="$(post_json "publish result" "$GATEWAY_URL/api/grading/results/1/publish" '{"operatorName":"Smoke","message":"Smoke publish"}')"
     assert_json_field_equals data.publicationStatus PUBLISHED <<< "$publish_response"
+    assert_jdbc_scalar_equals "grading result published" "SELECT publication_status FROM grading_results WHERE id = 1" "PUBLISHED"
   fi
   check_api "gateway publications" "$GATEWAY_URL/api/grading/results/publications?assignmentId=1"
   check_api "gateway publication audits" "$GATEWAY_URL/api/grading/results/1/publication-audits"
@@ -391,6 +443,7 @@ if [[ "$SMOKE_INCLUDE_WRITES" == "1" ]]; then
     appeal_id="$(json_field id <<< "$appeal_response")"
     resolved_appeal_response="$(post_json "resolve grade appeal" "$GATEWAY_URL/api/grading/results/appeals/$appeal_id/resolve" '{"status":"REJECTED","teacherReply":"Smoke appeal reply"}')"
     assert_json_field_equals data.status REJECTED <<< "$resolved_appeal_response"
+    assert_jdbc_scalar_equals "grade appeal persisted" "SELECT status FROM grade_appeals WHERE id = $appeal_id" "REJECTED"
   fi
   check_api "gateway grade appeals" "$GATEWAY_URL/api/grading/results/appeals?resultId=1"
   if [[ "$SMOKE_DRY_RUN" == "1" ]]; then
@@ -399,12 +452,18 @@ if [[ "$SMOKE_INCLUDE_WRITES" == "1" ]]; then
     post_json "similarity job" "$GATEWAY_URL/api/similarity/jobs" '{"assignmentId":1,"submissionIds":[1,2],"includeHistory":true}'
   else
     grade_export_response="$(post_json "grade export" "$GATEWAY_URL/api/grading/exports" '{"assignmentId":1,"format":"CSV","operatorName":"Smoke"}')"
+    grade_export_id="$(json_field id <<< "$grade_export_response")"
     assert_json_field_equals data.status READY <<< "$grade_export_response"
+    assert_jdbc_scalar_equals "grade export persisted" "SELECT status FROM grade_exports WHERE id = $grade_export_id" "READY"
     reminder_response="$(post_json "remind unsubmitted" "$GATEWAY_URL/api/notifications/remind-unsubmitted" '{"assignmentId":1,"studentIds":[2],"channels":["IN_APP"],"message":"Smoke reminder"}')"
     assert_json_field_equals data.status SENT <<< "$reminder_response"
+    assert_jdbc_scalar_equals "reminder persisted" "SELECT CASE WHEN EXISTS (SELECT 1 FROM notification_events WHERE assignment_id = 1 AND recipient_id = 2 AND status = 'SENT' AND message = 'Smoke reminder') THEN 1 ELSE 0 END" "1"
     similarity_response="$(post_json "similarity job" "$GATEWAY_URL/api/similarity/jobs" "{\"assignmentId\":1,\"submissionIds\":[$submission_id,$peer_submission_id],\"includeHistory\":true}")"
+    similarity_job_id="$(json_field id <<< "$similarity_response")"
     assert_json_field_equals data.status COMPLETED <<< "$similarity_response"
     assert_json_field_equals data.checkedSubmissionCount 2 <<< "$similarity_response"
+    assert_jdbc_scalar_equals "similarity job persisted" "SELECT checked_submission_count FROM similarity_jobs WHERE id = $similarity_job_id" "2"
+    assert_jdbc_scalar_equals "similarity match persisted" "SELECT count(*) FROM similarity_matches WHERE similarity_job_id = $similarity_job_id AND source_submission_id = $submission_id AND target_submission_id = $peer_submission_id" "1"
   fi
 fi
 

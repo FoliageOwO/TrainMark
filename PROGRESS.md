@@ -3313,6 +3313,28 @@ node -e "JSON.parse(require('fs').readFileSync('package.json','utf8')); console.
 pnpm verify:mvp
 ```
 
+JDBC live smoke 落库断言已补齐，`pnpm smoke:mvp:jdbc` 默认启用 `TRAINMARK_JDBC_ASSERTIONS=1`，并在 JDBC 启动脚本中补齐与 Docker Compose 一致的 RabbitMQ 默认账号，同时让通知服务默认关闭 mail health，写接口 smoke 会在字段校验后继续用 `psql` 查询 PostgreSQL：
+
+```bash
+bash -n scripts/smoke-api.sh
+SMOKE_DRY_RUN=1 SMOKE_INCLUDE_WRITES=1 pnpm smoke:api
+TRAINMARK_SKIP_INFRA=1 SMOKE_INCLUDE_WRITES=1 pnpm smoke:mvp:jdbc
+pnpm verify:mvp
+```
+
+覆盖数据库断言：
+
+- 组织、学生角色、学生名单导入和管理端系统配置落库。
+- 上传会话、提交记录和提交文件元数据落库。
+- 任务、评分标准、批改任务、OCR 任务和成绩发布状态落库。
+- 申诉处理、成绩导出、催交通知和查重任务/匹配结果落库。
+- 批注 PDF 生成已改为优先加载中文 TrueType 字体，避免 PDFBox 标准字体无法写入中文导致 live smoke 下载入口失败。
+- 已修复 analytics-service JDBC 实时统计兜底方法的错误 `@Override`，避免 JDBC smoke 读统计端点触发运行期编译错误。
+- 已修复同步批改路径的 JDBC job 生命周期，创建批改任务后会进入 `SCORING`、按提交递增进度并最终落为 `COMPLETED`。
+- 已修复 JDBC auth 下缺失 Bearer 与无效 Bearer token 的错误语义，strict auth smoke 可区分 `Authentication is required` 和 `Invalid access token`。
+
+> 本地验证时使用 `TRAINMARK_SKIP_INFRA=1`，因为当前 Windows/WSL 环境已有其他 Redis 容器占用 `127.0.0.1:6379`；TrainMark 的 Postgres、RabbitMQ、MinIO 和 Nginx 容器已在运行。
+
 覆盖内容：
 
 - 前端 `pnpm lint:web`
@@ -3426,7 +3448,7 @@ pnpm verify:mvp
 
 - 已新增可重复运行的 `pnpm smoke:mvp:jdbc` 入口，覆盖 strict HTTP/JDBC API smoke 与严格认证 token 正负路径。
 - 已用 `SMOKE_INCLUDE_WRITES=1 pnpm smoke:mvp:jdbc` 跑通上传、批改、发布、导出、申诉、催交、查重和管理配置写入。
-- 已将写路径 live smoke 从"接口成功"增强为关键字段校验；后续继续补充数据库落库校验。
+- 已将写路径 live smoke 从"接口成功"增强为关键字段校验，并补充 PostgreSQL 落库断言。
 
 ### 4. 工程质量
 

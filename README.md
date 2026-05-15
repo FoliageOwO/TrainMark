@@ -329,7 +329,7 @@ pnpm dev:mvp:jdbc
 pnpm smoke:mvp:jdbc
 ```
 
-该入口复用 `dev:mvp:jdbc` 的基础设施、迁移和 JDBC 环境变量，默认运行 API smoke 与严格认证 token 正负路径；需要同时覆盖提交、OCR、批改、发布、导出、申诉、催交和查重写接口时，可设置 `SMOKE_INCLUDE_WRITES=1 pnpm smoke:mvp:jdbc`。
+该入口复用 `dev:mvp:jdbc` 的基础设施、迁移和 JDBC 环境变量，默认运行 API smoke、严格认证 token 正负路径和数据库落库断言；需要同时覆盖提交、OCR、批改、发布、导出、申诉、催交和查重写接口时，可设置 `SMOKE_INCLUDE_WRITES=1 pnpm smoke:mvp:jdbc`。
 
 示例接口：
 
@@ -376,6 +376,8 @@ pnpm smoke:auth:strict
 ```bash
 pnpm smoke:mvp:jdbc
 ```
+
+该入口默认启用 `TRAINMARK_JDBC_ASSERTIONS=1`，写接口 live smoke 会在接口返回字段校验后继续通过 `psql` 查询 PostgreSQL，确认核心写路径已经落库。脚本也会导出与 Docker Compose 一致的 RabbitMQ 默认账号，避免 grading-service 的 RabbitMQ health check 使用 `guest/guest`；通知服务默认关闭 mail health，避免邮件发送功能未启用时仍因本地无 SMTP 服务导致 health 失败。若只想验证 HTTP 返回而暂不检查数据库，可临时覆盖为 `TRAINMARK_JDBC_ASSERTIONS=0 pnpm smoke:mvp:jdbc`。
 
 OCR 服务默认使用本地文档预处理实现。需要把 Word/PDF/图片预处理切换到外部命令时，可设置：
 
