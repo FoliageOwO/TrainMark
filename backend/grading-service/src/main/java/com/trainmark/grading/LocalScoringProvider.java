@@ -127,11 +127,17 @@ public class LocalScoringProvider implements ScoringProvider {
 
   private String evidenceText(ScoringRequest request) {
     var terms = new LinkedHashSet<String>();
-    terms.add(request.fileName());
-    terms.addAll(List.of("登录", "课程", "任务", "提交", "运行截图", "总结"));
-    var normalized = request.fileName().toLowerCase(Locale.ROOT);
-    if (normalized.contains("database") || normalized.contains("数据库")) {
-      terms.addAll(List.of("ER图", "表结构", "约束", "实体关系"));
+    // Use actual file content text when available
+    if (request.fileContentText() != null && !request.fileContentText().isBlank()) {
+      terms.add(request.fileContentText());
+    } else {
+      // Fallback to filename and hardcoded terms
+      terms.add(request.fileName());
+      terms.addAll(List.of("登录", "课程", "任务", "提交", "运行截图", "总结"));
+      var normalized = request.fileName().toLowerCase(Locale.ROOT);
+      if (normalized.contains("database") || normalized.contains("数据库")) {
+        terms.addAll(List.of("ER图", "表结构", "约束", "实体关系"));
+      }
     }
     request.rubric().items().forEach(item -> item.points().forEach(point -> {
       if (!point.keywords().isEmpty()) {
