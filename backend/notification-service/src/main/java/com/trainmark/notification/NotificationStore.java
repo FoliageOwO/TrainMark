@@ -1,5 +1,6 @@
 package com.trainmark.notification;
 
+import com.trainmark.shared.dto.NotificationSummary;
 import com.trainmark.shared.dto.ReminderRequest;
 import com.trainmark.shared.dto.ReminderResult;
 import com.trainmark.shared.dto.SubmissionCollectionOverview;
@@ -12,4 +13,10 @@ public interface NotificationStore {
   Collection<UnsubmittedStudent> unsubmittedStudents(Long assignmentId);
 
   ReminderResult remind(ReminderRequest request);
+
+  Collection<NotificationSummary> listNotifications(Long userId, boolean unreadOnly);
+
+  int markAsRead(Long notificationId, Long userId);
+
+  int markAllAsRead(Long userId);
 }

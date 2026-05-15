@@ -2,6 +2,7 @@ package com.trainmark.notification;
 
 import com.trainmark.shared.NotificationChannel;
 import com.trainmark.shared.NotificationStatus;
+import com.trainmark.shared.dto.NotificationSummary;
 import com.trainmark.shared.dto.ReminderRequest;
 import com.trainmark.shared.dto.ReminderResult;
 import com.trainmark.shared.dto.SubmissionCollectionOverview;
@@ -146,6 +147,63 @@ public class JdbcNotificationStore implements NotificationStore {
       }
     } catch (SQLException error) {
       throw new IllegalStateException("Failed to create reminder notifications", error);
+    }
+  }
+
+  @Override
+  public Collection<NotificationSummary> listNotifications(Long userId, boolean unreadOnly) {
+    var sql = """
+        SELECT id, title, message, event_type AS type, is_read, target_url, created_at
+        FROM notification_events
+        WHERE recipient_id = ?
+        """ + (unreadOnly ? " AND is_read = false" : "") + """
+        ORDER BY created_at DESC
+        """;
+    try (var connection = connect();
+        var statement = connection.prepareStatement(sql)) {
+      statement.setLong(1, userId);
+      try (var results = statement.executeQuery()) {
+        var items = new ArrayList<NotificationSummary>();
+        while (results.next()) {
+          items.add(new NotificationSummary(
+              results.getLong("id"),
+              results.getString("title"),
+              results.getString("message"),
+              results.getString("type"),
+              results.getBoolean("is_read"),
+              results.getString("target_url"),
+              results.getObject("created_at", OffsetDateTime.class)
+          ));
+        }
+        return items;
+      }
+    } catch (SQLException error) {
+      throw new IllegalStateException("Failed to load notifications", error);
+    }
+  }
+
+  @Override
+  public int markAsRead(Long notificationId, Long userId) {
+    var sql = "UPDATE notification_events SET is_read = true WHERE id = ? AND recipient_id = ?";
+    try (var connection = connect();
+        var statement = connection.prepareStatement(sql)) {
+      statement.setLong(1, notificationId);
+      statement.setLong(2, userId);
+      return statement.executeUpdate();
+    } catch (SQLException error) {
+      throw new IllegalStateException("Failed to mark notification as read", error);
+    }
+  }
+
+  @Override
+  public int markAllAsRead(Long userId) {
+    var sql = "UPDATE notification_events SET is_read = true WHERE recipient_id = ? AND is_read = false";
+    try (var connection = connect();
+        var statement = connection.prepareStatement(sql)) {
+      statement.setLong(1, userId);
+      return statement.executeUpdate();
+    } catch (SQLException error) {
+      throw new IllegalStateException("Failed to mark all notifications as read", error);
     }
   }
 

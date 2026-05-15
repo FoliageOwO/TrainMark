@@ -1,5 +1,6 @@
 package com.trainmark.notification;
 
+import com.trainmark.shared.dto.NotificationSummary;
 import com.trainmark.shared.dto.ReminderRequest;
 import com.trainmark.shared.dto.ReminderResult;
 import com.trainmark.shared.dto.SubmissionCollectionOverview;
@@ -51,6 +52,18 @@ public class ReminderService {
     }
 
     return result;
+  }
+
+  public Collection<NotificationSummary> listNotifications(Long userId, boolean unreadOnly) {
+    return store.listNotifications(userId, unreadOnly);
+  }
+
+  public int markAsRead(Long notificationId, Long userId) {
+    return store.markAsRead(notificationId, userId);
+  }
+
+  public int markAllAsRead(Long userId) {
+    return store.markAllAsRead(userId);
   }
 
   private void sendReminderEmail(Long studentId, ReminderRequest request) {
