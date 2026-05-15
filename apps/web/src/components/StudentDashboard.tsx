@@ -59,6 +59,17 @@ export function StudentDashboard({ tasks, publishedResults, appeals, userId, use
   };
 
   useEffect(() => {
+    if (!viewingResult) return;
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setViewingResult(null);
+      }
+    };
+    document.addEventListener('keydown', handleEscape);
+    return () => document.removeEventListener('keydown', handleEscape);
+  }, [viewingResult]);
+
+  useEffect(() => {
     setTaskRows((current) => reconcileTaskRows(tasks, current));
   }, [tasks]);
 
@@ -294,7 +305,7 @@ export function StudentDashboard({ tasks, publishedResults, appeals, userId, use
       </article>
 
       {viewingResult && (
-        <div className="pdf-viewer-modal">
+        <div className="pdf-viewer-modal" role="dialog" aria-modal="true" aria-label="批注预览">
           <div className="pdf-viewer-backdrop" onClick={() => setViewingResult(null)} />
           <div className="pdf-viewer-modal-content">
             <div className="pdf-viewer-modal-header">
@@ -303,14 +314,14 @@ export function StudentDashboard({ tasks, publishedResults, appeals, userId, use
                 <span>批注预览</span>
               </div>
               <div className="pdf-viewer-modal-actions">
-                <button className="icon-button" type="button" onClick={() => setPdfZoom((z) => Math.max(50, z - 10))} title="缩小">
+                <button className="icon-button" type="button" onClick={() => setPdfZoom((z) => Math.max(50, z - 10))} aria-label="缩小">
                   <ZoomOut size={16} />
                 </button>
-                <span className="pdf-zoom-label">{pdfZoom}%</span>
-                <button className="icon-button" type="button" onClick={() => setPdfZoom((z) => Math.min(200, z + 10))} title="放大">
+                <span className="pdf-zoom-label" aria-live="polite">{pdfZoom}%</span>
+                <button className="icon-button" type="button" onClick={() => setPdfZoom((z) => Math.min(200, z + 10))} aria-label="放大">
                   <ZoomIn size={16} />
                 </button>
-                <button className="icon-button" type="button" onClick={() => setViewingResult(null)} title="关闭">
+                <button className="icon-button" type="button" onClick={() => setViewingResult(null)} aria-label="关闭">
                   <X size={18} />
                 </button>
               </div>
