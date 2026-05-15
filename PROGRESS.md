@@ -3413,6 +3413,21 @@ SMOKE_DRY_RUN=1 SMOKE_INCLUDE_WRITES=1 pnpm smoke:api
 pnpm smoke:mvp:minio
 ```
 
+Gateway 管理端 RBAC 边界已补齐：
+
+- 已在 gateway 认证过滤器中为 `/api/admin/**` 增加 ADMIN 角色校验，非管理员访问会返回 403 和统一 `ApiResponse` 失败结构。
+- gateway 仍会对非公开业务路径统一校验 Bearer token，并继续向下游转发 `X-TrainMark-User-Id`、`X-TrainMark-Username`、`X-TrainMark-Roles`。
+- API smoke 已增加 teacher 访问管理端审计接口的 403 负向断言，并在管理端审计和系统配置读写路径使用 admin token。
+
+验证命令：
+
+```bash
+bash -n scripts/smoke-api.sh
+SMOKE_DRY_RUN=1 SMOKE_INCLUDE_WRITES=1 pnpm smoke:api
+mvn -f backend/pom.xml -pl gateway-service -am package -DskipTests
+pnpm verify:mvp
+```
+
 ## 已提交记录
 
 主要提交：
@@ -3524,4 +3539,4 @@ pnpm smoke:mvp:minio
 
 - 继续拆分老师端/学生端工作台内部组件。
 - 在不破坏现有无依赖开发路径的前提下补充单元测试和接口测试依赖。
-- 补齐生产化权限、异步队列和审计留痕的边界验证。
+- 补齐异步队列和审计留痕的边界验证。

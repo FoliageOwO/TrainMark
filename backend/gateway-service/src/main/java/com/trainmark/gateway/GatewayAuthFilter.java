@@ -80,6 +80,9 @@ public class GatewayAuthFilter implements GlobalFilter, Ordered {
     var roles = data.get("roles") instanceof List<?> roleList
         ? String.join(",", roleList.stream().map(String::valueOf).toList())
         : "";
+    if (isAdminPath(exchange.getRequest().getURI().getPath()) && !hasRole(roles, "ADMIN")) {
+      return forbidden(exchange, "Access is denied");
+    }
     var authenticatedRequest = exchange.getRequest().mutate()
         .header("X-TrainMark-User-Id", userId)
         .header("X-TrainMark-Username", username)
@@ -88,9 +91,30 @@ public class GatewayAuthFilter implements GlobalFilter, Ordered {
     return chain.filter(exchange.mutate().request(authenticatedRequest).build());
   }
 
+  private boolean isAdminPath(String path) {
+    return path.startsWith("/api/admin/");
+  }
+
+  private boolean hasRole(String roles, String expectedRole) {
+    for (var role : roles.split(",")) {
+      if (expectedRole.equals(role.trim())) {
+        return true;
+      }
+    }
+    return false;
+  }
+
   private Mono<Void> unauthorized(ServerWebExchange exchange, String message) {
+    return writeError(exchange, HttpStatus.UNAUTHORIZED, message);
+  }
+
+  private Mono<Void> forbidden(ServerWebExchange exchange, String message) {
+    return writeError(exchange, HttpStatus.FORBIDDEN, message);
+  }
+
+  private Mono<Void> writeError(ServerWebExchange exchange, HttpStatus status, String message) {
     var response = exchange.getResponse();
-    response.setStatusCode(HttpStatus.UNAUTHORIZED);
+    response.setStatusCode(status);
     response.getHeaders().setContentType(MediaType.APPLICATION_JSON);
     var body = "{\"success\":false,\"data\":null,\"message\":\"" + message + "\"}";
     DataBuffer buffer = response.bufferFactory().wrap(body.getBytes(StandardCharsets.UTF_8));

@@ -8,6 +8,7 @@ SMOKE_RETRY_DELAY_SECONDS="${SMOKE_RETRY_DELAY_SECONDS:-2}"
 SMOKE_INCLUDE_WRITES="${SMOKE_INCLUDE_WRITES:-0}"
 TRAINMARK_JDBC_ASSERTIONS="${TRAINMARK_JDBC_ASSERTIONS:-0}"
 SMOKE_ACCESS_TOKEN=""
+SMOKE_ADMIN_TOKEN=""
 
 check_url() {
   local label="$1"
@@ -107,6 +108,25 @@ expect_gateway_auth_failure() {
   echo "[smoke] EXPECT gateway auth failure $label" >&2
   response="$(curl --noproxy '*' --silent --show-error --max-time 5 -w '\n%{http_code}' "$url")"
   python3 -c 'import json, sys; body, code = sys.stdin.read().rstrip("\n").rsplit("\n", 1); payload = json.loads(body); expected = sys.argv[1]; ok = code == "401" and payload.get("success") is False and expected in payload.get("message", ""); raise SystemExit(0 if ok else 1)' "$expected_message" <<< "$response"
+}
+
+expect_gateway_forbidden() {
+  local label="$1"
+  local url="$2"
+  local token="$3"
+  local expected_message="$4"
+  local response
+
+  if [[ "$SMOKE_DRY_RUN" == "1" ]]; then
+    echo "[smoke:dry-run] EXPECT gateway forbidden $label -> $url :: Authorization=Bearer $token :: $expected_message"
+    return
+  fi
+
+  echo "[smoke] EXPECT gateway forbidden $label" >&2
+  response="$(curl --noproxy '*' --silent --show-error --max-time 5 -w '\n%{http_code}' \
+    -H "Authorization: Bearer $token" \
+    "$url")"
+  python3 -c 'import json, sys; body, code = sys.stdin.read().rstrip("\n").rsplit("\n", 1); payload = json.loads(body); expected = sys.argv[1]; ok = code == "403" and payload.get("success") is False and expected in payload.get("message", ""); raise SystemExit(0 if ok else 1)' "$expected_message" <<< "$response"
 }
 
 post_json() {
@@ -361,9 +381,14 @@ expect_gateway_auth_failure "organizations without token" "$GATEWAY_URL/api/orga
 
 if [[ "$SMOKE_DRY_RUN" == "1" ]]; then
   post_json "gateway smoke session login" "$GATEWAY_URL/api/auth/login" '{"username":"teacher","password":"trainmark"}'
+  post_json "gateway admin session login" "$GATEWAY_URL/api/auth/login" '{"username":"admin","password":"trainmark"}'
+  expect_gateway_forbidden "teacher admin audit logs" "$GATEWAY_URL/api/admin/audit-logs" "<from gateway smoke session login>" "Access is denied"
 else
   smoke_session_response="$(post_json "gateway smoke session login" "$GATEWAY_URL/api/auth/login" '{"username":"teacher","password":"trainmark"}')"
   SMOKE_ACCESS_TOKEN="$(json_field accessToken <<< "$smoke_session_response")"
+  admin_session_response="$(post_json "gateway admin session login" "$GATEWAY_URL/api/auth/login" '{"username":"admin","password":"trainmark"}')"
+  SMOKE_ADMIN_TOKEN="$(json_field accessToken <<< "$admin_session_response")"
+  expect_gateway_forbidden "teacher admin audit logs" "$GATEWAY_URL/api/admin/audit-logs" "$SMOKE_ACCESS_TOKEN" "Access is denied"
 fi
 
 check_api "gateway organizations" "$GATEWAY_URL/api/organizations"
@@ -381,15 +406,15 @@ check_url "gateway annotated PDF export bundle" "$GATEWAY_URL/exports/assignment
 check_api "gateway OCR jobs" "$GATEWAY_URL/api/ocr/jobs"
 check_api "gateway similarity jobs" "$GATEWAY_URL/api/similarity/jobs"
 check_api "gateway analytics" "$GATEWAY_URL/api/analytics/grade-statistics?assignmentId=1"
-check_api "gateway admin audit logs" "$GATEWAY_URL/api/admin/audit-logs"
-check_api "gateway admin settings" "$GATEWAY_URL/api/admin/settings"
+check_api_auth "gateway admin audit logs" "$GATEWAY_URL/api/admin/audit-logs" "${SMOKE_ADMIN_TOKEN:-<from gateway admin session login>}"
+check_api_auth "gateway admin settings" "$GATEWAY_URL/api/admin/settings" "${SMOKE_ADMIN_TOKEN:-<from gateway admin session login>}"
 
 if [[ "$SMOKE_INCLUDE_WRITES" == "1" ]]; then
   if [[ "$SMOKE_DRY_RUN" == "1" ]]; then
     post_json "organization" "$GATEWAY_URL/api/organizations" '{"parentId":2,"name":"Smoke 软件测试班","type":"CLASS"}'
     post_json "user" "$GATEWAY_URL/api/users" '{"organizationId":3,"username":"smoke-student","name":"Smoke 学生","studentNo":"SMOKE001","email":"smoke.student@trainmark.local","phone":"13800000000","roles":["STUDENT"]}'
     post_json "student import" "$GATEWAY_URL/api/users/students/import" '{"classId":3,"rows":[{"studentNo":"SMOKE002","name":"Smoke 导入学生","email":"smoke.import@trainmark.local","phone":"13800000001"}]}'
-    patch_json "admin setting" "$GATEWAY_URL/api/admin/settings/export.retention-days" '{"value":"45"}'
+    patch_json "admin setting as admin" "$GATEWAY_URL/api/admin/settings/export.retention-days" '{"value":"45"}'
   else
     smoke_suffix="$(date +%s)"
     organization_response="$(post_json "organization" "$GATEWAY_URL/api/organizations" "{\"parentId\":2,\"name\":\"Smoke 软件测试班 $smoke_suffix\",\"type\":\"CLASS\"}")"
@@ -402,7 +427,10 @@ if [[ "$SMOKE_INCLUDE_WRITES" == "1" ]]; then
     assert_jdbc_scalar_equals "student role persisted" "SELECT count(*) FROM user_roles ur JOIN roles r ON r.id = ur.role_id WHERE ur.user_id = $smoke_student_id AND r.code = 'STUDENT'" "1"
     student_import_response="$(post_json "student import" "$GATEWAY_URL/api/users/students/import" "{\"classId\":$organization_id,\"rows\":[{\"studentNo\":\"SMOKE-IMPORT-$smoke_suffix\",\"name\":\"Smoke 导入学生\",\"email\":\"smoke.import.$smoke_suffix@trainmark.local\",\"phone\":\"13800000001\"}]}")"
     assert_json_field_equals data.created 1 <<< "$student_import_response"
-    admin_setting_response="$(patch_json "admin setting" "$GATEWAY_URL/api/admin/settings/export.retention-days" '{"value":"45"}')"
+    teacher_token="$SMOKE_ACCESS_TOKEN"
+    SMOKE_ACCESS_TOKEN="$SMOKE_ADMIN_TOKEN"
+    admin_setting_response="$(patch_json "admin setting as admin" "$GATEWAY_URL/api/admin/settings/export.retention-days" '{"value":"45"}')"
+    SMOKE_ACCESS_TOKEN="$teacher_token"
     assert_json_field_equals data.value 45 <<< "$admin_setting_response"
     assert_jdbc_scalar_equals "admin setting persisted" "SELECT setting_value FROM system_settings WHERE setting_key = 'export.retention-days'" "45"
   fi
