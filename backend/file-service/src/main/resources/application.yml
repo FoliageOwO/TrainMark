@@ -21,3 +21,10 @@ trainmark:
     allowed-content-types: ${UPLOAD_ALLOWED_CONTENT_TYPES:application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,image/png,image/jpeg}
     object-root: ${UPLOAD_OBJECT_ROOT:.data/uploads}
     require-object-content: ${UPLOAD_REQUIRE_OBJECT_CONTENT:false}
+    object-store: ${UPLOAD_OBJECT_STORE:local}
+  minio:
+    endpoint: ${MINIO_ENDPOINT:http://localhost:9000}
+    access-key: ${MINIO_ACCESS_KEY:minioadmin}
+    secret-key: ${MINIO_SECRET_KEY:minioadmin}
+    bucket: ${MINIO_BUCKET:trainmark-uploads}
+    secure: ${MINIO_SECURE:false}

@@ -8,6 +8,9 @@ import io.minio.PutObjectArgs;
 import io.minio.StatObjectArgs;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.stereotype.Component;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -15,15 +18,22 @@ import java.io.InputStream;
 
 /**
  * MinIO/S3-backed {@link UploadObjectStore}.
- * Activated when {@code trainmark.upload.object-store=minio} and {@code trainmark.minio.endpoint} is set.
+ * Activated when {@code trainmark.upload.object-store=minio}.
  */
+@Component
+@ConditionalOnProperty(name = "trainmark.upload.object-store", havingValue = "minio")
 public class MinioUploadObjectStore implements UploadObjectStore {
     private static final Logger log = LoggerFactory.getLogger(MinioUploadObjectStore.class);
 
     private final MinioClient client;
     private final String bucket;
 
-    public MinioUploadObjectStore(String endpoint, String accessKey, String secretKey, String bucket, boolean secure) {
+    public MinioUploadObjectStore(
+            @Value("${trainmark.minio.endpoint:http://localhost:9000}") String endpoint,
+            @Value("${trainmark.minio.access-key:minioadmin}") String accessKey,
+            @Value("${trainmark.minio.secret-key:minioadmin}") String secretKey,
+            @Value("${trainmark.minio.bucket:trainmark-uploads}") String bucket,
+            @Value("${trainmark.minio.secure:false}") boolean secure) {
         this.client = MinioClient.builder()
                 .endpoint(endpoint)
                 .credentials(accessKey, secretKey)

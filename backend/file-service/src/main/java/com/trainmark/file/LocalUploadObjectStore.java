@@ -6,9 +6,11 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 
 @Component
+@ConditionalOnProperty(name = "trainmark.upload.object-store", havingValue = "local", matchIfMissing = true)
 public class LocalUploadObjectStore implements UploadObjectStore {
   private final Path root;
 
