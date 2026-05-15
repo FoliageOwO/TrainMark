@@ -3348,6 +3348,19 @@ pnpm build:web
 pnpm verify:mvp
 ```
 
+教师端工作台组件拆分继续推进：
+
+- 已从 `TeacherDashboard.tsx` 抽出纯展示组件 `TeacherSectionTabs`，让主工作台文件保留业务编排与写操作状态。
+- 拆分保持导航 key、文案、样式 class 和 section 切换行为不变，为后续继续拆分概览/空态/动作处理留出更清晰边界。
+
+验证命令：
+
+```bash
+pnpm lint:web
+pnpm build:web
+pnpm verify:mvp
+```
+
 覆盖内容：
 
 - 前端 `pnpm lint:web`

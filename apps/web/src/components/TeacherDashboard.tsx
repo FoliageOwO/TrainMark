@@ -28,19 +28,8 @@ import { TeacherCoursePanel } from './TeacherCoursePanel';
 import { TeacherOperationsPanel } from './TeacherOperationsPanel';
 import { TeacherRosterPanel } from './TeacherRosterPanel';
 import { TeacherReviewWorkspace } from './TeacherReviewWorkspace';
+import { TeacherSectionTabs } from './TeacherSectionTabs';
 import { TeacherSimilarityPanel } from './TeacherSimilarityPanel';
-
-const teacherNavSections = [
-  { key: 'overview', label: '工作台' },
-  { key: 'collection', label: '报告收集' },
-  { key: 'ai-pipeline', label: 'AI 批改' },
-  { key: 'review', label: '人工复核' },
-  { key: 'analytics', label: '失分分析' },
-  { key: 'roster', label: '名单管理' },
-  { key: 'appeals', label: '申诉处理' },
-  { key: 'similarity', label: '查重检测' },
-  { key: 'operations', label: '运维能力' },
-];
 
 type TeacherDashboardProps = {
   assignments: ReturnType<typeof mockApi.listAssignments>;
@@ -317,18 +306,7 @@ export function TeacherDashboard({
 
   return (
     <>
-      <nav className="teacher-section-tabs">
-        {teacherNavSections.map((item) => (
-          <button
-            className={section === item.key ? 'active' : ''}
-            key={item.key}
-            type="button"
-            onClick={() => setSection(item.key)}
-          >
-            {item.label}
-          </button>
-        ))}
-      </nav>
+      <TeacherSectionTabs activeSection={section} onSectionChange={setSection} />
 
       {isOverview || section === 'collection' ? (
         <TeacherCollectionPanel
