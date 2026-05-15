@@ -23,10 +23,12 @@ type StudentDashboardProps = {
   publishedResults: GradingResultSummary[];
   appeals: AppealSummary[];
   userId: number;
+  userName: string;
+  userStudentNo: string;
   onWorkspaceRefresh: () => Promise<void>;
 };
 
-export function StudentDashboard({ tasks, publishedResults, appeals, userId, onWorkspaceRefresh }: StudentDashboardProps) {
+export function StudentDashboard({ tasks, publishedResults, appeals, userId, userName, userStudentNo, onWorkspaceRefresh }: StudentDashboardProps) {
   const [selectedFileName, setSelectedFileName] = useState('JavaWeb综合实训报告-张三-2024010101.pdf');
   const [uploadProgress, setUploadProgress] = useState(72);
   const [receipt, setReceipt] = useState<UploadReceipt | null>(null);
@@ -247,7 +249,7 @@ export function StudentDashboard({ tasks, publishedResults, appeals, userId, onW
           </label>
           <div className="detected-profile">
             <span>识别信息</span>
-            <strong>张三 / 2024010101 / 软件2401班</strong>
+            <strong>{userName} / {userStudentNo}</strong>
           </div>
           <div className="upload-progress" aria-label="上传进度">
             <span style={{ width: `${uploadProgress}%` }} />

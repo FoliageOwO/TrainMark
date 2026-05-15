@@ -236,6 +236,8 @@ export function App() {
           publishedResults={publishedResults}
           appeals={studentAppeals}
           userId={user.id}
+          userName={user.name}
+          userStudentNo={user.username}
           onWorkspaceRefresh={refreshWorkspaceData}
         />
       ) : primaryRole === 'ADMIN' ? (
