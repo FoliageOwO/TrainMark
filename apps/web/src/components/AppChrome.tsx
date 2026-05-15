@@ -6,6 +6,7 @@ import {
   BookOpen,
   FileCheck2,
   FileText,
+  GraduationCap,
   LayoutDashboard,
   LogOut,
   Plus,
@@ -31,14 +32,16 @@ const roleOptions: RoleOption[] = [
 ];
 
 const navItems = [
-  { icon: LayoutDashboard, label: '工作台' },
-  { icon: BookOpen, label: '课程与班级' },
-  { icon: FileText, label: '实训任务' },
-  { icon: UploadCloud, label: '报告收集' },
-  { icon: Sparkles, label: 'AI 批改中心' },
-  { icon: FileCheck2, label: '人工复核' },
-  { icon: BarChart3, label: '失分分析' },
-  { icon: ShieldCheck, label: '系统管理' },
+  { icon: LayoutDashboard, label: '工作台', roles: ['TEACHER', 'COURSE_OWNER', 'SUPERVISOR'] },
+  { icon: BookOpen, label: '课程与班级', roles: ['TEACHER', 'COURSE_OWNER', 'SUPERVISOR'] },
+  { icon: FileText, label: '实训任务', roles: ['TEACHER', 'COURSE_OWNER', 'SUPERVISOR'] },
+  { icon: UploadCloud, label: '报告收集', roles: ['TEACHER', 'COURSE_OWNER', 'SUPERVISOR'] },
+  { icon: Sparkles, label: 'AI 批改中心', roles: ['TEACHER', 'COURSE_OWNER'] },
+  { icon: FileCheck2, label: '人工复核', roles: ['TEACHER', 'COURSE_OWNER'] },
+  { icon: BarChart3, label: '失分分析', roles: ['TEACHER', 'COURSE_OWNER', 'SUPERVISOR'] },
+  { icon: ShieldCheck, label: '系统管理', roles: ['ADMIN'] },
+  { icon: GraduationCap, label: '我的课程', roles: ['STUDENT'] },
+  { icon: FileText, label: '提交报告', roles: ['STUDENT'] },
 ];
 
 type AppChromeProps = {
@@ -78,17 +81,19 @@ export function AppChrome({
           </div>
         </div>
         <nav className="nav-list">
-          {navItems.map((item) => (
-            <button
-              className={`nav-item ${activeNav === item.label ? 'active' : ''}`}
-              key={item.label}
-              type="button"
-              onClick={() => onNavChange(item.label)}
-            >
-              <item.icon size={18} />
-              {item.label}
-            </button>
-          ))}
+          {navItems
+            .filter((item) => item.roles.includes(primaryRole))
+            .map((item) => (
+              <button
+                className={`nav-item ${activeNav === item.label ? 'active' : ''}`}
+                key={item.label}
+                type="button"
+                onClick={() => onNavChange(item.label)}
+              >
+                <item.icon size={18} />
+                {item.label}
+              </button>
+            ))}
         </nav>
       </aside>
 
