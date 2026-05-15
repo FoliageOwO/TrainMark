@@ -3413,16 +3413,22 @@ pnpm verify:mvp
 ### 1. 真实 AI Provider 替换
 
 - 用生产部署的 PaddleOCR 服务替换当前离线 fallback，并保留现有 provider JSON 契约。
-- 用真实关键词、语义相似度和规则扣分引擎替换当前本地语义评分 fallback。
-- 用真实批注 PDF 服务替换本地摘要 PDF 生成，并覆盖教师端/学生端下载链路。
+- 用真实语义相似度模型（SentenceTransformer/BGE）替换当前关键词评分 fallback。
+- 用真实 LLM 评语生成替换当前规则评分生成的证据文本。
 
-### 2. Strict HTTP/JDBC Live Smoke
+### 2. 前端通知面板
+
+- 已新增通知中心后端 API（列表、单条已读、全部已读）。
+- 已完成内存和 JDBC 存储实现。
+- 待完成：前端通知面板 UI（Bell 图标点击弹出通知列表、未读计数、标记已读）。
+
+### 3. Strict HTTP/JDBC Live Smoke
 
 - 已新增可重复运行的 `pnpm smoke:mvp:jdbc` 入口，覆盖 strict HTTP/JDBC API smoke 与严格认证 token 正负路径。
 - 已用 `SMOKE_INCLUDE_WRITES=1 pnpm smoke:mvp:jdbc` 跑通上传、批改、发布、导出、申诉、催交、查重和管理配置写入。
-- 已将写路径 live smoke 从“接口成功”增强为关键字段校验；后续继续补充数据库落库校验。
+- 已将写路径 live smoke 从"接口成功"增强为关键字段校验；后续继续补充数据库落库校验。
 
-### 3. 工程质量
+### 4. 工程质量
 
 - 继续拆分老师端/学生端工作台内部组件。
 - 在不破坏现有无依赖开发路径的前提下补充单元测试和接口测试依赖。
