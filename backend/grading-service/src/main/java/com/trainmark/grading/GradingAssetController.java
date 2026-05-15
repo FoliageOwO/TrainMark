@@ -4,10 +4,15 @@ import com.trainmark.shared.dto.GradingResultSummary;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
+import org.apache.pdfbox.pdmodel.PDDocument;
+import org.apache.pdfbox.pdmodel.PDPage;
+import org.apache.pdfbox.pdmodel.PDPageContentStream;
+import org.apache.pdfbox.pdmodel.common.PDRectangle;
+import org.apache.pdfbox.pdmodel.font.PDType1Font;
+import org.apache.pdfbox.pdmodel.font.Standard14Fonts;
 import org.springframework.http.ContentDisposition;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -28,13 +33,7 @@ public class GradingAssetController {
   public ResponseEntity<byte[]> annotationPdf(@PathVariable("submissionId") Long submissionId) {
     var fileName = "annotated-%d.pdf".formatted(submissionId);
     var result = gradingService.findResultBySubmission(submissionId);
-    return binary(fileName, MediaType.APPLICATION_PDF, pdfBytes(result
-        .map(this::annotationLines)
-        .orElseGet(() -> List.of(
-            "TrainMark AI Annotated Report",
-            "Submission ID: " + submissionId,
-            "No grading result found yet"
-        ))));
+    return binary(fileName, MediaType.APPLICATION_PDF, pdfBytes(result.orElse(null)));
   }
 
   @GetMapping(value = "/exports/assignments/{assignmentId}/{fileName:.+}")
@@ -43,11 +42,7 @@ public class GradingAssetController {
       @PathVariable("fileName") String fileName
   ) {
     if (fileName.toLowerCase().endsWith(".pdf")) {
-      return binary(fileName, MediaType.APPLICATION_PDF, pdfBytes(List.of(
-          "TrainMark AI Grade Export",
-          "Assignment ID: " + assignmentId,
-          "Rows: 1"
-      )));
+      return binary(fileName, MediaType.APPLICATION_PDF, pdfBytes(null));
     }
     if (fileName.toLowerCase().endsWith(".zip")) {
       return binary(fileName, MediaType.parseMediaType("application/zip"), zipBytes(assignmentId));
@@ -79,7 +74,7 @@ public class GradingAssetController {
         var results = gradingService.listResults(assignmentId, null);
         for (var result : results) {
           zip.putNextEntry(new ZipEntry("annotations/annotated-%d.pdf".formatted(result.submissionId())));
-          zip.write(pdfBytes(annotationLines(result)));
+          zip.write(pdfBytes(result));
           zip.closeEntry();
         }
         zip.putNextEntry(new ZipEntry("README.txt"));
@@ -98,29 +93,121 @@ public class GradingAssetController {
         + "Included annotated PDFs: " + annotationCount + "\n";
   }
 
-  private List<String> annotationLines(GradingResultSummary result) {
-    var lines = new ArrayList<String>();
-    lines.add("TrainMark AI Annotated Report");
-    lines.add("Submission ID: " + result.submissionId());
-    lines.add("Student: " + result.studentName() + " (" + result.studentNo() + ")");
-    lines.add("Score: " + result.teacherScore() + "/" + result.totalScore());
-    lines.add("Review: " + result.reviewStatus() + " / Publish: " + result.publicationStatus());
-    lines.add("Overall: " + shorten(result.overallComment(), 86));
-    lines.add("Annotations:");
-    result.annotations().stream()
-        .limit(6)
-        .forEach(annotation -> lines.add("- [" + annotation.severity() + "] "
-            + shorten(annotation.anchorText() + ": " + annotation.comment(), 92)));
-    lines.add("Items:");
-    result.items().stream()
-        .limit(6)
-        .forEach(item -> {
-          lines.add("- " + item.title() + " " + item.teacherScore() + "/" + item.maxScore());
-          item.evidence().stream()
-              .limit(2)
-              .forEach(evidence -> lines.add("  evidence: " + shorten(evidence, 88)));
-        });
-    return lines;
+  /**
+   * Generates a real PDF with annotations using Apache PDFBox.
+   * Includes score summary, per-item breakdown, deduction reasons, and annotation comments.
+   */
+  private byte[] pdfBytes(GradingResultSummary result) {
+    try (var document = new PDDocument()) {
+      var page = new PDPage(PDRectangle.A4);
+      document.addPage(page);
+
+      var margin = 72f;
+      var pageWidth = page.getMediaBox().getWidth();
+      var y = page.getMediaBox().getTop() - margin;
+      var contentWidth = pageWidth - 2 * margin;
+
+      try (var contentStream = new PDPageContentStream(document, page)) {
+        // Title
+        contentStream.beginText();
+        contentStream.setFont(new PDType1Font(Standard14Fonts.FontName.HELVETICA_BOLD), 18);
+        contentStream.newLineAtOffset(margin, y);
+        contentStream.showText("TrainMark AI 批改批注报告");
+        contentStream.endText();
+        y -= 36;
+
+        if (result == null) {
+          // Placeholder for no result
+          contentStream.beginText();
+          contentStream.setFont(new PDType1Font(Standard14Fonts.FontName.HELVETICA), 12);
+          contentStream.newLineAtOffset(margin, y);
+          contentStream.showText("暂无批改结果");
+          contentStream.endText();
+        } else {
+          // Score summary
+          y = drawSection(contentStream, margin, y, contentWidth, "成绩总览", List.of(
+              "学生: " + result.studentName() + " (" + result.studentNo() + ")",
+              "总分: " + result.teacherScore() + " / " + result.totalScore(),
+              "AI 初评: " + result.aiScore() + " / " + result.totalScore(),
+              "复核状态: " + result.reviewStatus(),
+              "发布状态: " + result.publicationStatus(),
+              "置信度: " + result.confidence() + "%"
+          ));
+
+          // Overall comment
+          if (result.overallComment() != null && !result.overallComment().isBlank()) {
+            y = drawSection(contentStream, margin, y, contentWidth, "总评", List.of(
+                result.overallComment()
+            ));
+          }
+
+          // Per-item scores
+          y = drawSection(contentStream, margin, y, contentWidth, "分项得分",
+              result.items().stream()
+                  .map(item -> item.title() + ": " + item.teacherScore() + "/" + item.maxScore()
+                      + (item.deductionReason() != null && !item.deductionReason().isBlank()
+                          ? "  [扣分: " + item.deductionReason() + "]"
+                          : ""))
+                  .toList());
+
+          // Annotations
+          if (!result.annotations().isEmpty()) {
+            y = drawSection(contentStream, margin, y, contentWidth, "批注详情",
+                result.annotations().stream()
+                    .limit(10)
+                    .map(a -> "[" + a.severity() + "] 第" + a.page() + "页 - " + a.comment())
+                    .toList());
+          }
+        }
+      }
+
+      var output = new ByteArrayOutputStream();
+      document.save(output);
+      return output.toByteArray();
+    } catch (IOException exception) {
+      throw new IllegalStateException("Failed to generate annotation PDF", exception);
+    }
+  }
+
+  /**
+   * Draws a section with heading and bullet points. Returns the new Y position.
+   */
+  private float drawSection(PDPageContentStream cs, float margin, float y, float width,
+                            String heading, List<String> items) throws IOException {
+    var gap = 18f;
+    if (y < margin + 60) {
+      // Page is full, don't draw more
+      return y;
+    }
+
+    // Section heading with underline
+    cs.beginText();
+    cs.setFont(new PDType1Font(Standard14Fonts.FontName.HELVETICA_BOLD), 14);
+    cs.newLineAtOffset(margin, y);
+    cs.showText(heading);
+    cs.endText();
+    y -= 20;
+
+    // Underline
+    cs.moveTo(margin, y + 2);
+    cs.lineTo(margin + width * 0.3f, y + 2);
+    cs.stroke();
+    y -= 6;
+
+    // Bullet items
+    for (var item : items) {
+      if (y < margin + 30) break;
+      cs.beginText();
+      cs.setFont(new PDType1Font(Standard14Fonts.FontName.HELVETICA), 10);
+      cs.newLineAtOffset(margin + 8, y);
+      // Truncate very long lines
+      var display = item.length() > 100 ? item.substring(0, 97) + "..." : item;
+      cs.showText("- " + display);
+      cs.endText();
+      y -= 16;
+    }
+
+    return y - gap;
   }
 
   private String shorten(String value, int maxLength) {
@@ -128,42 +215,5 @@ public class GradingAssetController {
       return value == null ? "" : value;
     }
     return value.substring(0, maxLength - 3) + "...";
-  }
-
-  private byte[] pdfBytes(List<String> lines) {
-    var content = new StringBuilder("BT\n/F1 18 Tf\n72 760 Td\n");
-    for (var index = 0; index < lines.size(); index++) {
-      if (index > 0) {
-        content.append("0 -28 Td\n");
-      }
-      content.append("(").append(pdfEscape(lines.get(index))).append(") Tj\n");
-    }
-    content.append("ET");
-    var stream = content.toString().getBytes(StandardCharsets.UTF_8);
-    var objects = List.of(
-        "<< /Type /Catalog /Pages 2 0 R >>",
-        "<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
-        "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 4 0 R >> >> /Contents 5 0 R >>",
-        "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>",
-        "<< /Length " + stream.length + " >>\nstream\n" + new String(stream, StandardCharsets.UTF_8) + "\nendstream"
-    );
-    var output = new StringBuilder("%PDF-1.4\n");
-    var offsets = new java.util.ArrayList<Integer>();
-    for (var index = 0; index < objects.size(); index++) {
-      offsets.add(output.length());
-      output.append(index + 1).append(" 0 obj\n").append(objects.get(index)).append("\nendobj\n");
-    }
-    var xrefOffset = output.length();
-    output.append("xref\n0 ").append(objects.size() + 1).append("\n0000000000 65535 f \n");
-    for (var offset : offsets) {
-      output.append("%010d 00000 n \n".formatted(offset));
-    }
-    output.append("trailer\n<< /Size ").append(objects.size() + 1).append(" /Root 1 0 R >>\nstartxref\n")
-        .append(xrefOffset).append("\n%%EOF\n");
-    return output.toString().getBytes(StandardCharsets.UTF_8);
-  }
-
-  private String pdfEscape(String value) {
-    return value.replace("\\", "\\\\").replace("(", "\\(").replace(")", "\\)");
   }
 }
