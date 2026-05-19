@@ -51,10 +51,28 @@ function writeRoleToLocation(role: RoleCode) {
   window.history.replaceState(null, '', nextUrl);
 }
 
+function getSectionFromLocation(): string {
+  if (typeof window === 'undefined') {
+    return 'overview';
+  }
+
+  return new URLSearchParams(window.location.search).get('section') ?? 'overview';
+}
+
+function writeSectionToLocation(section: string) {
+  if (typeof window === 'undefined') {
+    return;
+  }
+
+  const nextUrl = new URL(window.location.href);
+  nextUrl.searchParams.set('section', section);
+  window.history.replaceState(null, '', nextUrl);
+}
+
 export function App() {
   const [user, setUser] = useState<UserProfile>(() => mockApi.login(getRoleFromLocation()));
   const [activeNav, setActiveNav] = useState('工作台');
-  const [teacherSection, setTeacherSection] = useState('overview');
+  const [teacherSection, setTeacherSection] = useState(getSectionFromLocation);
   const [selectedCourseId, setSelectedCourseId] = useState(1);
   const [workspaceData, setWorkspaceData] = useState<WorkspaceData | null>(null);
   const [apiModeLabel, setApiModeLabel] = useState(shouldUseHttpApi() ? 'HTTP API' : 'Mock 数据');
@@ -95,6 +113,7 @@ export function App() {
 
   const handleSectionChange = (section: string) => {
     setTeacherSection(section);
+    writeSectionToLocation(section);
     const label = sectionToNavLabel[section];
     if (label) {
       setActiveNav(label);
@@ -158,6 +177,22 @@ export function App() {
     return () => {
       cancelled = true;
       window.removeEventListener('popstate', syncRoleFromLocation);
+    };
+  }, []);
+
+  useEffect(() => {
+    const syncSectionFromLocation = () => {
+      const section = getSectionFromLocation();
+      setTeacherSection(section);
+      const label = sectionToNavLabel[section];
+      if (label) {
+        setActiveNav(label);
+      }
+    };
+
+    window.addEventListener('popstate', syncSectionFromLocation);
+    return () => {
+      window.removeEventListener('popstate', syncSectionFromLocation);
     };
   }, []);
 
