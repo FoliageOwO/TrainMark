@@ -10,5 +10,11 @@ public interface OcrStore {
 
   OcrJobSummary createJob(CreateOcrJobRequest request);
 
+  OcrJobSummary createPendingJob(CreateOcrJobRequest request);
+
+  OcrJobSummary completeJob(Long jobId, CreateOcrJobRequest request);
+
+  void failJob(Long jobId);
+
   OcrResultSummary result(Long jobId);
 }

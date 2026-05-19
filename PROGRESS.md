@@ -3498,6 +3498,21 @@ UI 修复验证已通过：
 - 学生端"查看批注"按钮滚动到成绩区域并打开内联批注预览模态框，支持 Esc 键关闭。
 - 侧边栏品牌图标与网站 favicon 保持一致（SVG 图标）。
 
+RabbitMQ 异步 OCR 任务消费者已补齐：
+
+- ocr-service 新增 `OCR_ASYNC_ENABLED` 开关，默认保持同步本地路径；开启后 `POST /api/ocr/jobs` 会先创建 `PENDING` 任务并发布到 RabbitMQ。
+- 已新增 OCR 队列、交换机、JSON 消息转换、任务 Publisher 与 Consumer，消费端复用现有 OCR Provider / DocumentPreprocessor 完成识别并写回内存或 JDBC 存储。
+- OCR 存储接口已拆分为“创建待处理任务 / 完成任务 / 标记失败”，同步模式继续走原有即时完成语义，异步发布失败会把任务标记为 `FAILED`，避免长期悬挂。
+- `pnpm smoke:mvp:async` 现在同时启用 `GRADING_ASYNC_ENABLED=true` 与 `OCR_ASYNC_ENABLED=true`，写接口 smoke 在 OCR 异步模式下会轮询 JDBC 状态直到 `COMPLETED`。
+
+验证命令：
+
+```bash
+mvn -f backend/pom.xml -pl ocr-service -am package -DskipTests
+SMOKE_DRY_RUN=1 SMOKE_INCLUDE_WRITES=1 OCR_ASYNC_ENABLED=true pnpm smoke:api
+pnpm verify:mvp
+```
+
 ## 已提交记录
 
 主要提交：
@@ -3584,6 +3599,7 @@ UI 修复验证已通过：
 - `chore: add strict auth smoke`
 - `chore: verify strict auth smoke`
 - `docs: refresh remaining work`
+- `feat: add async ocr queue`
 
 ## 接下来需要做
 
@@ -3609,4 +3625,4 @@ UI 修复验证已通过：
 
 - 继续拆分老师端/学生端工作台内部组件。
 - 在不破坏现有无依赖开发路径的前提下补充单元测试和接口测试依赖。
-- 用生产部署形态补齐 RabbitMQ 异步 OCR、导出和通知任务消费者。
+- 用生产部署形态补齐 RabbitMQ 异步导出和通知任务消费者。

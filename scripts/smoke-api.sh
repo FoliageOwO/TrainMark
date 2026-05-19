@@ -571,7 +571,13 @@ if [[ "$SMOKE_INCLUDE_WRITES" == "1" ]]; then
   else
     ocr_response="$(post_json "ocr job" "$GATEWAY_URL/api/ocr/jobs" '{"submissionId":1,"objectKey":"assignments/1/students/2/database-report.docx","mode":"STRUCTURE"}')"
     ocr_job_id="$(json_field id <<< "$ocr_response")"
-    assert_jdbc_scalar_equals "ocr job persisted" "SELECT status FROM ocr_jobs WHERE id = $ocr_job_id" "COMPLETED"
+    if [[ "${OCR_ASYNC_ENABLED:-false}" == "true" || "${OCR_ASYNC_ENABLED:-0}" == "1" ]]; then
+      assert_json_field_in data.status PENDING RECOGNIZING COMPLETED <<< "$ocr_response"
+      assert_jdbc_scalar_eventually_equals "async ocr job completed" "SELECT status FROM ocr_jobs WHERE id = $ocr_job_id" "COMPLETED"
+    else
+      assert_json_field_equals data.status COMPLETED <<< "$ocr_response"
+      assert_jdbc_scalar_equals "ocr job persisted" "SELECT status FROM ocr_jobs WHERE id = $ocr_job_id" "COMPLETED"
+    fi
     check_api "gateway OCR result" "$GATEWAY_URL/api/ocr/jobs/$ocr_job_id/result"
   fi
   if [[ "$SMOKE_DRY_RUN" == "1" ]]; then

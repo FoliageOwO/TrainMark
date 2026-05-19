@@ -58,12 +58,39 @@ public class InMemoryOcrStore implements OcrStore {
 
   @Override
   public OcrJobSummary createJob(CreateOcrJobRequest request) {
+    var job = createPendingJob(request);
+    return completeJob(job.id(), request);
+  }
+
+  @Override
+  public OcrJobSummary createPendingJob(CreateOcrJobRequest request) {
     var id = jobIds.getAndIncrement();
-    var document = documentPreprocessor.preprocess(request);
-    var result = ocrProvider.recognize(id, request, document);
-    var blocks = result.blocks();
     var job = new OcrJobSummary(
         id,
+        request.submissionId(),
+        request.objectKey(),
+        OcrJobStatus.PENDING,
+        0,
+        0,
+        0,
+        0,
+        OffsetDateTime.now()
+    );
+    jobs.put(id, job);
+    return job;
+  }
+
+  @Override
+  public OcrJobSummary completeJob(Long jobId, CreateOcrJobRequest request) {
+    var pending = jobs.get(jobId);
+    if (pending == null) {
+      throw new IllegalArgumentException("OCR job not found: " + jobId);
+    }
+    var document = documentPreprocessor.preprocess(request);
+    var result = ocrProvider.recognize(jobId, request, document);
+    var blocks = result.blocks();
+    var job = new OcrJobSummary(
+        jobId,
         request.submissionId(),
         request.objectKey(),
         OcrJobStatus.COMPLETED,
@@ -73,9 +100,28 @@ public class InMemoryOcrStore implements OcrStore {
         confidence(blocks),
         OffsetDateTime.now()
     );
-    jobs.put(id, job);
-    results.put(id, result);
+    jobs.put(jobId, job);
+    results.put(jobId, result);
     return job;
+  }
+
+  @Override
+  public void failJob(Long jobId) {
+    var job = jobs.get(jobId);
+    if (job == null) {
+      throw new IllegalArgumentException("OCR job not found: " + jobId);
+    }
+    jobs.put(jobId, new OcrJobSummary(
+        job.id(),
+        job.submissionId(),
+        job.objectKey(),
+        OcrJobStatus.FAILED,
+        job.pageCount(),
+        job.textBlockCount(),
+        job.tableCount(),
+        job.confidence(),
+        job.createdAt()
+    ));
   }
 
   @Override

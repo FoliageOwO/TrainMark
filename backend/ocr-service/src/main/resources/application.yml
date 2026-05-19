@@ -3,6 +3,11 @@ server:
 spring:
   application:
     name: ocr-service
+  rabbitmq:
+    host: ${RABBITMQ_HOST:localhost}
+    port: ${RABBITMQ_PORT:5672}
+    username: ${RABBITMQ_USERNAME:guest}
+    password: ${RABBITMQ_PASSWORD:guest}
 management:
   endpoints:
     web:
@@ -16,11 +21,17 @@ trainmark:
       command: ${DOCUMENT_PREPROCESSOR_COMMAND:}
       timeout-seconds: ${DOCUMENT_PREPROCESSOR_TIMEOUT_SECONDS:60}
   ocr:
+    async-enabled: ${OCR_ASYNC_ENABLED:false}
     store: ${TRAINMARK_OCR_STORE:memory}
     provider: ${OCR_PROVIDER:local}
     command: ${OCR_COMMAND:}
     require-real: ${OCR_REQUIRE_REAL:false}
     timeout-seconds: ${OCR_TIMEOUT_SECONDS:60}
+    queue:
+      name: ${OCR_QUEUE_NAME:trainmark-ocr-jobs}
+    exchange:
+      name: ${OCR_EXCHANGE_NAME:trainmark-ocr-exchange}
+    routing-key: ${OCR_ROUTING_KEY:ocr.job.create}
     jdbc:
       url: ${TRAINMARK_OCR_JDBC_URL:}
       username: ${TRAINMARK_OCR_JDBC_USERNAME:}

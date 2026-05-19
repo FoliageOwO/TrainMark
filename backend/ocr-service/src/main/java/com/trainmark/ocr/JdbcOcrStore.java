@@ -74,10 +74,26 @@ public class JdbcOcrStore implements OcrStore {
 
   @Override
   public OcrJobSummary createJob(CreateOcrJobRequest request) {
+    var job = createPendingJob(request);
+    return completeJob(job.id(), request);
+  }
+
+  @Override
+  public OcrJobSummary createPendingJob(CreateOcrJobRequest request) {
+    try (var connection = connect()) {
+      var jobId = insertPendingJob(connection, request);
+      return getJob(connection, jobId);
+    } catch (SQLException error) {
+      throw new IllegalStateException("Failed to create OCR job", error);
+    }
+  }
+
+  @Override
+  public OcrJobSummary completeJob(Long jobId, CreateOcrJobRequest request) {
     try (var connection = connect()) {
       connection.setAutoCommit(false);
       try {
-        var jobId = insertPendingJob(connection, request);
+        updateJobStatus(connection, jobId, OcrJobStatus.RECOGNIZING);
         var document = documentPreprocessor.preprocess(request);
         var result = ocrProvider.recognize(jobId, request, document);
         var blocks = result.blocks();
@@ -91,7 +107,16 @@ public class JdbcOcrStore implements OcrStore {
         throw error;
       }
     } catch (SQLException error) {
-      throw new IllegalStateException("Failed to create OCR job", error);
+      throw new IllegalStateException("Failed to complete OCR job", error);
+    }
+  }
+
+  @Override
+  public void failJob(Long jobId) {
+    try (var connection = connect()) {
+      updateJobStatus(connection, jobId, OcrJobStatus.FAILED);
+    } catch (SQLException error) {
+      throw new IllegalStateException("Failed to mark OCR job failed", error);
     }
   }
 
@@ -114,7 +139,7 @@ public class JdbcOcrStore implements OcrStore {
     try (var statement = connection.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
       statement.setLong(1, request.submissionId());
       statement.setString(2, request.objectKey());
-      statement.setString(3, OcrJobStatus.RECOGNIZING.name());
+      statement.setString(3, OcrJobStatus.PENDING.name());
       statement.executeUpdate();
       try (var keys = statement.getGeneratedKeys()) {
         if (keys.next()) {
@@ -123,6 +148,19 @@ public class JdbcOcrStore implements OcrStore {
       }
     }
     throw new SQLException("Insert did not return a generated OCR job id");
+  }
+
+  private void updateJobStatus(Connection connection, Long jobId, OcrJobStatus status) throws SQLException {
+    var sql = """
+        UPDATE ocr_jobs
+        SET status = ?, updated_at = now()
+        WHERE id = ?
+        """;
+    try (var statement = connection.prepareStatement(sql)) {
+      statement.setString(1, status.name());
+      statement.setLong(2, jobId);
+      statement.executeUpdate();
+    }
   }
 
   private void updateCompletedJob(Connection connection, Long jobId, List<OcrBlockSummary> blocks) throws SQLException {
