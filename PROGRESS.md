@@ -3556,6 +3556,19 @@ pnpm lint:web
 pnpm build:web
 ```
 
+学生端上传面板边界已继续收敛：
+
+- 已新增 `StudentUploadPanel`，集中承载学生端文件拖拽、任务选择、文件名编辑、进度条、提交按钮和提交回执展示。
+- `StudentDashboard` 保留任务/成绩/申诉状态协调和上传动作处理，上传 UI 从学生工作台主组件中下沉，后续拆分成绩批注与批注预览时改动面更小。
+- 上传面板继续复用当前 HTTP/mock 提交链路、原文件查看入口和任务提交后的本地即时状态反馈。
+
+验证命令：
+
+```bash
+pnpm lint:web
+pnpm build:web
+```
+
 ## 已提交记录
 
 主要提交：
@@ -3646,6 +3659,7 @@ pnpm build:web
 - `feat: add async grade exports`
 - `feat: add async notifications`
 - `refactor: split teacher overview`
+- `refactor: split student upload panel`
 
 ## 接下来需要做
 
@@ -3669,6 +3683,6 @@ pnpm build:web
 
 ### 4. 工程质量
 
-- 继续拆分学生端工作台和教师端剩余复杂交互组件。
+- 继续拆分学生端成绩批注/预览和教师端剩余复杂交互组件。
 - 在不破坏现有无依赖开发路径的前提下补充单元测试和接口测试依赖。
 - 持续补充自动化测试覆盖，并收敛前后端组件边界。

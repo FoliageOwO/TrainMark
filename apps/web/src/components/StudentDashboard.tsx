@@ -1,19 +1,17 @@
 import { useEffect, useRef, useState } from 'react';
 import {
   CalendarClock,
-  CheckCircle2,
-  Clock3,
   FileCheck2,
   FileText,
   GraduationCap,
-  UploadCloud,
   X,
   ZoomIn,
   ZoomOut,
 } from 'lucide-react';
-import { createAppeal, createUploadReceipt, resolveApiAssetUrl, shouldUseHttpApi } from '../api/httpApi';
+import { createAppeal, createUploadReceipt, resolveApiAssetUrl } from '../api/httpApi';
 import type { AppealSummary, GradingResultSummary, SubmissionTask, UploadReceipt } from '../api/types';
 import { formatDate } from '../utils/formatDate';
+import { StudentUploadPanel } from './StudentUploadPanel';
 
 const appealStatusText = {
   SUBMITTED: '待处理',
@@ -98,6 +96,19 @@ export function StudentDashboard({ tasks, publishedResults, appeals, userId, use
       task.id === selectedTask.id ? { ...task, status: '已提交', score: undefined } : task
     )));
     await onWorkspaceRefresh();
+  };
+
+  const handleUploadTaskSelect = (taskId: number) => {
+    setSelectedTaskId(taskId);
+    setReceipt(null);
+    setUploadProgress(36);
+  };
+
+  const handleUploadFileNameChange = (fileName: string) => {
+    setSelectedFileName(fileName);
+    setSelectedFile(null);
+    setReceipt(null);
+    setUploadProgress(36);
   };
 
   const submitAppeal = async (resultId: number, rubricItemId: number | null) => {
@@ -216,93 +227,19 @@ export function StudentDashboard({ tasks, publishedResults, appeals, userId, use
         </div>
       </article>
 
-      <article className="panel">
-        <div className="panel-heading">
-          <div>
-            <p className="eyebrow">Upload</p>
-            <h3>上传报告</h3>
-          </div>
-          <UploadCloud size={22} />
-        </div>
-        <div className="student-upload-card">
-          <label
-            className="upload-dropzone compact"
-            onDragOver={(event) => event.preventDefault()}
-            onDrop={(event) => {
-              event.preventDefault();
-              selectUploadFile(event.dataTransfer.files?.[0] ?? null);
-            }}
-          >
-            <UploadCloud size={24} />
-            <strong>拖拽报告到这里</strong>
-            <span>PDF / Word / JPG / PNG，最大 50MB</span>
-            <input
-              type="file"
-              accept=".pdf,.doc,.docx,.png,.jpg,.jpeg,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,image/png,image/jpeg"
-              onChange={(event) => {
-                selectUploadFile(event.target.files?.[0] ?? null);
-              }}
-            />
-          </label>
-          <label className="file-name-field">
-            提交任务
-            <select
-              value={selectedTask?.id ?? ''}
-              onChange={(event) => {
-                setSelectedTaskId(Number(event.target.value));
-                setReceipt(null);
-                setUploadProgress(36);
-              }}
-            >
-              {taskRows.map((task) => (
-                <option key={task.id} value={task.id}>
-                  {task.title}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label className="file-name-field">
-            文件名
-            <input
-              value={selectedFileName}
-              onChange={(event) => {
-                setSelectedFileName(event.target.value);
-                setSelectedFile(null);
-                setReceipt(null);
-                setUploadProgress(36);
-              }}
-            />
-          </label>
-          <div className="detected-profile">
-            <span>识别信息</span>
-            <strong>{userName} / {userStudentNo}</strong>
-          </div>
-          <div className="upload-progress" aria-label="上传进度">
-            <span style={{ width: `${uploadProgress}%` }} />
-          </div>
-          {receipt ? (
-            <div className="receipt-card">
-              <CheckCircle2 size={18} />
-              <div>
-                <strong>提交成功</strong>
-                <span>回执 #{receipt.submissionId} · 版本 {receipt.version}</span>
-                {shouldUseHttpApi() && (
-                  <a href={resolveApiAssetUrl(`/api/submissions/${receipt.submissionId}/file`)} rel="noreferrer" target="_blank">查看原文件</a>
-                )}
-              </div>
-            </div>
-          ) : (
-            <button className="primary-button full-width" type="button" onClick={confirmUpload} disabled={!selectedTask}>
-              确认提交
-            </button>
-          )}
-        </div>
-        <ul className="feature-list">
-          <li><FileText size={16} /> 支持 PDF、Word、JPG、PNG</li>
-          <li><Clock3 size={16} /> 截止前可重复提交并保留版本</li>
-          <li><CheckCircle2 size={16} /> 系统自动识别姓名、学号、班级</li>
-        </ul>
-      </article>
+      <StudentUploadPanel
+        receipt={receipt}
+        selectedFileName={selectedFileName}
+        selectedTask={selectedTask}
+        tasks={taskRows}
+        uploadProgress={uploadProgress}
+        userName={userName}
+        userStudentNo={userStudentNo}
+        onConfirmUpload={confirmUpload}
+        onFileNameChange={handleUploadFileNameChange}
+        onFileSelect={selectUploadFile}
+        onTaskSelect={handleUploadTaskSelect}
+      />
 
       {viewingResult && (
         <div className="pdf-viewer-modal" role="dialog" aria-modal="true" aria-label="批注预览">
