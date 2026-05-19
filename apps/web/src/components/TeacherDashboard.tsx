@@ -26,6 +26,7 @@ import { TeacherAppealPanel } from './TeacherAppealPanel';
 import { TeacherCollectionPanel } from './TeacherCollectionPanel';
 import { TeacherCoursePanel } from './TeacherCoursePanel';
 import { TeacherOperationsPanel } from './TeacherOperationsPanel';
+import { TeacherOverviewDashboard } from './TeacherOverviewDashboard';
 import { TeacherRosterPanel } from './TeacherRosterPanel';
 import { TeacherReviewWorkspace } from './TeacherReviewWorkspace';
 import { TeacherSectionTabs } from './TeacherSectionTabs';
@@ -302,57 +303,105 @@ export function TeacherDashboard({
     await onWorkspaceRefresh();
   };
 
+  const collectionPanelProps = {
+    collectionOverview,
+    submissions,
+    selectedAssignmentId,
+    unsubmittedStudents,
+    reminderResult,
+    onRemindUnsubmitted: handleRemindUnsubmitted,
+  };
+  const aiPipelineProps = {
+    assignments: assignmentRows,
+    rubric,
+    rubricNotice,
+    gradingJobs: visibleJobs,
+    ocrJobs: ocrRows,
+    canStartOcr: Boolean(ocrCandidate),
+    onCreateRubric: handleCreateRubric,
+    onStartGrading: handleStartGrading,
+    onStartOcr: handleStartOcr,
+  };
+  const similarityPanelProps = {
+    similarityJobs: similarityRows,
+    onStartSimilarity: handleStartSimilarity,
+  };
+  const reviewWorkspaceProps = selectedReview ? {
+    reviewResults,
+    selectedReview,
+    publicationAudits: publicationAuditRows,
+    onSelectReview: setSelectedReviewId,
+    onReviewItemSubmit: handleReviewItemSubmit,
+    onApproveResult: handleApproveResult,
+    onPublishResult: handlePublishResult,
+    onWithdrawResult: handleWithdrawResult,
+  } : null;
+  const analyticsPanelProps = {
+    gradeExports: exportRows,
+    gradeStatistics,
+    lossPoints,
+    courseOutcomes,
+    onCreateGradeExport: handleCreateGradeExport,
+  };
+  const appealPanelProps = {
+    appeals: appealRows,
+    onResolveAppeal: handleResolveAppeal,
+  };
+  const rosterPanelProps = {
+    classes,
+    importPreview,
+    importResult: studentImportResult,
+    organizations,
+    students: studentRows,
+    onImportStudents: handleImportStudents,
+  };
+  const coursePanelProps = {
+    assignments: assignmentRows,
+    classes,
+    courses,
+    selectedCourse,
+    selectedCourseId,
+    stats,
+    assignmentNotice,
+    onCreateAssignment: handleCreateAssignment,
+    onSelectCourse: setSelectedCourseId,
+  };
+
   const isOverview = section === 'overview';
 
   return (
     <>
       <TeacherSectionTabs activeSection={section} onSectionChange={setSection} />
 
-      {isOverview || section === 'collection' ? (
-        <TeacherCollectionPanel
-          collectionOverview={collectionOverview}
-          submissions={submissions}
-          selectedAssignmentId={selectedAssignmentId}
-          unsubmittedStudents={unsubmittedStudents}
-          reminderResult={reminderResult}
-          onRemindUnsubmitted={handleRemindUnsubmitted}
+      {isOverview ? (
+        <TeacherOverviewDashboard
+          collection={collectionPanelProps}
+          aiPipeline={aiPipelineProps}
+          similarity={similarityPanelProps}
+          review={reviewWorkspaceProps}
+          analytics={analyticsPanelProps}
+          appeals={appealPanelProps}
+          roster={rosterPanelProps}
+          courses={coursePanelProps}
         />
       ) : null}
 
-      {isOverview || section === 'ai-pipeline' ? (
-        <>
-          <TeacherAiPipeline
-            assignments={assignmentRows}
-            rubric={rubric}
-            rubricNotice={rubricNotice}
-            gradingJobs={visibleJobs}
-            ocrJobs={ocrRows}
-            canStartOcr={Boolean(ocrCandidate)}
-            onCreateRubric={handleCreateRubric}
-            onStartGrading={handleStartGrading}
-            onStartOcr={handleStartOcr}
-          />
-          {isOverview ? (
-            <TeacherSimilarityPanel similarityJobs={similarityRows} onStartSimilarity={handleStartSimilarity} />
-          ) : null}
-        </>
+      {section === 'collection' ? (
+        <TeacherCollectionPanel {...collectionPanelProps} />
+      ) : null}
+
+      {section === 'ai-pipeline' ? (
+        <TeacherAiPipeline {...aiPipelineProps} />
       ) : null}
 
       {section === 'similarity' ? (
-        <TeacherSimilarityPanel similarityJobs={similarityRows} onStartSimilarity={handleStartSimilarity} />
+        <TeacherSimilarityPanel {...similarityPanelProps} />
       ) : null}
 
-      {isOverview || section === 'review' ? (
-        selectedReview ? (
+      {section === 'review' ? (
+        reviewWorkspaceProps ? (
           <TeacherReviewWorkspace
-            reviewResults={reviewResults}
-            selectedReview={selectedReview}
-            publicationAudits={publicationAuditRows}
-            onSelectReview={setSelectedReviewId}
-            onReviewItemSubmit={handleReviewItemSubmit}
-            onApproveResult={handleApproveResult}
-            onPublishResult={handlePublishResult}
-            onWithdrawResult={handleWithdrawResult}
+            {...reviewWorkspaceProps}
           />
         ) : (
           <section className="review-layout">
@@ -373,47 +422,24 @@ export function TeacherDashboard({
         )
       ) : null}
 
-      {isOverview || section === 'analytics' ? (
-        <TeacherAnalyticsPanel
-          gradeExports={exportRows}
-          gradeStatistics={gradeStatistics}
-          lossPoints={lossPoints}
-          courseOutcomes={courseOutcomes}
-          onCreateGradeExport={handleCreateGradeExport}
-        />
+      {section === 'analytics' ? (
+        <TeacherAnalyticsPanel {...analyticsPanelProps} />
       ) : null}
 
-      {isOverview || section === 'appeals' ? (
-        <TeacherAppealPanel appeals={appealRows} onResolveAppeal={handleResolveAppeal} />
+      {section === 'appeals' ? (
+        <TeacherAppealPanel {...appealPanelProps} />
       ) : null}
 
-      {isOverview || section === 'roster' ? (
-        <TeacherRosterPanel
-          classes={classes}
-          importPreview={importPreview}
-          importResult={studentImportResult}
-          organizations={organizations}
-          students={studentRows}
-          onImportStudents={handleImportStudents}
-        />
+      {section === 'roster' ? (
+        <TeacherRosterPanel {...rosterPanelProps} />
       ) : null}
 
-      {isOverview || section === 'operations' ? (
+      {section === 'operations' ? (
         <TeacherOperationsPanel />
       ) : null}
 
-      {isOverview || section === 'courses' || section === 'assignments' ? (
-        <TeacherCoursePanel
-          assignments={assignmentRows}
-          classes={classes}
-          courses={courses}
-          selectedCourse={selectedCourse}
-          selectedCourseId={selectedCourseId}
-          stats={stats}
-          assignmentNotice={assignmentNotice}
-          onCreateAssignment={handleCreateAssignment}
-          onSelectCourse={setSelectedCourseId}
-        />
+      {section === 'courses' || section === 'assignments' ? (
+        <TeacherCoursePanel {...coursePanelProps} />
       ) : null}
     </>
   );

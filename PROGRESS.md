@@ -3543,6 +3543,19 @@ SMOKE_DRY_RUN=1 SMOKE_INCLUDE_WRITES=1 NOTIFICATION_ASYNC_ENABLED=true pnpm smok
 pnpm verify:mvp
 ```
 
+教师端概览工作台边界已继续收敛：
+
+- 已新增 `TeacherOverviewDashboard`，集中承载教师端工作台首页的收集、AI 流水线、查重、复核、分析、申诉、名单、运维和课程任务组合视图。
+- `TeacherDashboard` 现在保留数据同步、写操作处理和分区路由职责；概览页组合逻辑下沉到独立组件，后续继续拆分教师端时不再需要反复改动主调度组件。
+- 单分区页面继续复用同一组 panel props，保持侧边栏和 Section Tabs 切换行为不变。
+
+验证命令：
+
+```bash
+pnpm lint:web
+pnpm build:web
+```
+
 ## 已提交记录
 
 主要提交：
@@ -3632,6 +3645,7 @@ pnpm verify:mvp
 - `feat: add async ocr queue`
 - `feat: add async grade exports`
 - `feat: add async notifications`
+- `refactor: split teacher overview`
 
 ## 接下来需要做
 
@@ -3655,6 +3669,6 @@ pnpm verify:mvp
 
 ### 4. 工程质量
 
-- 继续拆分老师端/学生端工作台内部组件。
+- 继续拆分学生端工作台和教师端剩余复杂交互组件。
 - 在不破坏现有无依赖开发路径的前提下补充单元测试和接口测试依赖。
 - 持续补充自动化测试覆盖，并收敛前后端组件边界。
