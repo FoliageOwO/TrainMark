@@ -14,6 +14,12 @@ public interface NotificationStore {
 
   ReminderResult remind(ReminderRequest request);
 
+  ReminderResult createPendingReminder(ReminderRequest request);
+
+  ReminderResult completeReminder(ReminderRequest request, java.time.OffsetDateTime scheduledAt);
+
+  void failReminder(ReminderRequest request, java.time.OffsetDateTime scheduledAt);
+
   Collection<NotificationSummary> listNotifications(Long userId, boolean unreadOnly);
 
   int markAsRead(Long notificationId, Long userId);

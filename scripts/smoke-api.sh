@@ -627,8 +627,13 @@ if [[ "$SMOKE_INCLUDE_WRITES" == "1" ]]; then
     fi
     assert_jdbc_audit_exists "GRADE_EXPORT" "GRADE_EXPORT" "$grade_export_id"
     reminder_response="$(post_json "remind unsubmitted" "$GATEWAY_URL/api/notifications/remind-unsubmitted" '{"assignmentId":1,"studentIds":[2],"channels":["IN_APP"],"message":"Smoke reminder"}')"
-    assert_json_field_equals data.status SENT <<< "$reminder_response"
-    assert_jdbc_scalar_equals "reminder persisted" "SELECT CASE WHEN EXISTS (SELECT 1 FROM notification_events WHERE assignment_id = 1 AND recipient_id = 2 AND status = 'SENT' AND message = 'Smoke reminder') THEN 1 ELSE 0 END" "1"
+    if [[ "${NOTIFICATION_ASYNC_ENABLED:-false}" == "true" || "${NOTIFICATION_ASYNC_ENABLED:-0}" == "1" ]]; then
+      assert_json_field_equals data.status PENDING <<< "$reminder_response"
+      assert_jdbc_scalar_eventually_equals "async reminder sent" "SELECT CASE WHEN EXISTS (SELECT 1 FROM notification_events WHERE assignment_id = 1 AND recipient_id = 2 AND status = 'SENT' AND message = 'Smoke reminder') THEN 1 ELSE 0 END" "1"
+    else
+      assert_json_field_equals data.status SENT <<< "$reminder_response"
+      assert_jdbc_scalar_equals "reminder persisted" "SELECT CASE WHEN EXISTS (SELECT 1 FROM notification_events WHERE assignment_id = 1 AND recipient_id = 2 AND status = 'SENT' AND message = 'Smoke reminder') THEN 1 ELSE 0 END" "1"
+    fi
     similarity_response="$(post_json "similarity job" "$GATEWAY_URL/api/similarity/jobs" "{\"assignmentId\":1,\"submissionIds\":[$submission_id,$peer_submission_id],\"includeHistory\":true}")"
     similarity_job_id="$(json_field id <<< "$similarity_response")"
     assert_json_field_equals data.status COMPLETED <<< "$similarity_response"

@@ -3,6 +3,11 @@ server:
 spring:
   application:
     name: notification-service
+  rabbitmq:
+    host: ${RABBITMQ_HOST:localhost}
+    port: ${RABBITMQ_PORT:5672}
+    username: ${RABBITMQ_USERNAME:guest}
+    password: ${RABBITMQ_PASSWORD:guest}
   mail:
     host: ${MAIL_HOST:localhost}
     port: ${MAIL_PORT:587}
@@ -16,9 +21,15 @@ spring:
             enable: true
 trainmark:
   notification:
+    async-enabled: ${NOTIFICATION_ASYNC_ENABLED:false}
     store: ${TRAINMARK_NOTIFICATION_STORE:memory}
     email-enabled: ${NOTIFICATION_EMAIL_ENABLED:false}
     from-email: ${NOTIFICATION_FROM_EMAIL:}
+    queue:
+      name: ${NOTIFICATION_QUEUE_NAME:trainmark-notification-jobs}
+    exchange:
+      name: ${NOTIFICATION_EXCHANGE_NAME:trainmark-notification-exchange}
+    routing-key: ${NOTIFICATION_ROUTING_KEY:notification.reminder.send}
     jdbc:
       url: ${TRAINMARK_NOTIFICATION_JDBC_URL:}
       username: ${TRAINMARK_NOTIFICATION_JDBC_USERNAME:}

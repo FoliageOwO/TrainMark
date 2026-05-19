@@ -57,8 +57,13 @@ public class InMemoryNotificationStore implements NotificationStore {
 
   @Override
   public ReminderResult remind(ReminderRequest request) {
+    var pending = createPendingReminder(request);
+    return completeReminder(request, pending.scheduledAt());
+  }
+
+  @Override
+  public ReminderResult createPendingReminder(ReminderRequest request) {
     var channels = request.channels().isEmpty() ? List.of(NotificationChannel.IN_APP) : request.channels();
-    // Create a notification for each student
     for (var studentId : request.studentIds()) {
       addNotification("提交催交", request.message(), "REMINDER_SENT", false, "/tasks/" + request.assignmentId());
     }
@@ -67,9 +72,27 @@ public class InMemoryNotificationStore implements NotificationStore {
         request.studentIds().size(),
         request.studentIds().size() * channels.size(),
         channels,
-        NotificationStatus.SENT,
+        NotificationStatus.PENDING,
         OffsetDateTime.now()
     );
+  }
+
+  @Override
+  public ReminderResult completeReminder(ReminderRequest request, OffsetDateTime scheduledAt) {
+    var channels = request.channels().isEmpty() ? List.of(NotificationChannel.IN_APP) : request.channels();
+    return new ReminderResult(
+        request.assignmentId(),
+        request.studentIds().size(),
+        request.studentIds().size() * channels.size(),
+        channels,
+        NotificationStatus.SENT,
+        scheduledAt
+    );
+  }
+
+  @Override
+  public void failReminder(ReminderRequest request, OffsetDateTime scheduledAt) {
+    // In-memory reminder rows are represented only as user-facing notifications.
   }
 
   @Override

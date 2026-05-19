@@ -6,6 +6,7 @@ import com.trainmark.shared.dto.ReminderResult;
 import com.trainmark.shared.dto.SubmissionCollectionOverview;
 import com.trainmark.shared.dto.UnsubmittedStudent;
 import java.util.Collection;
+import org.springframework.beans.factory.ObjectProvider;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -19,18 +20,24 @@ public class ReminderService {
 
   private final NotificationStore store;
   private final JavaMailSender mailSender;
+  private final NotificationJobPublisher jobPublisher;
   private final boolean emailEnabled;
+  private final boolean asyncEnabled;
   private final String fromEmail;
 
   public ReminderService(
       NotificationStore store,
       JavaMailSender mailSender,
+      ObjectProvider<NotificationJobPublisher> jobPublisher,
       @Value("${trainmark.notification.email-enabled:false}") boolean emailEnabled,
+      @Value("${trainmark.notification.async-enabled:false}") boolean asyncEnabled,
       @Value("${trainmark.notification.from-email:}") String fromEmail
   ) {
     this.store = store;
     this.mailSender = mailSender;
+    this.jobPublisher = jobPublisher.getIfAvailable();
     this.emailEnabled = emailEnabled;
+    this.asyncEnabled = asyncEnabled;
     this.fromEmail = fromEmail;
   }
 
@@ -43,6 +50,26 @@ public class ReminderService {
   }
 
   public ReminderResult remind(ReminderRequest request) {
+    if (asyncEnabled) {
+      var result = store.createPendingReminder(request);
+      if (jobPublisher == null) {
+        store.failReminder(request, result.scheduledAt());
+        throw new IllegalStateException("Notification async publisher is not available");
+      }
+      try {
+        jobPublisher.publish(new NotificationJobMessage(
+            request.assignmentId(),
+            request.studentIds(),
+            request.channels(),
+            request.message(),
+            result.scheduledAt()
+        ));
+      } catch (RuntimeException error) {
+        store.failReminder(request, result.scheduledAt());
+        throw error;
+      }
+      return result;
+    }
     var result = store.remind(request);
 
     if (emailEnabled && request.channels().contains("EMAIL")) {
@@ -52,6 +79,20 @@ public class ReminderService {
     }
 
     return result;
+  }
+
+  public ReminderResult completePendingReminder(ReminderRequest request, java.time.OffsetDateTime scheduledAt) {
+    if (emailEnabled && request.channels().contains("EMAIL")) {
+      for (var student : request.studentIds()) {
+        sendReminderEmail(student, request);
+      }
+    }
+    try {
+      return store.completeReminder(request, scheduledAt);
+    } catch (RuntimeException error) {
+      store.failReminder(request, scheduledAt);
+      throw error;
+    }
   }
 
   public Collection<NotificationSummary> listNotifications(Long userId, boolean unreadOnly) {

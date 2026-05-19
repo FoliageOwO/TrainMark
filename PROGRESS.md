@@ -3528,6 +3528,21 @@ SMOKE_DRY_RUN=1 SMOKE_INCLUDE_WRITES=1 GRADING_ASYNC_ENABLED=true GRADE_EXPORT_A
 pnpm verify:mvp
 ```
 
+RabbitMQ 异步通知任务消费者已补齐：
+
+- notification-service 新增 `NOTIFICATION_ASYNC_ENABLED` 开关，默认保持同步催交发送；开启后 `POST /api/notifications/remind-unsubmitted` 会先创建 `PENDING` 通知事件并发布到 RabbitMQ。
+- 已新增通知队列、交换机、JSON 消息、任务 Publisher 与 Consumer，消费端复用现有邮件发送逻辑，并将内存/JDBC 通知事件流转为 `SENT`。
+- JDBC 通知存储新增 `PENDING` / `SENT` / `FAILED` 状态更新能力，异步发布或消费失败会标记失败，避免通知事件长期停留在待处理状态。
+- `pnpm smoke:mvp:async` 现在同时启用批改、OCR、成绩导出与通知异步开关；写接口 smoke 会在通知异步模式下轮询 JDBC 事件直到 `SENT`。
+
+验证命令：
+
+```bash
+mvn -f backend/pom.xml -pl notification-service -am package -DskipTests
+SMOKE_DRY_RUN=1 SMOKE_INCLUDE_WRITES=1 NOTIFICATION_ASYNC_ENABLED=true pnpm smoke:api
+pnpm verify:mvp
+```
+
 ## 已提交记录
 
 主要提交：
@@ -3616,6 +3631,7 @@ pnpm verify:mvp
 - `docs: refresh remaining work`
 - `feat: add async ocr queue`
 - `feat: add async grade exports`
+- `feat: add async notifications`
 
 ## 接下来需要做
 
@@ -3641,4 +3657,4 @@ pnpm verify:mvp
 
 - 继续拆分老师端/学生端工作台内部组件。
 - 在不破坏现有无依赖开发路径的前提下补充单元测试和接口测试依赖。
-- 用生产部署形态补齐 RabbitMQ 异步通知任务消费者。
+- 持续补充自动化测试覆盖，并收敛前后端组件边界。

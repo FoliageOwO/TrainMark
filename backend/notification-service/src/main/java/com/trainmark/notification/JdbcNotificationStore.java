@@ -126,19 +126,25 @@ public class JdbcNotificationStore implements NotificationStore {
 
   @Override
   public ReminderResult remind(ReminderRequest request) {
+    var pending = createPendingReminder(request);
+    return completeReminder(request, pending.scheduledAt());
+  }
+
+  @Override
+  public ReminderResult createPendingReminder(ReminderRequest request) {
     var channels = request.channels().isEmpty() ? List.of(NotificationChannel.IN_APP) : request.channels();
     var scheduledAt = OffsetDateTime.now();
     try (var connection = connect()) {
       connection.setAutoCommit(false);
       try {
-        var messageCount = insertNotificationEvents(connection, request, channels, scheduledAt);
+        var messageCount = insertNotificationEvents(connection, request, channels, NotificationStatus.PENDING, scheduledAt, null);
         connection.commit();
         return new ReminderResult(
             request.assignmentId(),
             request.studentIds().size(),
             messageCount,
             channels,
-            NotificationStatus.SENT,
+            NotificationStatus.PENDING,
             scheduledAt
         );
       } catch (SQLException | RuntimeException error) {
@@ -147,6 +153,34 @@ public class JdbcNotificationStore implements NotificationStore {
       }
     } catch (SQLException error) {
       throw new IllegalStateException("Failed to create reminder notifications", error);
+    }
+  }
+
+  @Override
+  public ReminderResult completeReminder(ReminderRequest request, OffsetDateTime scheduledAt) {
+    var channels = request.channels().isEmpty() ? List.of(NotificationChannel.IN_APP) : request.channels();
+    try (var connection = connect()) {
+      var updated = updateReminderStatus(connection, request, channels, scheduledAt, NotificationStatus.SENT, OffsetDateTime.now());
+      return new ReminderResult(
+          request.assignmentId(),
+          request.studentIds().size(),
+          updated,
+          channels,
+          NotificationStatus.SENT,
+          scheduledAt
+      );
+    } catch (SQLException error) {
+      throw new IllegalStateException("Failed to mark reminder notifications sent", error);
+    }
+  }
+
+  @Override
+  public void failReminder(ReminderRequest request, OffsetDateTime scheduledAt) {
+    var channels = request.channels().isEmpty() ? List.of(NotificationChannel.IN_APP) : request.channels();
+    try (var connection = connect()) {
+      updateReminderStatus(connection, request, channels, scheduledAt, NotificationStatus.FAILED, null);
+    } catch (SQLException error) {
+      throw new IllegalStateException("Failed to mark reminder notifications failed", error);
     }
   }
 
@@ -211,7 +245,9 @@ public class JdbcNotificationStore implements NotificationStore {
       Connection connection,
       ReminderRequest request,
       List<NotificationChannel> channels,
-      OffsetDateTime scheduledAt
+      NotificationStatus status,
+      OffsetDateTime scheduledAt,
+      OffsetDateTime sentAt
   ) throws SQLException {
     var sql = """
         INSERT INTO notification_events (
@@ -228,10 +264,10 @@ public class JdbcNotificationStore implements NotificationStore {
           statement.setLong(1, request.assignmentId());
           statement.setLong(2, studentId);
           statement.setString(3, channel.name());
-          statement.setString(4, NotificationStatus.SENT.name());
+          statement.setString(4, status.name());
           statement.setString(5, request.message());
           statement.setObject(6, scheduledAt);
-          statement.setObject(7, scheduledAt);
+          statement.setObject(7, sentAt);
           statement.addBatch();
           messageCount++;
         }
@@ -239,6 +275,49 @@ public class JdbcNotificationStore implements NotificationStore {
       statement.executeBatch();
     }
     return messageCount;
+  }
+
+  private int updateReminderStatus(
+      Connection connection,
+      ReminderRequest request,
+      List<NotificationChannel> channels,
+      OffsetDateTime scheduledAt,
+      NotificationStatus status,
+      OffsetDateTime sentAt
+  ) throws SQLException {
+    var sql = """
+        UPDATE notification_events
+        SET status = ?, sent_at = ?
+        WHERE assignment_id = ?
+          AND recipient_id = ?
+          AND channel = ?
+          AND status = ?
+          AND scheduled_at = ?
+        """;
+    var updated = 0;
+    try (var statement = connection.prepareStatement(sql)) {
+      for (var studentId : request.studentIds()) {
+        if (studentId == null) {
+          continue;
+        }
+        for (var channel : channels) {
+          statement.setString(1, status.name());
+          statement.setObject(2, sentAt);
+          statement.setLong(3, request.assignmentId());
+          statement.setLong(4, studentId);
+          statement.setString(5, channel.name());
+          statement.setString(6, NotificationStatus.PENDING.name());
+          statement.setObject(7, scheduledAt);
+          statement.addBatch();
+        }
+      }
+      for (var count : statement.executeBatch()) {
+        if (count > 0) {
+          updated += count;
+        }
+      }
+    }
+    return updated;
   }
 
   private Connection connect() throws SQLException {
