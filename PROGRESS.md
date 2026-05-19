@@ -3513,6 +3513,21 @@ SMOKE_DRY_RUN=1 SMOKE_INCLUDE_WRITES=1 OCR_ASYNC_ENABLED=true pnpm smoke:api
 pnpm verify:mvp
 ```
 
+RabbitMQ 异步成绩导出消费者已补齐：
+
+- grading-service 新增 `GRADE_EXPORT_ASYNC_ENABLED` 开关，默认保持同步导出记录创建；开启后 `POST /api/grading/exports` 会先返回 `PROCESSING` 导出任务并发布到 RabbitMQ。
+- 已新增成绩导出队列、交换机、任务 Publisher 与 Consumer，消费端统计当前作业已发布成绩行数并将导出任务标记为 `READY`。
+- 成绩导出存储接口已补齐 `PROCESSING` / `READY` / `FAILED` 生命周期更新，内存与 JDBC 存储均支持异步状态流转。
+- `pnpm smoke:mvp:async` 现在同时启用批改、OCR 与成绩导出异步开关；写接口 smoke 会在导出异步模式下轮询 JDBC 状态直到 `READY`。
+
+验证命令：
+
+```bash
+mvn -f backend/pom.xml -pl grading-service -am package -DskipTests
+SMOKE_DRY_RUN=1 SMOKE_INCLUDE_WRITES=1 GRADING_ASYNC_ENABLED=true GRADE_EXPORT_ASYNC_ENABLED=true pnpm smoke:api
+pnpm verify:mvp
+```
+
 ## 已提交记录
 
 主要提交：
@@ -3600,6 +3615,7 @@ pnpm verify:mvp
 - `chore: verify strict auth smoke`
 - `docs: refresh remaining work`
 - `feat: add async ocr queue`
+- `feat: add async grade exports`
 
 ## 接下来需要做
 
@@ -3625,4 +3641,4 @@ pnpm verify:mvp
 
 - 继续拆分老师端/学生端工作台内部组件。
 - 在不破坏现有无依赖开发路径的前提下补充单元测试和接口测试依赖。
-- 用生产部署形态补齐 RabbitMQ 异步导出和通知任务消费者。
+- 用生产部署形态补齐 RabbitMQ 异步通知任务消费者。

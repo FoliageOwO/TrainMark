@@ -17,6 +17,7 @@ management:
 trainmark:
   grading:
     async-enabled: ${GRADING_ASYNC_ENABLED:false}
+    export-async-enabled: ${GRADE_EXPORT_ASYNC_ENABLED:false}
     rubric-store: ${TRAINMARK_GRADING_RUBRIC_STORE:memory}
     export-store: ${TRAINMARK_GRADING_EXPORT_STORE:memory}
     publication-audit-store: ${TRAINMARK_GRADING_PUBLICATION_AUDIT_STORE:memory}
@@ -27,6 +28,11 @@ trainmark:
       name: ${GRADING_QUEUE_NAME:trainmark-grading-jobs}
     exchange:
       name: ${GRADING_EXCHANGE_NAME:trainmark-grading-exchange}
+    export-queue:
+      name: ${GRADE_EXPORT_QUEUE_NAME:trainmark-grade-export-jobs}
+    export-exchange:
+      name: ${GRADE_EXPORT_EXCHANGE_NAME:trainmark-grade-export-exchange}
+    export-routing-key: ${GRADE_EXPORT_ROUTING_KEY:grade.export.create}
     jdbc:
       url: ${TRAINMARK_GRADING_JDBC_URL:}
       username: ${TRAINMARK_GRADING_JDBC_USERNAME:}

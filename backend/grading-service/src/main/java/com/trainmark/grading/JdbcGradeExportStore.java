@@ -62,6 +62,11 @@ public class JdbcGradeExportStore implements GradeExportStore {
 
   @Override
   public GradeExportSummary createGradeExport(CreateGradeExportRequest request, int rowCount) {
+    return createGradeExport(request, rowCount, "READY");
+  }
+
+  @Override
+  public GradeExportSummary createGradeExport(CreateGradeExportRequest request, int rowCount, String status) {
     var format = request.format().toUpperCase();
     var suffix = suffix(format);
     var sql = """
@@ -76,7 +81,7 @@ public class JdbcGradeExportStore implements GradeExportStore {
       statement.setString(3, format);
       statement.setInt(4, rowCount);
       statement.setString(5, "/exports/assignments/%d/grades-pending.%s".formatted(request.assignmentId(), suffix));
-      statement.setString(6, "READY");
+      statement.setString(6, status);
       statement.setString(7, request.operatorName());
       statement.executeUpdate();
       try (var keys = statement.getGeneratedKeys()) {
@@ -90,6 +95,46 @@ public class JdbcGradeExportStore implements GradeExportStore {
       throw new IllegalStateException("Failed to create grade export", error);
     }
     throw new IllegalStateException("Insert did not return a generated grade export id");
+  }
+
+  @Override
+  public GradeExportSummary markGradeExportReady(Long exportId, int rowCount) {
+    try (var connection = connect()) {
+      var export = getExport(exportId);
+      updateExportStatus(connection, exportId, rowCount, "READY");
+      return getExport(exportId);
+    } catch (SQLException error) {
+      throw new IllegalStateException("Failed to mark grade export ready", error);
+    }
+  }
+
+  @Override
+  public void markGradeExportFailed(Long exportId) {
+    try (var connection = connect()) {
+      var export = getExport(exportId);
+      updateExportStatus(connection, exportId, export.rowCount(), "FAILED");
+    } catch (SQLException error) {
+      throw new IllegalStateException("Failed to mark grade export failed", error);
+    }
+  }
+
+  private void updateExportStatus(
+      java.sql.Connection connection,
+      Long exportId,
+      int rowCount,
+      String status
+  ) throws SQLException {
+    var sql = """
+        UPDATE grade_exports
+        SET row_count = ?, status = ?
+        WHERE id = ?
+        """;
+    try (var statement = connection.prepareStatement(sql)) {
+      statement.setInt(1, rowCount);
+      statement.setString(2, status);
+      statement.setLong(3, exportId);
+      statement.executeUpdate();
+    }
   }
 
   private void updateDownloadUrl(

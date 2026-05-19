@@ -618,8 +618,13 @@ if [[ "$SMOKE_INCLUDE_WRITES" == "1" ]]; then
   else
     grade_export_response="$(post_json "grade export" "$GATEWAY_URL/api/grading/exports" '{"assignmentId":1,"format":"CSV","operatorName":"Smoke"}')"
     grade_export_id="$(json_field id <<< "$grade_export_response")"
-    assert_json_field_equals data.status READY <<< "$grade_export_response"
-    assert_jdbc_scalar_equals "grade export persisted" "SELECT status FROM grade_exports WHERE id = $grade_export_id" "READY"
+    if [[ "${GRADE_EXPORT_ASYNC_ENABLED:-false}" == "true" || "${GRADE_EXPORT_ASYNC_ENABLED:-0}" == "1" ]]; then
+      assert_json_field_in data.status PROCESSING READY <<< "$grade_export_response"
+      assert_jdbc_scalar_eventually_equals "async grade export ready" "SELECT status FROM grade_exports WHERE id = $grade_export_id" "READY"
+    else
+      assert_json_field_equals data.status READY <<< "$grade_export_response"
+      assert_jdbc_scalar_equals "grade export persisted" "SELECT status FROM grade_exports WHERE id = $grade_export_id" "READY"
+    fi
     assert_jdbc_audit_exists "GRADE_EXPORT" "GRADE_EXPORT" "$grade_export_id"
     reminder_response="$(post_json "remind unsubmitted" "$GATEWAY_URL/api/notifications/remind-unsubmitted" '{"assignmentId":1,"studentIds":[2],"channels":["IN_APP"],"message":"Smoke reminder"}')"
     assert_json_field_equals data.status SENT <<< "$reminder_response"

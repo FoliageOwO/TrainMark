@@ -38,6 +38,11 @@ public class InMemoryGradeExportStore implements GradeExportStore {
 
   @Override
   public GradeExportSummary createGradeExport(CreateGradeExportRequest request, int rowCount) {
+    return createGradeExport(request, rowCount, "READY");
+  }
+
+  @Override
+  public GradeExportSummary createGradeExport(CreateGradeExportRequest request, int rowCount, String status) {
     var id = exportIds.getAndIncrement();
     var format = request.format().toUpperCase();
     var suffix = suffix(format);
@@ -48,11 +53,49 @@ public class InMemoryGradeExportStore implements GradeExportStore {
         format,
         rowCount,
         "/exports/assignments/%d/grades-%d.%s".formatted(request.assignmentId(), id, suffix),
-        "READY",
+        status,
         OffsetDateTime.now()
     );
     exports.put(id, export);
     return export;
+  }
+
+  @Override
+  public GradeExportSummary markGradeExportReady(Long exportId, int rowCount) {
+    var export = exports.get(exportId);
+    if (export == null) {
+      throw new IllegalArgumentException("Grade export not found: " + exportId);
+    }
+    var ready = new GradeExportSummary(
+        export.id(),
+        export.assignmentId(),
+        export.fileName(),
+        export.format(),
+        rowCount,
+        export.downloadUrl(),
+        "READY",
+        export.createdAt()
+    );
+    exports.put(exportId, ready);
+    return ready;
+  }
+
+  @Override
+  public void markGradeExportFailed(Long exportId) {
+    var export = exports.get(exportId);
+    if (export == null) {
+      throw new IllegalArgumentException("Grade export not found: " + exportId);
+    }
+    exports.put(exportId, new GradeExportSummary(
+        export.id(),
+        export.assignmentId(),
+        export.fileName(),
+        export.format(),
+        export.rowCount(),
+        export.downloadUrl(),
+        "FAILED",
+        export.createdAt()
+    ));
   }
 
   private String suffix(String format) {

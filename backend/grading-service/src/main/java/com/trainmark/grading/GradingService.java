@@ -42,8 +42,11 @@ public class GradingService {
   private final AnnotationProvider annotationProvider;
   private final AuditLogClient auditLog;
   private final boolean asyncEnabled;
+  private final boolean exportAsyncEnabled;
   @Autowired(required = false)
   private GradingJobPublisher jobPublisher;
+  @Autowired(required = false)
+  private GradeExportPublisher gradeExportPublisher;
 
   public GradingService(
       RubricStore rubricStore,
@@ -55,7 +58,8 @@ public class GradingService {
       ScoringProvider scoringProvider,
       AnnotationProvider annotationProvider,
       AuditLogClient auditLog,
-      @Value("${trainmark.grading.async-enabled:false}") boolean asyncEnabled
+      @Value("${trainmark.grading.async-enabled:false}") boolean asyncEnabled,
+      @Value("${trainmark.grading.export-async-enabled:false}") boolean exportAsyncEnabled
   ) {
     this.rubricStore = rubricStore;
     this.gradeExportStore = gradeExportStore;
@@ -67,6 +71,7 @@ public class GradingService {
     this.annotationProvider = annotationProvider;
     this.auditLog = auditLog;
     this.asyncEnabled = asyncEnabled;
+    this.exportAsyncEnabled = exportAsyncEnabled;
   }
 
   public Collection<RubricSummary> listRubrics(Long assignmentId) {
@@ -235,14 +240,30 @@ public class GradingService {
   }
 
   public GradeExportSummary createGradeExport(CreateGradeExportRequest request) {
-    var rowCount = (int) gradingResultStore.listResults(request.assignmentId(), null).stream()
-        .filter(item -> request.assignmentId().equals(item.assignmentId()))
+    var rowCount = exportAsyncEnabled ? 0 : publishedResultCount(request.assignmentId());
+    var export = gradeExportStore.createGradeExport(request, rowCount, exportAsyncEnabled ? "PROCESSING" : "READY");
+    auditLog.log(request.operatorName(), "GRADE_EXPORT", "GRADE_EXPORT", String.valueOf(export.id()),
+        "导出成绩表 " + request.format() + "，" + (exportAsyncEnabled ? "异步处理中" : rowCount + " 行"), null);
+    if (exportAsyncEnabled) {
+      if (gradeExportPublisher == null) {
+        gradeExportStore.markGradeExportFailed(export.id());
+        throw new IllegalStateException("Grade export async publisher is not available");
+      }
+      try {
+        gradeExportPublisher.publish(new GradeExportMessage(export.id(), request.assignmentId()));
+      } catch (RuntimeException error) {
+        gradeExportStore.markGradeExportFailed(export.id());
+        throw error;
+      }
+    }
+    return export;
+  }
+
+  int publishedResultCount(Long assignmentId) {
+    return (int) gradingResultStore.listResults(assignmentId, null).stream()
+        .filter(item -> assignmentId.equals(item.assignmentId()))
         .filter(item -> item.publicationStatus() == PublicationStatus.PUBLISHED)
         .count();
-    var export = gradeExportStore.createGradeExport(request, rowCount);
-    auditLog.log(request.operatorName(), "GRADE_EXPORT", "GRADE_EXPORT", String.valueOf(export.id()),
-        "导出成绩表 " + request.format() + "，" + rowCount + " 行", null);
-    return export;
   }
 
   private GradingResultSummary saveReviewedResult(
