@@ -256,8 +256,8 @@ export type GradingResultSummary = {
   studentName: string;
   studentNo: string;
   fileName: string;
-  previewUrl: string;
-  annotationPdfUrl: string;
+  previewUrl: string | null;
+  annotationPdfUrl: string | null;
   totalScore: number;
   aiScore: number;
   teacherScore: number;
