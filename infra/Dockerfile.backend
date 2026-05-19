@@ -1,28 +1,18 @@
-FROM maven:3.9-eclipse-temurin-21-alpine AS builder
-
-WORKDIR /app
-
-COPY backend/ ./backend/
-RUN mvn -f backend/pom.xml dependency:go-offline -B
-
-COPY backend/ ./backend/
-RUN mvn -f backend/pom.xml package -DskipTests -B
-
 FROM eclipse-temurin:21-jre-alpine
 
 WORKDIR /app
 
-COPY --from=builder /app/backend/gateway-service/target/*.jar ./gateway.jar
-COPY --from=builder /app/backend/auth-service/target/*.jar ./auth.jar
-COPY --from=builder /app/backend/user-service/target/*.jar ./user.jar
-COPY --from=builder /app/backend/course-service/target/*.jar ./course.jar
-COPY --from=builder /app/backend/file-service/target/*.jar ./file.jar
-COPY --from=builder /app/backend/grading-service/target/*.jar ./grading.jar
-COPY --from=builder /app/backend/ocr-service/target/*.jar ./ocr.jar
-COPY --from=builder /app/backend/notification-service/target/*.jar ./notification.jar
-COPY --from=builder /app/backend/similarity-service/target/*.jar ./similarity.jar
-COPY --from=builder /app/backend/admin-service/target/*.jar ./admin.jar
-COPY --from=builder /app/backend/analytics-service/target/*.jar ./analytics.jar
+COPY backend/gateway-service/target/*.jar ./gateway.jar
+COPY backend/auth-service/target/*.jar ./auth.jar
+COPY backend/user-service/target/*.jar ./user.jar
+COPY backend/course-service/target/*.jar ./course.jar
+COPY backend/file-service/target/*.jar ./file.jar
+COPY backend/grading-service/target/*.jar ./grading.jar
+COPY backend/ocr-service/target/*.jar ./ocr.jar
+COPY backend/notification-service/target/*.jar ./notification.jar
+COPY backend/similarity-service/target/*.jar ./similarity.jar
+COPY backend/admin-service/target/*.jar ./admin.jar
+COPY backend/analytics-service/target/*.jar ./analytics.jar
 
 EXPOSE 8080
 

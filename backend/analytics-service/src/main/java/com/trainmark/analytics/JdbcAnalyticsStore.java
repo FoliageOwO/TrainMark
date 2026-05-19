@@ -220,7 +220,6 @@ public class JdbcAnalyticsStore implements AnalyticsStore {
     return computeLossPoints(assignmentId);
   }
 
-  @Override
   public List<LossPointSummary> computeLossPoints(Long assignmentId) {
     var sql = """
         SELECT
@@ -304,7 +303,6 @@ public class JdbcAnalyticsStore implements AnalyticsStore {
     return computeCourseOutcomes(assignmentId);
   }
 
-  @Override
   public List<CourseOutcomeAchievementSummary> computeCourseOutcomes(Long assignmentId) {
     var sql = """
         SELECT

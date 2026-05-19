@@ -68,6 +68,7 @@ services:
     build:
       context: ..
       dockerfile: infra/Dockerfile.backend
+    image: trainmark-backend:latest
     container_name: trainmark-backend
     environment:
       - SPRING_PROFILES_ACTIVE=prod
@@ -139,6 +140,7 @@ services:
     build:
       context: ..
       dockerfile: infra/Dockerfile.frontend
+    image: trainmark-frontend:latest
     container_name: trainmark-frontend
     expose:
       - "3000"
