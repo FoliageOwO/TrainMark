@@ -51,26 +51,34 @@ TrainMark/
 - 服务器已安装 Docker 和 Docker Compose
 - 服务器已有 Nginx/OpenResty 运行
 
-### 一键部署
+### 部署步骤
+
+**本地电脑执行（构建镜像）：**
 
 ```bash
-# 1. 克隆项目
-git clone <your-repo-url>
-cd TrainMark
+# 1. 构建并导出镜像
+./scripts/build-and-export.sh
 
-# 2. 复制环境配置
+# 2. 传输到服务器
+scp deployments/images/*.tar.gz root@你的服务器IP:~/TrainMark/
+scp -r . root@你的服务器IP:~/TrainMark/
+```
+
+**服务器执行（启动服务）：**
+
+```bash
+# 1. 复制配置
+cd ~/TrainMark
 cp .env.example .env
+nano .env  # 修改密码
 
-# 3. 编辑配置（修改密码等）
-nano .env
-
-# 4. 运行部署脚本
-./scripts/deploy-server.sh
+# 2. 加载镜像并启动
+./scripts/start-server.sh
 ```
 
 ### 配置服务器 Nginx 反向代理
 
-部署完成后，在服务器现有的 Nginx/OpenResty 配置中添加：
+在服务器现有的 Nginx/OpenResty 配置中添加：
 
 ```nginx
 server {
