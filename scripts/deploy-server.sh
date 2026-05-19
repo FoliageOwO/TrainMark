@@ -20,14 +20,14 @@ if ! command -v docker compose &> /dev/null; then
 fi
 
 # 检查配置文件
-if [ ! -f ".env.production" ]; then
-    echo "[提示] 未找到 .env.production，从示例文件创建..."
-    if [ -f ".env.production.example" ]; then
-        cp .env.production.example .env.production
-        echo "[警告] 请编辑 .env.production 修改默认密码后再运行此脚本"
+if [ ! -f ".env" ]; then
+    echo "[提示] 未找到 .env，从示例文件创建..."
+    if [ -f ".env.example" ]; then
+        cp .env.example .env
+        echo "[警告] 请编辑 .env 修改默认密码后再运行此脚本"
         echo "[警告] 现在使用默认配置继续部署（仅用于测试）"
     else
-        echo "[错误] 未找到 .env.production.example"
+        echo "[错误] 未找到 .env.example"
         exit 1
     fi
 fi

@@ -58,11 +58,11 @@ TrainMark/
 git clone <your-repo-url>
 cd TrainMark
 
-# 2. 复制生产环境配置
-cp .env.production.example .env.production
+# 2. 复制环境配置
+cp .env.example .env
 
 # 3. 编辑配置（修改密码等）
-nano .env.production
+nano .env
 
 # 4. 运行部署脚本
 ./scripts/deploy-server.sh
