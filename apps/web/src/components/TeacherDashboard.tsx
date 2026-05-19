@@ -377,14 +377,12 @@ export function TeacherDashboard({
     <>
       {isOverview ? (
         <TeacherOverviewDashboard
-          collection={collectionPanelProps}
-          aiPipeline={aiPipelineProps}
-          similarity={similarityPanelProps}
-          review={reviewWorkspaceProps}
-          analytics={analyticsPanelProps}
-          appeals={appealPanelProps}
-          roster={rosterPanelProps}
-          courses={coursePanelProps}
+          stats={stats}
+          collectionOverview={collectionOverview}
+          assignments={assignmentRows}
+          gradingJobs={visibleJobs}
+          gradingResults={reviewResults}
+          onSectionChange={setSection}
         />
       ) : null}
 
