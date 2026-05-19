@@ -30,7 +30,7 @@ export function TeacherOverviewDashboard({
   const pendingReview = gradingResults.filter((r) => r.reviewStatus === 'NEEDS_REVIEW' || r.reviewStatus === 'IN_REVIEW').length;
   const completedJobs = gradingJobs.filter((j) => j.status === 'COMPLETED').length;
   const totalJobs = gradingJobs.length;
-  const activeAssignments = assignments.filter((a) => a.status === 'PUBLISHED' || a.status === 'ACTIVE').length;
+  const activeAssignments = assignments.filter((a) => a.status === 'PUBLISHED').length;
 
   return (
     <>
@@ -150,7 +150,7 @@ export function TeacherOverviewDashboard({
             <p className="highlight-empty">暂无进行中的任务</p>
           ) : (
             <div className="highlight-assignments">
-              {assignments.filter((a) => a.status === 'PUBLISHED' || a.status === 'ACTIVE').slice(0, 3).map((a) => (
+              {assignments.filter((a) => a.status === 'PUBLISHED').slice(0, 3).map((a) => (
                 <div className="highlight-assignment" key={a.id}>
                   <strong>{a.title}</strong>
                   <span>{a.totalScore} 分</span>

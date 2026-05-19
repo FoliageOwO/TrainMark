@@ -1,0 +1,12 @@
+.git
+.vscode
+.omx
+.logs
+node_modules
+deployments
+backups
+.env
+.env.*
+.data
+**/target
+.DS_Store

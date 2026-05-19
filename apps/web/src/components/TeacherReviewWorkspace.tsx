@@ -75,12 +75,20 @@ export function TeacherReviewWorkspace({
             </div>
           </div>
           <div className="pdf-viewer">
-            <iframe
-              className="pdf-iframe"
-              src={resolveApiAssetUrl(selectedReview.annotationPdfUrl) ?? undefined}
-              title={`批注 PDF - ${selectedReview.studentName}`}
-              sandbox="allow-scripts allow-same-origin"
-            />
+            {selectedReview.annotationPdfUrl ? (
+              <iframe
+                className="pdf-iframe"
+                src={resolveApiAssetUrl(selectedReview.annotationPdfUrl) ?? undefined}
+                title={`批注 PDF - ${selectedReview.studentName}`}
+                sandbox="allow-scripts allow-same-origin"
+              />
+            ) : (
+              <div className="pdf-fallback">
+                <FileText size={48} />
+                <p>PDF 预览需要后端服务提供文件</p>
+                <span>部署后端并上传文件后，此处将直接显示批注 PDF</span>
+              </div>
+            )}
           </div>
         </div>
         <div className="annotation-list">

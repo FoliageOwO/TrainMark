@@ -1066,20 +1066,20 @@ button:focus-visible {
 .collection-stats {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 8px;
+  gap: 10px;
 }
 
 .collection-stats span {
-  padding: 12px;
+  padding: 14px 16px;
   color: var(--text-secondary);
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-md);
   background: var(--bg-elevated);
 }
 
 .collection-stats strong {
   display: block;
   color: var(--text-primary);
-  font-size: 20px;
+  font-size: 22px;
   font-weight: 700;
 }
 
@@ -1406,6 +1406,36 @@ button:focus-visible {
 .pdf-viewer {
   height: 480px;
   background: #525659;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.pdf-fallback {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  color: #a5a5b8;
+  text-align: center;
+  padding: 20px;
+}
+
+.pdf-fallback svg {
+  color: #7c7c90;
+  opacity: 0.5;
+}
+
+.pdf-fallback p {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 600;
+  color: #d4d4e0;
+}
+
+.pdf-fallback span {
+  font-size: 12px;
+  color: #9494a8;
 }
 
 .pdf-iframe {
