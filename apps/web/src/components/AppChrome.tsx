@@ -9,7 +9,6 @@ import {
   GraduationCap,
   LayoutDashboard,
   LogOut,
-  Plus,
   ShieldCheck,
   Sparkles,
   UploadCloud,
@@ -67,8 +66,6 @@ export function AppChrome({
 }: AppChromeProps) {
   const [notifOpen, setNotifOpen] = useState(false);
   const roleHint = roleOptions.find((item) => item.role === primaryRole)?.hint;
-  const isStudent = primaryRole === 'STUDENT';
-  const hero = heroCopy(primaryRole);
 
   return (
     <main className="app-shell">
@@ -99,9 +96,8 @@ export function AppChrome({
 
       <section className="workspace">
         <header className="topbar">
-          <div>
-            <p className="eyebrow">生产级实训报告智能批改与管理平台</p>
-            <h1>智训批 TrainMark AI</h1>
+          <div className="topbar-left">
+            <p className="page-title">{getPageTitle(activeNav, primaryRole)}</p>
           </div>
           <div className="topbar-actions">
             <div className="role-switcher" aria-label="角色切换">
@@ -126,23 +122,6 @@ export function AppChrome({
           </div>
         </header>
 
-        <section className="hero-card">
-          <div>
-            <p className="eyebrow">{hero.eyebrow}</p>
-            <h2>{hero.title}</h2>
-            <p>{hero.description}</p>
-          </div>
-          <div className="hero-actions">
-            <div className="user-chip">
-              <span>{user.name}</span>
-              <small>{roleHint} · {apiModeLabel}</small>
-            </div>
-            <button className="primary-button" type="button">
-              <Plus size={16} /> {isStudent ? '上传报告' : '创建实训任务'}
-            </button>
-          </div>
-        </section>
-
         {children}
       </section>
 
@@ -151,38 +130,9 @@ export function AppChrome({
   );
 }
 
-function heroCopy(role: RoleCode) {
-  switch (role) {
-    case 'STUDENT':
-      return {
-        eyebrow: 'Student Portal',
-        title: '学生端学习与提交中心',
-        description: '聚合待提交任务、批改进度、成绩反馈和申诉入口，让学生清楚知道下一步要做什么。',
-      };
-    case 'COURSE_OWNER':
-      return {
-        eyebrow: 'Course Owner Workspace',
-        title: '课程负责人质量工作台',
-        description: '聚合课程任务、批改进度、成绩发布和目标达成情况，让课程负责人把控教学质量闭环。',
-      };
-    case 'SUPERVISOR':
-      return {
-        eyebrow: 'Supervisor View',
-        title: '督导端教学质量看板',
-        description: '聚合课程风险、未交比例、成绩分布和达成分析，让督导快速定位需要关注的教学问题。',
-      };
-    case 'ADMIN':
-      return {
-        eyebrow: 'Admin Console',
-        title: '管理端系统配置中心',
-        description: '聚合组织账号、系统配置和审计日志，让管理员维护本地演示和真实联调所需的基础数据。',
-      };
-    case 'TEACHER':
-    default:
-      return {
-        eyebrow: 'Teacher Workspace',
-        title: '老师端教学管理工作台',
-        description: '聚合任务进度、待复核报告、未提交名单和教学风险，让教师从收集、批改到发布成绩全流程可控。',
-      };
+function getPageTitle(navLabel: string, role: RoleCode): string {
+  if (role === 'STUDENT') {
+    return navLabel;
   }
+  return navLabel;
 }

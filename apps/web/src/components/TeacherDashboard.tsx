@@ -29,8 +29,8 @@ import { TeacherOperationsPanel } from './TeacherOperationsPanel';
 import { TeacherOverviewDashboard } from './TeacherOverviewDashboard';
 import { TeacherRosterPanel } from './TeacherRosterPanel';
 import { TeacherReviewWorkspace } from './TeacherReviewWorkspace';
-import { TeacherSectionTabs } from './TeacherSectionTabs';
 import { TeacherSimilarityPanel } from './TeacherSimilarityPanel';
+import { TeacherAssignmentPanel } from './TeacherAssignmentPanel';
 
 type TeacherDashboardProps = {
   assignments: ReturnType<typeof mockApi.listAssignments>;
@@ -356,23 +356,25 @@ export function TeacherDashboard({
     onImportStudents: handleImportStudents,
   };
   const coursePanelProps = {
-    assignments: assignmentRows,
     classes,
     courses,
     selectedCourse,
     selectedCourseId,
-    stats,
+    onSelectCourse: setSelectedCourseId,
+  };
+  const assignmentPanelProps = {
+    assignments: assignmentRows,
+    classes,
+    selectedCourseId,
+    selectedCourseName: selectedCourse.name,
     assignmentNotice,
     onCreateAssignment: handleCreateAssignment,
-    onSelectCourse: setSelectedCourseId,
   };
 
   const isOverview = section === 'overview';
 
   return (
     <>
-      <TeacherSectionTabs activeSection={section} onSectionChange={setSection} />
-
       {isOverview ? (
         <TeacherOverviewDashboard
           collection={collectionPanelProps}
@@ -438,8 +440,12 @@ export function TeacherDashboard({
         <TeacherOperationsPanel />
       ) : null}
 
-      {section === 'courses' || section === 'assignments' ? (
+      {section === 'courses' ? (
         <TeacherCoursePanel {...coursePanelProps} />
+      ) : null}
+
+      {section === 'assignments' ? (
+        <TeacherAssignmentPanel {...assignmentPanelProps} />
       ) : null}
     </>
   );

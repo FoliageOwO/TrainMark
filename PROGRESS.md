@@ -1138,6 +1138,30 @@
 - `README.md`
 - `PROGRESS.md`
 
+### 35. 前端 UI 重构与导航优化
+
+- 已移除冗余的 `TeacherSectionTabs` 组件，侧边栏成为唯一导航入口，避免与顶部导航重复。
+- 已拆分"课程与班级"和"实训任务"为独立面板：`TeacherCoursePanel` 专注课程和班级管理，新增 `TeacherAssignmentPanel` 处理实训任务创建和列表。
+- 已移除 `AppChrome` 中的冗余 hero card，顶部仅保留页面标题和角色切换、通知、退出等操作。
+- 已重写全局 CSS，采用 restrained palette 设计策略：
+  - 移除所有蓝绿渐变色（`linear-gradient(135deg, #2563eb, #14b8a6)` 等）。
+  - 品牌色改为单一靛蓝 `#4f46e5`，中性色带品牌色调。
+  - 卡片采用简洁边框和轻阴影，不再使用玻璃拟态或渐变背景。
+  - 状态徽章、进度环、按钮等组件统一采用新配色。
+  - 空状态采用图标加文字的简洁引导。
+- 已更新 `TeacherOverviewDashboard` 适配新的组件拆分。
+- 本模块遵循 impeccable 设计原则：restrained color、4pt spacing system、fixed rem typography（适合 dashboard）、no gradient text、no glassmorphism、no hero-metric template。
+
+主要代码：
+
+- `apps/web/src/styles/global.css`
+- `apps/web/src/components/AppChrome.tsx`
+- `apps/web/src/components/TeacherDashboard.tsx`
+- `apps/web/src/components/TeacherCoursePanel.tsx`
+- `apps/web/src/components/TeacherAssignmentPanel.tsx`
+- `apps/web/src/components/TeacherOverviewDashboard.tsx`
+- `PROGRESS.md`
+
 ### 35. API 冒烟检查脚本
 
 - 已新增 `pnpm smoke:api` 脚本入口。
@@ -3569,6 +3593,19 @@ pnpm lint:web
 pnpm build:web
 ```
 
+学生端成绩批注面板边界已继续收敛：
+
+- 已新增 `StudentResultsPanel`，集中承载学生端已发布成绩、分项扣分、申诉列表、批注 PDF 下载和内联批注预览模态框。
+- 批注预览的缩放、Esc 关闭和预览结果状态已从 `StudentDashboard` 下沉，学生工作台主组件只保留任务滚动锚点和申诉提交动作。
+- 成绩批注面板继续复用当前已发布成绩数据、申诉写入链路和网关资源 URL 解析逻辑。
+
+验证命令：
+
+```bash
+pnpm lint:web
+pnpm build:web
+```
+
 ## 已提交记录
 
 主要提交：
@@ -3660,6 +3697,7 @@ pnpm build:web
 - `feat: add async notifications`
 - `refactor: split teacher overview`
 - `refactor: split student upload panel`
+- `refactor: split student results panel`
 
 ## 接下来需要做
 
@@ -3683,6 +3721,6 @@ pnpm build:web
 
 ### 4. 工程质量
 
-- 继续拆分学生端成绩批注/预览和教师端剩余复杂交互组件。
+- 继续拆分学生端任务列表和教师端剩余复杂交互组件。
 - 在不破坏现有无依赖开发路径的前提下补充单元测试和接口测试依赖。
 - 持续补充自动化测试覆盖，并收敛前后端组件边界。

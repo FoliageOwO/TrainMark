@@ -2,6 +2,7 @@ import type { ComponentProps } from 'react';
 import { TeacherAiPipeline } from './TeacherAiPipeline';
 import { TeacherAnalyticsPanel } from './TeacherAnalyticsPanel';
 import { TeacherAppealPanel } from './TeacherAppealPanel';
+import { TeacherAssignmentPanel } from './TeacherAssignmentPanel';
 import { TeacherCollectionPanel } from './TeacherCollectionPanel';
 import { TeacherCoursePanel } from './TeacherCoursePanel';
 import { TeacherOperationsPanel } from './TeacherOperationsPanel';
@@ -39,8 +40,8 @@ export function TeacherOverviewDashboard({
       <TeacherAnalyticsPanel {...analytics} />
       <TeacherAppealPanel {...appeals} />
       <TeacherRosterPanel {...roster} />
-      <TeacherOperationsPanel />
       <TeacherCoursePanel {...courses} />
+      <TeacherOperationsPanel />
     </>
   );
 }
@@ -51,7 +52,6 @@ function TeacherReviewEmptyState() {
       <article className="panel wide-panel">
         <div className="panel-heading">
           <div>
-            <p className="eyebrow">Manual Review</p>
             <h3>人工复核工作区</h3>
           </div>
           <span className="status-pill">暂无结果</span>
