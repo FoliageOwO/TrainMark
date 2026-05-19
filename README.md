@@ -49,7 +49,7 @@ TrainMark/
 ### 前提条件
 
 - 服务器已安装 Docker 和 Docker Compose
-- 服务器端口 80/443 可用
+- 服务器已有 Nginx/OpenResty 运行
 
 ### 一键部署
 
@@ -61,14 +61,31 @@ cd TrainMark
 # 2. 复制生产环境配置
 cp .env.production.example .env.production
 
-# 3. 编辑配置（修改密码、域名等）
+# 3. 编辑配置（修改密码等）
 nano .env.production
 
 # 4. 运行部署脚本
 ./scripts/deploy-server.sh
 ```
 
-部署完成后访问 `http://你的服务器IP` 即可。
+### 配置服务器 Nginx 反向代理
+
+部署完成后，在服务器现有的 Nginx/OpenResty 配置中添加：
+
+```nginx
+server {
+    listen 80;
+    server_name your-domain.com;
+
+    location / {
+        proxy_pass http://127.0.0.1:3000;
+    }
+
+    location /api/ {
+        proxy_pass http://127.0.0.1:8080;
+    }
+}
+```
 
 ### 手动部署
 
@@ -83,14 +100,18 @@ docker compose -f infra/docker-compose.prod.yml logs -f
 docker compose -f infra/docker-compose.prod.yml down
 ```
 
-### 常用服务地址
+### 服务端口说明
 
-| 服务 | 地址 |
-|------|------|
-| 前端 | `http://你的服务器IP` |
-| 后端 API | `http://你的服务器IP/api` |
-| MinIO 控制台 | `http://你的服务器IP:9001` |
-| RabbitMQ 管理 | `http://你的服务器IP:15672` |
+所有服务仅监听 `127.0.0.1`，不占用服务器 80/443 端口：
+
+| 服务 | 监听地址 | 说明 |
+|------|----------|------|
+| 前端 | `127.0.0.1:3000` | 静态文件 + API 转发 |
+| 后端 | 容器内 `8080` | 通过前端容器代理 |
+| PostgreSQL | `127.0.0.1:5432` | 数据库 |
+| Redis | `127.0.0.1:6379` | 缓存 |
+| MinIO 控制台 | `127.0.0.1:9001` | 对象存储管理 |
+| RabbitMQ 管理 | `127.0.0.1:15672` | 消息队列管理 |
 
 ### 默认账号
 

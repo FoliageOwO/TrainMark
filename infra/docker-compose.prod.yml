@@ -7,7 +7,7 @@ services:
       POSTGRES_USER: ${POSTGRES_USER:-trainmark}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-trainmark_dev}
     ports:
-      - "${POSTGRES_PORT:-5432}:5432"
+      - "127.0.0.1:${POSTGRES_PORT:-5432}:5432"
     volumes:
       - postgres-data:/var/lib/postgresql/data
       - ./postgres/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
@@ -25,7 +25,7 @@ services:
     image: redis:7-alpine
     container_name: trainmark-redis
     ports:
-      - "6379:6379"
+      - "127.0.0.1:6379:6379"
     command: ["redis-server", "--appendonly", "yes"]
     volumes:
       - redis-data:/data
@@ -40,8 +40,8 @@ services:
       RABBITMQ_DEFAULT_USER: ${RABBITMQ_USERNAME:-trainmark}
       RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:-trainmark_dev}
     ports:
-      - "5672:5672"
-      - "15672:15672"
+      - "127.0.0.1:5672:5672"
+      - "127.0.0.1:15672:15672"
     volumes:
       - rabbitmq-data:/var/lib/rabbitmq
     restart: unless-stopped
@@ -55,8 +55,8 @@ services:
       MINIO_ROOT_USER: ${MINIO_ACCESS_KEY:-trainmark}
       MINIO_ROOT_PASSWORD: ${MINIO_SECRET_KEY:-trainmark_dev_password}
     ports:
-      - "9000:9000"
-      - "9001:9001"
+      - "127.0.0.1:9000:9000"
+      - "127.0.0.1:9001:9001"
     command: server /data --console-address ":9001"
     volumes:
       - minio-data:/data
@@ -126,8 +126,8 @@ services:
       - MINIO_ACCESS_KEY=${MINIO_ACCESS_KEY:-trainmark}
       - MINIO_SECRET_KEY=${MINIO_SECRET_KEY:-trainmark_dev_password}
       - MINIO_BUCKET=trainmark-reports
-    ports:
-      - "8080:8080"
+    expose:
+      - "8080"
     depends_on:
       postgres:
         condition: service_healthy
@@ -140,12 +140,8 @@ services:
       context: ..
       dockerfile: infra/Dockerfile.frontend
     container_name: trainmark-frontend
-    environment:
-      - VITE_API_BASE_URL=http://backend:8080
-      - VITE_API_MODE=http
-    ports:
-      - "80:80"
-      - "443:443"
+    expose:
+      - "3000"
     depends_on:
       - backend
     restart: unless-stopped
