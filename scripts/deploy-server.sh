@@ -25,31 +25,23 @@ if [ ! -f ".env" ]; then
     if [ -f ".env.example" ]; then
         cp .env.example .env
         echo "[警告] 请编辑 .env 修改默认密码后再运行此脚本"
-        echo "[警告] 现在使用默认配置继续部署（仅用于测试）"
     else
         echo "[错误] 未找到 .env.example"
         exit 1
     fi
 fi
 
-# 构建前端
 echo ""
-echo "[1/4] 构建前端..."
-pnpm install --frozen-lockfile
-pnpm build:web
+echo "[1/2] 构建镜像 (前端 + 后端 + 依赖)..."
+echo "  (此过程在 Docker 容器内进行，不依赖服务器 Node/Maven 版本)"
+docker compose -f infra/docker-compose.prod.yml build
 
-# 构建后端
 echo ""
-echo "[2/4] 构建后端..."
-mvn -f backend/pom.xml package -DskipTests -q
-
-# 启动基础设施
-echo ""
-echo "[3/4] 启动基础设施 (PostgreSQL, Redis, MinIO, RabbitMQ)..."
+echo "[2/2] 启动服务..."
 docker compose -f infra/docker-compose.prod.yml up -d
 
 # 等待数据库就绪
-echo "[4/4] 等待数据库就绪..."
+echo "等待数据库就绪..."
 MAX_RETRIES=30
 RETRY_COUNT=0
 while ! docker compose -f infra/docker-compose.prod.yml exec -T postgres pg_isready -U trainmark &> /dev/null; do
