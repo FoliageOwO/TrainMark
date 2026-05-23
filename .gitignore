@@ -39,3 +39,5 @@ deployments/
 
 # Agents
 .omx/
+.claude/
+tmp/
