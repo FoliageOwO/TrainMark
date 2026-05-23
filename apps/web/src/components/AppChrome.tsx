@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
 import {
   BarChart3,
@@ -14,6 +14,8 @@ import {
   UploadCloud,
 } from 'lucide-react';
 import type { RoleCode, UserProfile } from '../api/types';
+import { listNotifications, shouldUseHttpApi } from '../api/httpApi';
+import { mockApi } from '../api/mockApi';
 import { NotificationPanel } from './NotificationPanel';
 
 type RoleOption = {
@@ -64,6 +66,24 @@ export function AppChrome({
   onRoleChange,
 }: AppChromeProps) {
   const [notifOpen, setNotifOpen] = useState(false);
+  const [unreadNotifications, setUnreadNotifications] = useState(0);
+
+  const refreshUnreadNotifications = useCallback(async () => {
+    try {
+      const items = shouldUseHttpApi()
+        ? await listNotifications(user.id, true)
+        : mockApi.listNotifications(user.id, true);
+      setUnreadNotifications(items.length);
+    } catch {
+      setUnreadNotifications(0);
+    }
+  }, [user.id]);
+
+  useEffect(() => {
+    refreshUnreadNotifications();
+    const timer = window.setInterval(refreshUnreadNotifications, 30000);
+    return () => window.clearInterval(timer);
+  }, [refreshUnreadNotifications]);
 
   return (
     <main className="app-shell">
@@ -110,8 +130,16 @@ export function AppChrome({
                 </button>
               ))}
             </div>
-            <button className="icon-button" type="button" aria-label="通知" onClick={() => setNotifOpen(!notifOpen)}>
+            <button
+              className="icon-button notification-trigger"
+              type="button"
+              aria-label={`通知，${unreadNotifications} 条未读`}
+              onClick={() => setNotifOpen(!notifOpen)}
+            >
               <Bell size={18} />
+              {unreadNotifications > 0 && (
+                <span className="topbar-notification-badge">{unreadNotifications > 99 ? '99+' : unreadNotifications}</span>
+              )}
             </button>
             <button className="icon-button" type="button" aria-label="退出登录" title="退出登录" onClick={() => onLogout()}>
               <LogOut size={18} />
@@ -123,7 +151,12 @@ export function AppChrome({
         {children}
       </section>
 
-      <NotificationPanel userId={user.id} isOpen={notifOpen} onClose={() => setNotifOpen(false)} />
+      <NotificationPanel
+        userId={user.id}
+        isOpen={notifOpen}
+        onClose={() => setNotifOpen(false)}
+        onUnreadCountChange={setUnreadNotifications}
+      />
     </main>
   );
 }

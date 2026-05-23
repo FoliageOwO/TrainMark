@@ -19,9 +19,10 @@ type NotificationPanelProps = {
   userId: number;
   isOpen: boolean;
   onClose: () => void;
+  onUnreadCountChange?: (count: number) => void;
 };
 
-export function NotificationPanel({ userId, isOpen, onClose }: NotificationPanelProps) {
+export function NotificationPanel({ userId, isOpen, onClose, onUnreadCountChange }: NotificationPanelProps) {
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
 
@@ -33,8 +34,10 @@ export function NotificationPanel({ userId, isOpen, onClose }: NotificationPanel
       items = mockApi.listNotifications(userId);
     }
     setNotifications(items);
-    setUnreadCount(items.filter((n) => !n.isRead).length);
-  }, [userId]);
+    const nextUnreadCount = items.filter((n) => !n.isRead).length;
+    setUnreadCount(nextUnreadCount);
+    onUnreadCountChange?.(nextUnreadCount);
+  }, [onUnreadCountChange, userId]);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -54,7 +57,11 @@ export function NotificationPanel({ userId, isOpen, onClose }: NotificationPanel
     setNotifications((prev) =>
       prev.map((n) => (n.id === id ? { ...n, isRead: true } : n)),
     );
-    setUnreadCount((c) => Math.max(0, c - 1));
+    setUnreadCount((count) => {
+      const nextUnreadCount = Math.max(0, count - 1);
+      onUnreadCountChange?.(nextUnreadCount);
+      return nextUnreadCount;
+    });
   };
 
   const handleMarkAllRead = async () => {
@@ -65,6 +72,7 @@ export function NotificationPanel({ userId, isOpen, onClose }: NotificationPanel
     }
     setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
     setUnreadCount(0);
+    onUnreadCountChange?.(0);
   };
 
   if (!isOpen) return null;

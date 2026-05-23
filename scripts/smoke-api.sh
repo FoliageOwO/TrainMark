@@ -785,6 +785,9 @@ if [[ "$SMOKE_INCLUDE_WRITES" == "1" ]]; then
   if [[ "$SMOKE_DRY_RUN" == "1" ]]; then
     post_json "grade export" "$GATEWAY_URL/api/grading/exports" '{"assignmentId":1,"format":"CSV","operatorName":"\u8054\u8c03\u6559\u5e08"}'
     post_json "remind unsubmitted" "$GATEWAY_URL/api/notifications/remind-unsubmitted" '{"assignmentId":1,"studentIds":[2],"channels":["IN_APP"],"message":"\u8bf7\u6309\u65f6\u63d0\u4ea4\u5b9e\u8bad\u62a5\u544a\u3002"}'
+    check_api "gateway notification list" "$GATEWAY_URL/api/notifications?userId=2"
+    patch_json "notification mark read" "$GATEWAY_URL/api/notifications/<from notification>/read?userId=2" '{}'
+    patch_json "notification mark all read" "$GATEWAY_URL/api/notifications/read-all?userId=2" '{}'
     post_json "similarity job" "$GATEWAY_URL/api/similarity/jobs" '{"assignmentId":1,"submissionIds":[1,2],"includeHistory":true}'
   else
     grade_export_response="$(post_json "grade export" "$GATEWAY_URL/api/grading/exports" '{"assignmentId":1,"format":"CSV","operatorName":"\u8054\u8c03\u6559\u5e08"}')"
@@ -805,6 +808,18 @@ if [[ "$SMOKE_INCLUDE_WRITES" == "1" ]]; then
       assert_json_field_equals data.status SENT <<< "$reminder_response"
       assert_jdbc_scalar_equals "reminder persisted" "SELECT CASE WHEN EXISTS (SELECT 1 FROM notification_events WHERE assignment_id = 1 AND recipient_id = 2 AND status = 'SENT') THEN 1 ELSE 0 END" "1"
     fi
+    notification_list_response="$(get_api "gateway notification list" "$GATEWAY_URL/api/notifications?userId=2")"
+    notification_id="$(json_data_path "0.id" <<< "$notification_list_response")"
+    assert_json_field_equals data.0.isRead false <<< "$notification_list_response"
+    assert_jdbc_scalar_equals "notification unread persisted" "SELECT is_read FROM notification_events WHERE id = $notification_id" "f"
+    patch_json "notification mark read" "$GATEWAY_URL/api/notifications/$notification_id/read?userId=2" '{}' >/dev/null
+    notification_after_read_response="$(get_api "gateway notification after read" "$GATEWAY_URL/api/notifications?userId=2")"
+    assert_json_field_equals data.0.isRead true <<< "$notification_after_read_response"
+    assert_jdbc_scalar_equals "notification read persisted" "SELECT is_read FROM notification_events WHERE id = $notification_id" "t"
+    post_json "remind unsubmitted again" "$GATEWAY_URL/api/notifications/remind-unsubmitted" '{"assignmentId":1,"studentIds":[2],"channels":["IN_APP"],"message":"\u8bf7\u518d\u6b21\u786e\u8ba4\u5b9e\u8bad\u62a5\u544a\u63d0\u4ea4\u72b6\u6001\u3002"}' >/dev/null
+    assert_jdbc_scalar_equals "notification unread recreated" "SELECT CASE WHEN EXISTS (SELECT 1 FROM notification_events WHERE recipient_id = 2 AND is_read = false) THEN 1 ELSE 0 END" "1"
+    patch_json "notification mark all read" "$GATEWAY_URL/api/notifications/read-all?userId=2" '{}' >/dev/null
+    assert_jdbc_scalar_equals "all notifications read persisted" "SELECT count(*) FROM notification_events WHERE recipient_id = 2 AND is_read = false" "0"
     similarity_response="$(post_json "similarity job" "$GATEWAY_URL/api/similarity/jobs" "{\"assignmentId\":1,\"submissionIds\":[$submission_id,$peer_submission_id],\"includeHistory\":true}")"
     similarity_job_id="$(json_field id <<< "$similarity_response")"
     assert_json_field_equals data.status COMPLETED <<< "$similarity_response"

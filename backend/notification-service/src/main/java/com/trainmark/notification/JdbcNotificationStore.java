@@ -191,7 +191,7 @@ public class JdbcNotificationStore implements NotificationStore {
         FROM notification_events
         WHERE recipient_id = ?
         """ + (unreadOnly ? " AND is_read = false" : "") + """
-        ORDER BY created_at DESC
+        ORDER BY created_at DESC, id DESC
         """;
     try (var connection = connect();
         var statement = connection.prepareStatement(sql)) {
