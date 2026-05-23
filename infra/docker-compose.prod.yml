@@ -6,8 +6,6 @@ services:
       POSTGRES_DB: ${POSTGRES_DB:-trainmark_ai}
       POSTGRES_USER: ${POSTGRES_USER:-trainmark}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-trainmark_dev}
-    ports:
-      - "127.0.0.1:${POSTGRES_PORT:-5432}:5432"
     volumes:
       - postgres-data:/var/lib/postgresql/data
       - ./postgres/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
@@ -20,50 +18,38 @@ services:
     restart: unless-stopped
     networks:
       - trainmark-network
-
   redis:
     image: redis:7-alpine
     container_name: trainmark-redis
-    ports:
-      - "127.0.0.1:6379:6379"
     command: ["redis-server", "--appendonly", "yes"]
     volumes:
       - redis-data:/data
     restart: unless-stopped
     networks:
       - trainmark-network
-
   rabbitmq:
     image: rabbitmq:3-management-alpine
     container_name: trainmark-rabbitmq
     environment:
       RABBITMQ_DEFAULT_USER: ${RABBITMQ_USERNAME:-trainmark}
       RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:-trainmark_dev}
-    ports:
-      - "127.0.0.1:5672:5672"
-      - "127.0.0.1:15672:15672"
     volumes:
       - rabbitmq-data:/var/lib/rabbitmq
     restart: unless-stopped
     networks:
       - trainmark-network
-
   minio:
     image: minio/minio:latest
     container_name: trainmark-minio
     environment:
       MINIO_ROOT_USER: ${MINIO_ACCESS_KEY:-trainmark}
       MINIO_ROOT_PASSWORD: ${MINIO_SECRET_KEY:-trainmark_dev_password}
-    ports:
-      - "127.0.0.1:9000:9000"
-      - "127.0.0.1:9001:9001"
     command: server /data --console-address ":9001"
     volumes:
       - minio-data:/data
     restart: unless-stopped
     networks:
       - trainmark-network
-
   backend:
     build:
       context: ..
@@ -127,35 +113,32 @@ services:
       - MINIO_ACCESS_KEY=${MINIO_ACCESS_KEY:-trainmark}
       - MINIO_SECRET_KEY=${MINIO_SECRET_KEY:-trainmark_dev_password}
       - MINIO_BUCKET=trainmark-reports
-    expose:
-      - "8080"
+    ports:
+      - "127.0.0.1:30080:8080"
     depends_on:
       postgres:
         condition: service_healthy
     restart: unless-stopped
     networks:
       - trainmark-network
-
   frontend:
     build:
       context: ..
       dockerfile: infra/Dockerfile.frontend
     image: trainmark-frontend:latest
     container_name: trainmark-frontend
-    expose:
-      - "3000"
+    ports:
+      - "127.0.0.1:30081:3000"
     depends_on:
       - backend
     restart: unless-stopped
     networks:
       - trainmark-network
-
 volumes:
   postgres-data:
   redis-data:
   rabbitmq-data:
   minio-data:
-
 networks:
   trainmark-network:
     driver: bridge

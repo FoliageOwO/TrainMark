@@ -86,11 +86,11 @@ server {
     server_name your-domain.com;
 
     location / {
-        proxy_pass http://127.0.0.1:3000;
+        proxy_pass http://127.0.0.1:30081;
     }
 
     location /api/ {
-        proxy_pass http://127.0.0.1:8080;
+        proxy_pass http://127.0.0.1:30080;
     }
 }
 ```
@@ -114,12 +114,12 @@ docker compose -f infra/docker-compose.prod.yml down
 
 | 服务 | 监听地址 | 说明 |
 |------|----------|------|
-| 前端 | `127.0.0.1:3000` | 静态文件 + API 转发 |
-| 后端 | 容器内 `8080` | 通过前端容器代理 |
-| PostgreSQL | `127.0.0.1:5432` | 数据库 |
-| Redis | `127.0.0.1:6379` | 缓存 |
-| MinIO 控制台 | `127.0.0.1:9001` | 对象存储管理 |
-| RabbitMQ 管理 | `127.0.0.1:15672` | 消息队列管理 |
+| 前端 | `127.0.0.1:30081` | 静态文件 + API 转发 |
+| 后端 | `127.0.0.1:30080` | API 服务 |
+| PostgreSQL | 内部网络 | 数据库 (不暴露端口) |
+| Redis | 内部网络 | 缓存 (不暴露端口) |
+| MinIO | 内部网络 | 对象存储 (不暴露端口) |
+| RabbitMQ | 内部网络 | 消息队列 (不暴露端口) |
 
 ### 默认账号
 
