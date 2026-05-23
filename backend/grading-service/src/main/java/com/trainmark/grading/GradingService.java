@@ -22,6 +22,8 @@ import com.trainmark.shared.dto.RubricItemSummary;
 import com.trainmark.shared.dto.RubricSummary;
 import com.trainmark.shared.dto.UpdateReviewItemRequest;
 import com.trainmark.shared.dto.WithdrawGradeRequest;
+import java.sql.DriverManager;
+import java.sql.SQLException;
 import java.time.OffsetDateTime;
 import java.util.Collection;
 import java.util.List;
@@ -41,6 +43,9 @@ public class GradingService {
   private final ScoringProvider scoringProvider;
   private final AnnotationProvider annotationProvider;
   private final AuditLogClient auditLog;
+  private final String jdbcUrl;
+  private final String jdbcUsername;
+  private final String jdbcPassword;
   private final boolean asyncEnabled;
   private final boolean exportAsyncEnabled;
   @Autowired(required = false)
@@ -58,6 +63,9 @@ public class GradingService {
       ScoringProvider scoringProvider,
       AnnotationProvider annotationProvider,
       AuditLogClient auditLog,
+      @Value("${trainmark.grading.jdbc.url:}") String jdbcUrl,
+      @Value("${trainmark.grading.jdbc.username:}") String jdbcUsername,
+      @Value("${trainmark.grading.jdbc.password:}") String jdbcPassword,
       @Value("${trainmark.grading.async-enabled:false}") boolean asyncEnabled,
       @Value("${trainmark.grading.export-async-enabled:false}") boolean exportAsyncEnabled
   ) {
@@ -70,6 +78,9 @@ public class GradingService {
     this.scoringProvider = scoringProvider;
     this.annotationProvider = annotationProvider;
     this.auditLog = auditLog;
+    this.jdbcUrl = jdbcUrl;
+    this.jdbcUsername = jdbcUsername;
+    this.jdbcPassword = jdbcPassword;
     this.asyncEnabled = asyncEnabled;
     this.exportAsyncEnabled = exportAsyncEnabled;
   }
@@ -332,16 +343,123 @@ public class GradingService {
     var rubric = rubricStore.findFirstForAssignment(assignmentId)
         .orElse(new RubricSummary(1L, assignmentId, "默认评分标准", 100, List.<RubricItemSummary>of()));
     var resultId = gradingResultStore.nextResultId();
+    var submission = findSubmissionContext(assignmentId, submissionId);
     var scored = scoringProvider.score(new ScoringRequest(
         resultId,
         assignmentId,
         submissionId,
-        2L,
-        "张三",
-        "2024010101",
-        "自动批改报告-" + submissionId + ".pdf",
+        submission.studentId(),
+        submission.studentName(),
+        submission.studentNo(),
+        submission.fileName(),
+        submission.fileContentText(),
         rubric
     ));
     gradingResultStore.saveScoredResult(annotationProvider.annotate(scored));
   }
+
+  private SubmissionContext findSubmissionContext(Long assignmentId, Long submissionId) {
+    if (jdbcUrl == null || jdbcUrl.isBlank()) {
+      return fallbackSubmissionContext(assignmentId, submissionId);
+    }
+
+    var sql = """
+        SELECT s.id, s.student_id,
+               COALESCE(NULLIF(u.name, ''), '学生' || s.student_id) AS student_name,
+               COALESCE(NULLIF(u.student_no, ''), u.username, '') AS student_no,
+               COALESCE(NULLIF(sf.file_name, ''), NULLIF(s.file_name, ''), '提交报告-' || s.id || '.pdf') AS file_name,
+               COALESCE(NULLIF(sf.object_key, ''), NULLIF(s.object_key, ''), '') AS object_key
+        FROM submissions s
+        LEFT JOIN users u ON u.id = s.student_id
+        LEFT JOIN LATERAL (
+          SELECT file_name, object_key
+          FROM submission_files
+          WHERE submission_id = s.id
+          ORDER BY uploaded_at DESC, id DESC
+          LIMIT 1
+        ) sf ON true
+        WHERE s.id = ? AND s.assignment_id = ?
+        """;
+    try (var connection = connect();
+        var statement = connection.prepareStatement(sql)) {
+      statement.setLong(1, submissionId);
+      statement.setLong(2, assignmentId);
+      try (var results = statement.executeQuery()) {
+        if (results.next()) {
+          var fileName = results.getString("file_name");
+          var objectKey = results.getString("object_key");
+          return new SubmissionContext(
+              results.getLong("student_id"),
+              results.getString("student_name"),
+              results.getString("student_no"),
+              fileName,
+              fileContentText(submissionId, fileName, objectKey)
+          );
+        }
+      }
+    } catch (SQLException error) {
+      throw new IllegalStateException("Failed to load submission for grading: " + submissionId, error);
+    }
+    throw new IllegalArgumentException("Submission not found for assignment " + assignmentId + ": " + submissionId);
+  }
+
+  private String fileContentText(Long submissionId, String fileName, String objectKey) {
+    var ocrText = latestOcrText(submissionId);
+    if (ocrText != null && !ocrText.isBlank()) {
+      return ocrText;
+    }
+    return (fileName == null ? "" : fileName) + " " + (objectKey == null ? "" : objectKey);
+  }
+
+  private String latestOcrText(Long submissionId) {
+    if (jdbcUrl == null || jdbcUrl.isBlank()) {
+      return "";
+    }
+    var sql = """
+        SELECT string_agg(COALESCE(NULLIF(b.text_content, ''), b.title), E'\\n' ORDER BY b.sort_order, b.id) AS text_content
+        FROM ocr_jobs j
+        JOIN ocr_blocks b ON b.ocr_job_id = j.id
+        WHERE j.submission_id = ? AND j.status = 'COMPLETED'
+        GROUP BY j.id
+        ORDER BY max(j.updated_at) DESC NULLS LAST, j.id DESC
+        LIMIT 1
+        """;
+    try (var connection = connect();
+        var statement = connection.prepareStatement(sql)) {
+      statement.setLong(1, submissionId);
+      try (var results = statement.executeQuery()) {
+        if (results.next()) {
+          return results.getString("text_content");
+        }
+      }
+    } catch (SQLException error) {
+      throw new IllegalStateException("Failed to load OCR text for submission: " + submissionId, error);
+    }
+    return "";
+  }
+
+  private SubmissionContext fallbackSubmissionContext(Long assignmentId, Long submissionId) {
+    return new SubmissionContext(
+        2L,
+        "张三",
+        "2024010101",
+        "自动批改报告-" + submissionId + ".pdf",
+        "作业 " + assignmentId + " 提交 " + submissionId
+    );
+  }
+
+  private java.sql.Connection connect() throws SQLException {
+    if (jdbcUsername == null || jdbcUsername.isBlank()) {
+      return DriverManager.getConnection(jdbcUrl);
+    }
+    return DriverManager.getConnection(jdbcUrl, jdbcUsername, jdbcPassword);
+  }
+
+  private record SubmissionContext(
+      Long studentId,
+      String studentName,
+      String studentNo,
+      String fileName,
+      String fileContentText
+  ) {}
 }

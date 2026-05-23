@@ -1,10 +1,15 @@
 package com.trainmark.grading;
 
+import com.trainmark.shared.AuthenticatedUser;
+import com.trainmark.shared.PublicationStatus;
+import com.trainmark.shared.ReviewStatus;
+import com.trainmark.shared.TrainMarkAccessDeniedException;
 import com.trainmark.shared.dto.GradingResultSummary;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
@@ -14,14 +19,13 @@ import org.apache.pdfbox.pdmodel.PDPageContentStream;
 import org.apache.pdfbox.pdmodel.common.PDRectangle;
 import org.apache.pdfbox.pdmodel.font.PDFont;
 import org.apache.pdfbox.pdmodel.font.PDType0Font;
-import org.apache.pdfbox.pdmodel.font.PDType1Font;
-import org.apache.pdfbox.pdmodel.font.Standard14Fonts;
 import org.springframework.http.ContentDisposition;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
@@ -33,54 +37,91 @@ public class GradingAssetController {
   }
 
   @GetMapping(value = "/annotations/submissions/{submissionId}/annotated.pdf", produces = MediaType.APPLICATION_PDF_VALUE)
-  public ResponseEntity<byte[]> annotationPdf(@PathVariable("submissionId") Long submissionId) {
-    var fileName = "annotated-%d.pdf".formatted(submissionId);
+  public ResponseEntity<byte[]> annotationPdf(
+      @PathVariable("submissionId") Long submissionId,
+      @RequestHeader(name = AuthenticatedUser.USER_ID_HEADER, required = false) String userId,
+      @RequestHeader(name = AuthenticatedUser.USERNAME_HEADER, required = false) String username,
+      @RequestHeader(name = AuthenticatedUser.ROLES_HEADER, required = false) String roles
+  ) {
+    var fileName = "批注报告-%d.pdf".formatted(submissionId);
     var result = gradingService.findResultBySubmission(submissionId);
+    var currentUser = currentUser(userId, username, roles);
+    if (result.isEmpty() && currentUser.isStudent()) {
+      throw new TrainMarkAccessDeniedException("Students can only access published annotations");
+    }
+    result.ifPresent(item -> requireAnnotationVisible(currentUser, item));
     return binary(fileName, MediaType.APPLICATION_PDF, pdfBytes(result.orElse(null)));
   }
 
   @GetMapping(value = "/exports/assignments/{assignmentId}/{fileName:.+}")
   public ResponseEntity<byte[]> exportFile(
       @PathVariable("assignmentId") Long assignmentId,
-      @PathVariable("fileName") String fileName
+      @PathVariable("fileName") String fileName,
+      @RequestHeader(name = AuthenticatedUser.USER_ID_HEADER, required = false) String userId,
+      @RequestHeader(name = AuthenticatedUser.USERNAME_HEADER, required = false) String username,
+      @RequestHeader(name = AuthenticatedUser.ROLES_HEADER, required = false) String roles
   ) {
+    currentUser(userId, username, roles).requireStaff();
     if (fileName.toLowerCase().endsWith(".pdf")) {
-      return binary(fileName, MediaType.APPLICATION_PDF, pdfBytes(null));
+      return binary("成绩导出说明.pdf", MediaType.APPLICATION_PDF, pdfBytes(null));
     }
     if (fileName.toLowerCase().endsWith(".zip")) {
-      return binary(fileName, MediaType.parseMediaType("application/zip"), zipBytes(assignmentId));
+      return binary("成绩与批注.zip", MediaType.parseMediaType("application/zip"), zipBytes(assignmentId));
     }
-    return binary(fileName, MediaType.parseMediaType("text/csv;charset=UTF-8"), csvBytes(assignmentId));
+    return binary("成绩单.csv", MediaType.parseMediaType("text/csv;charset=UTF-8"), csvBytes(assignmentId));
+  }
+
+  private AuthenticatedUser currentUser(String userId, String username, String roles) {
+    return AuthenticatedUser.fromHeaders(userId, username, roles);
+  }
+
+  private void requireAnnotationVisible(AuthenticatedUser currentUser, GradingResultSummary result) {
+    if (!currentUser.isStudent()) {
+      return;
+    }
+    currentUser.requireStudentOwner(result.studentId());
+    if (result.publicationStatus() != PublicationStatus.PUBLISHED) {
+      throw new TrainMarkAccessDeniedException("Students can only access published annotations");
+    }
   }
 
   private ResponseEntity<byte[]> binary(String fileName, MediaType mediaType, byte[] body) {
     return ResponseEntity.ok()
         .contentType(mediaType)
         .contentLength(body.length)
-        .header(HttpHeaders.CONTENT_DISPOSITION, ContentDisposition.attachment().filename(fileName).build().toString())
+        .header(HttpHeaders.CONTENT_DISPOSITION,
+            ContentDisposition.attachment().filename(fileName, StandardCharsets.UTF_8).build().toString())
         .body(body);
   }
 
   private byte[] csvBytes(Long assignmentId) {
-    var csv = "\uFEFFassignmentId,studentNo,studentName,score,status\n"
-        + assignmentId + ",2024010101,张三,88,PUBLISHED\n";
-    return csv.getBytes(StandardCharsets.UTF_8);
+    var csv = new StringBuilder("\uFEFF作业ID,学号,姓名,教师分,总分,复核状态,发布状态\n");
+    gradingService.listResults(assignmentId, null).stream()
+        .filter(result -> result.publicationStatus() == PublicationStatus.PUBLISHED)
+        .forEach(result -> csv.append(assignmentId).append(',')
+            .append(csvCell(result.studentNo())).append(',')
+            .append(csvCell(result.studentName())).append(',')
+            .append(result.teacherScore()).append(',')
+            .append(result.totalScore()).append(',')
+            .append(csvCell(reviewStatusLabel(result.reviewStatus()))).append(',')
+            .append(csvCell(publicationStatusLabel(result.publicationStatus()))).append('\n'));
+    return csv.toString().getBytes(StandardCharsets.UTF_8);
   }
 
   private byte[] zipBytes(Long assignmentId) {
     try {
       var output = new ByteArrayOutputStream();
       try (var zip = new ZipOutputStream(output, StandardCharsets.UTF_8)) {
-        zip.putNextEntry(new ZipEntry("grades.csv"));
+        zip.putNextEntry(new ZipEntry("成绩单.csv"));
         zip.write(csvBytes(assignmentId));
         zip.closeEntry();
         var results = gradingService.listResults(assignmentId, null);
         for (var result : results) {
-          zip.putNextEntry(new ZipEntry("annotations/annotated-%d.pdf".formatted(result.submissionId())));
+          zip.putNextEntry(new ZipEntry("批注报告/批注报告-%d.pdf".formatted(result.submissionId())));
           zip.write(pdfBytes(result));
           zip.closeEntry();
         }
-        zip.putNextEntry(new ZipEntry("README.txt"));
+        zip.putNextEntry(new ZipEntry("说明.txt"));
         zip.write(zipReadme(assignmentId, results.size()).getBytes(StandardCharsets.UTF_8));
         zip.closeEntry();
       }
@@ -91,9 +132,9 @@ public class GradingAssetController {
   }
 
   private String zipReadme(Long assignmentId, int annotationCount) {
-    return "TrainMark AI grade export bundle\n"
-        + "Assignment ID: " + assignmentId + "\n"
-        + "Included annotated PDFs: " + annotationCount + "\n";
+    return "智能批改成绩导出包\n"
+        + "作业 ID: " + assignmentId + "\n"
+        + "包含批注 PDF: " + annotationCount + " 份\n";
   }
 
   /**
@@ -110,13 +151,16 @@ public class GradingAssetController {
       var y = page.getMediaBox().getUpperRightY() - margin;
       var contentWidth = pageWidth - 2 * margin;
       var fonts = loadFonts(document);
+      if (fonts == null) {
+        throw new IllegalStateException("生成中文批注报告失败：未找到可用中文字体");
+      }
 
       try (var contentStream = new PDPageContentStream(document, page)) {
         // Title
         contentStream.beginText();
         contentStream.setFont(fonts.heading(), 18);
         contentStream.newLineAtOffset(margin, y);
-        contentStream.showText(fonts.text("TrainMark AI 批改批注报告"));
+        contentStream.showText(fonts.text("智能批改批注报告"));
         contentStream.endText();
         y -= 36;
 
@@ -133,8 +177,8 @@ public class GradingAssetController {
               "学生: " + result.studentName() + " (" + result.studentNo() + ")",
               "总分: " + result.teacherScore() + " / " + result.totalScore(),
               "AI 初评: " + result.aiScore() + " / " + result.totalScore(),
-              "复核状态: " + result.reviewStatus(),
-              "发布状态: " + result.publicationStatus(),
+              "复核状态: " + reviewStatusLabel(result.reviewStatus()),
+              "发布状态: " + publicationStatusLabel(result.publicationStatus()),
               "置信度: " + result.confidence() + "%"
           ));
 
@@ -159,7 +203,7 @@ public class GradingAssetController {
             y = drawSection(contentStream, fonts, margin, y, contentWidth, "批注详情",
                 result.annotations().stream()
                     .limit(10)
-                    .map(a -> "[" + a.severity() + "] 第" + a.page() + "页 - " + a.comment())
+                    .map(a -> "[" + severityLabel(a.severity()) + "] 第" + a.page() + "页 - " + a.comment())
                     .toList());
           }
         }
@@ -169,7 +213,7 @@ public class GradingAssetController {
       document.save(output);
       return output.toByteArray();
     } catch (IOException exception) {
-      throw new IllegalStateException("Failed to generate annotation PDF", exception);
+      throw new IllegalStateException("生成中文批注报告失败", exception);
     }
   }
 
@@ -200,67 +244,146 @@ public class GradingAssetController {
 
     // Bullet items
     for (var item : items) {
-      if (y < margin + 30) break;
-      cs.beginText();
-      cs.setFont(fonts.body(), 10);
-      cs.newLineAtOffset(margin + 8, y);
-      // Truncate very long lines
-      var display = item.length() > 100 ? item.substring(0, 97) + "..." : item;
-      cs.showText(fonts.text("- " + display));
-      cs.endText();
-      y -= 16;
+      var wrapped = wrapText(fonts.body(), 10, item, width - 24);
+      for (var lineIndex = 0; lineIndex < wrapped.size(); lineIndex++) {
+        if (y < margin + 30) {
+          return y;
+        }
+        cs.beginText();
+        cs.setFont(fonts.body(), 10);
+        cs.newLineAtOffset(margin + 8, y);
+        cs.showText(fonts.text((lineIndex == 0 ? "- " : "  ") + wrapped.get(lineIndex)));
+        cs.endText();
+        y -= 14;
+      }
+      y -= 2;
     }
 
     return y - gap;
   }
 
-  private PdfFonts loadFonts(PDDocument document) throws IOException {
+  private List<String> wrapText(PDFont font, float fontSize, String value, float maxWidth) throws IOException {
+    if (value == null || value.isBlank()) {
+      return List.of("");
+    }
+    var lines = new ArrayList<String>();
+    var current = new StringBuilder();
+    for (var offset = 0; offset < value.length(); ) {
+      var codePoint = value.codePointAt(offset);
+      var next = current.toString() + new String(Character.toChars(codePoint));
+      if (!current.isEmpty() && textWidth(font, fontSize, next) > maxWidth) {
+        lines.add(current.toString());
+        current.setLength(0);
+      }
+      current.appendCodePoint(codePoint);
+      offset += Character.charCount(codePoint);
+    }
+    if (!current.isEmpty()) {
+      lines.add(current.toString());
+    }
+    return lines;
+  }
+
+  private float textWidth(PDFont font, float fontSize, String value) throws IOException {
+    return font.getStringWidth(value) / 1000f * fontSize;
+  }
+
+  private PdfFonts loadFonts(PDDocument document) {
     var configuredFont = System.getenv("ANNOTATION_PDF_FONT_PATH");
     var bodyFont = loadFirstExistingFont(document, configuredFont, List.of(
+        "C:/Windows/Fonts/NotoSansSC-VF.ttf",
+        "C:/Windows/Fonts/msyh.ttc",
+        "C:/Windows/Fonts/simhei.ttf",
+        "C:/Windows/Fonts/simsun.ttc",
+        "/usr/share/fonts/noto-cjk/NotoSansCJK-Regular.ttc",
         "/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc",
-        "/usr/share/fonts/truetype/wqy/wqy-microhei.ttc",
-        "/mnt/c/Windows/Fonts/simhei.ttf",
-        "/mnt/c/Windows/Fonts/msyh.ttc"
+        "/usr/share/fonts/truetype/wqy/wqy-microhei.ttc"
     ));
     var headingFont = loadFirstExistingFont(document, configuredFont, List.of(
+        "C:/Windows/Fonts/NotoSansSC-VF.ttf",
+        "C:/Windows/Fonts/msyhbd.ttc",
+        "C:/Windows/Fonts/msyh.ttc",
+        "C:/Windows/Fonts/simhei.ttf",
+        "/usr/share/fonts/noto-cjk/NotoSansCJK-Bold.ttc",
+        "/usr/share/fonts/noto-cjk/NotoSansCJK-Regular.ttc",
         "/usr/share/fonts/opentype/noto/NotoSansCJK-Bold.ttc",
-        "/mnt/c/Windows/Fonts/simhei.ttf",
-        "/mnt/c/Windows/Fonts/msyhbd.ttc",
         "/usr/share/fonts/truetype/wqy/wqy-microhei.ttc"
     ));
     if (bodyFont != null && headingFont != null) {
-      return new PdfFonts(headingFont, bodyFont, true);
+      return new PdfFonts(headingFont, bodyFont);
     }
-    return new PdfFonts(
-        new PDType1Font(Standard14Fonts.FontName.HELVETICA_BOLD),
-        new PDType1Font(Standard14Fonts.FontName.HELVETICA),
-        false
-    );
+    return null;
   }
 
-  private PDFont loadFirstExistingFont(PDDocument document, String configuredFont, List<String> fallbackPaths)
-      throws IOException {
+  private PDFont loadFirstExistingFont(PDDocument document, String configuredFont, List<String> fallbackPaths) {
     if (configuredFont != null && !configuredFont.isBlank()) {
       var font = new File(configuredFont);
       if (font.isFile()) {
-        return PDType0Font.load(document, font);
+        var loaded = loadFont(document, font);
+        if (loaded != null) {
+          return loaded;
+        }
       }
     }
     for (var path : fallbackPaths) {
       var font = new File(path);
       if (font.isFile()) {
-        return PDType0Font.load(document, font);
+        var loaded = loadFont(document, font);
+        if (loaded != null) {
+          return loaded;
+        }
       }
     }
     return null;
   }
 
-  private record PdfFonts(PDFont heading, PDFont body, boolean unicode) {
+  private PDFont loadFont(PDDocument document, File font) {
+    try {
+      return PDType0Font.load(document, font);
+    } catch (IOException exception) {
+      return null;
+    }
+  }
+
+  private String csvCell(String value) {
+    var safe = value == null ? "" : value;
+    if (safe.contains(",") || safe.contains("\"") || safe.contains("\n") || safe.contains("\r")) {
+      return "\"" + safe.replace("\"", "\"\"") + "\"";
+    }
+    return safe;
+  }
+
+  private String reviewStatusLabel(ReviewStatus status) {
+    return switch (status) {
+      case NEEDS_REVIEW -> "待复核";
+      case IN_REVIEW -> "复核中";
+      case APPROVED -> "已通过";
+      case RETURNED -> "已退回";
+    };
+  }
+
+  private String publicationStatusLabel(PublicationStatus status) {
+    return switch (status) {
+      case NOT_PUBLISHED -> "未发布";
+      case PUBLISHED -> "已发布";
+      case WITHDRAWN -> "已撤回";
+    };
+  }
+
+  private String severityLabel(String severity) {
+    if (severity == null) {
+      return "提示";
+    }
+    return switch (severity.toLowerCase()) {
+      case "warning" -> "需关注";
+      case "error" -> "严重";
+      default -> "提示";
+    };
+  }
+
+  private record PdfFonts(PDFont heading, PDFont body) {
     String text(String value) {
-      if (unicode) {
-        return value;
-      }
-      return value.replaceAll("[^\\x00-\\x7F]", "?");
+      return value;
     }
   }
 

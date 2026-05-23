@@ -147,6 +147,21 @@ export function resolveApiAssetUrl(path: string) {
   return path;
 }
 
+export async function fetchApiAssetBlobUrl(path: string): Promise<string> {
+  const url = resolveApiAssetUrl(path);
+  if (!shouldUseHttpApi() || !url || url.startsWith('data:') || url.startsWith('blob:')) {
+    return url;
+  }
+
+  const response = await fetch(url, {
+    headers: authHeaders(),
+  });
+  if (!response.ok) {
+    throw new Error(`HTTP ${response.status} for ${path}`);
+  }
+  return URL.createObjectURL(await response.blob());
+}
+
 const roleLoginUsernames: Record<RoleCode, string> = {
   TEACHER: 'teacher',
   STUDENT: 'student',
@@ -212,13 +227,18 @@ export async function logoutCurrentSession(): Promise<void> {
 
 export async function loadWorkspaceData(selectedCourseId: number, userId: number, role: RoleCode): Promise<WorkspaceData> {
   const isStudent = role === 'STUDENT';
+  const isAdmin = role === 'ADMIN';
   const submissionPath = role === 'STUDENT' ? `/api/submissions?studentId=${userId}` : '/api/submissions';
   const assignmentPath = isStudent ? '/api/assignments' : `/api/assignments?courseId=${selectedCourseId}`;
   const assignmentFallback = isStudent ? mockApi.listAssignments() : mockApi.listAssignments(selectedCourseId);
   const assignments = await getOr(assignmentPath, assignmentFallback);
   const selectedAssignmentId = resolveWorkspaceAssignmentId(assignments, selectedCourseId);
   const gradingResultsPath = isStudent ? '/api/grading/results' : `/api/grading/results?assignmentId=${selectedAssignmentId}`;
+  const appealsPath = isStudent ? `/api/grading/results/appeals?studentId=${userId}` : '/api/grading/results/appeals';
   const fallbackGradingResults = isStudent ? mockApi.listGradingResults() : mockApi.listGradingResults(selectedAssignmentId);
+  const fallbackAppeals = isStudent ? mockApi.listAppeals().filter((item) => item.studentId === userId) : mockApi.listAppeals();
+  const emptyCollectionOverview = mockApi.getCollectionOverview(selectedAssignmentId);
+  const emptyGradeStatistics = { ...mockApi.getGradeStatistics(selectedAssignmentId), publishedCount: 0, averageScore: 0, maxScore: 0, minScore: 0, buckets: [] };
   const [
     courses,
     classes,
@@ -246,24 +266,24 @@ export async function loadWorkspaceData(selectedCourseId: number, userId: number
     getOr('/api/organizations', mockApi.listOrganizations()),
     getOr('/api/users', mockApi.listUsers()),
     getOr('/api/users?role=STUDENT', mockApi.listUsers('STUDENT')),
-    getOr(`/api/notifications/assignments/${selectedAssignmentId}/collection`, mockApi.getCollectionOverview(selectedAssignmentId)),
-    getOr(`/api/notifications/assignments/${selectedAssignmentId}/unsubmitted`, mockApi.listUnsubmittedStudents(selectedAssignmentId)),
-    getOr(`/api/rubrics?assignmentId=${selectedAssignmentId}`, mockApi.listRubrics(selectedAssignmentId)),
-    getOr(`/api/grading/jobs?assignmentId=${selectedAssignmentId}`, mockApi.listGradingJobs(selectedAssignmentId)),
-    loadOcrJobs(),
+    isStudent ? emptyCollectionOverview : getOr(`/api/notifications/assignments/${selectedAssignmentId}/collection`, mockApi.getCollectionOverview(selectedAssignmentId)),
+    isStudent ? [] : getOr(`/api/notifications/assignments/${selectedAssignmentId}/unsubmitted`, mockApi.listUnsubmittedStudents(selectedAssignmentId)),
+    isStudent ? [] : getOr(`/api/rubrics?assignmentId=${selectedAssignmentId}`, mockApi.listRubrics(selectedAssignmentId)),
+    isStudent ? [] : getOr(`/api/grading/jobs?assignmentId=${selectedAssignmentId}`, mockApi.listGradingJobs(selectedAssignmentId)),
+    isStudent ? [] : loadOcrJobs(),
     getOr(gradingResultsPath, fallbackGradingResults),
-    getOr(submissionPath, [] as SubmissionSummary[]),
-    getOr(`/api/grading/exports?assignmentId=${selectedAssignmentId}`, mockApi.listGradeExports(selectedAssignmentId)),
-    getOr(`/api/analytics/grade-statistics?assignmentId=${selectedAssignmentId}`, mockApi.getGradeStatistics(selectedAssignmentId)),
-    getOr(`/api/analytics/loss-points?assignmentId=${selectedAssignmentId}`, mockApi.listLossPoints(selectedAssignmentId)),
-    getOr(`/api/analytics/course-outcomes?assignmentId=${selectedAssignmentId}`, mockApi.listCourseOutcomes(selectedAssignmentId)),
-    getOr('/api/grading/results/appeals', mockApi.listAppeals()),
-    getOr(`/api/similarity/jobs?assignmentId=${selectedAssignmentId}`, mockApi.listSimilarityJobs(selectedAssignmentId)),
-    getOr('/api/admin/audit-logs', mockApi.listAuditLogs()),
-    getOr('/api/admin/settings', mockApi.listSystemSettings()),
+    getOr(submissionPath, isStudent ? mockApi.listSubmissions(undefined, userId) : mockApi.listSubmissions()),
+    isStudent ? [] : getOr(`/api/grading/exports?assignmentId=${selectedAssignmentId}`, mockApi.listGradeExports(selectedAssignmentId)),
+    isStudent ? emptyGradeStatistics : getOr(`/api/analytics/grade-statistics?assignmentId=${selectedAssignmentId}`, mockApi.getGradeStatistics(selectedAssignmentId)),
+    isStudent ? [] : getOr(`/api/analytics/loss-points?assignmentId=${selectedAssignmentId}`, mockApi.listLossPoints(selectedAssignmentId)),
+    isStudent ? [] : getOr(`/api/analytics/course-outcomes?assignmentId=${selectedAssignmentId}`, mockApi.listCourseOutcomes(selectedAssignmentId)),
+    getOr(appealsPath, fallbackAppeals),
+    isStudent ? [] : getOr(`/api/similarity/jobs?assignmentId=${selectedAssignmentId}`, mockApi.listSimilarityJobs(selectedAssignmentId)),
+    isAdmin ? getOr('/api/admin/audit-logs', mockApi.listAuditLogs()) : [],
+    isAdmin ? getOr('/api/admin/settings', mockApi.listSystemSettings()) : [],
   ]);
   const publishedResults = gradingResults.filter((item) => item.publicationStatus === 'PUBLISHED' && item.studentId === userId);
-  const publicationAudits = await loadPublicationAuditsForResults(gradingResults);
+  const publicationAudits = isStudent ? [] : await loadPublicationAuditsForResults(gradingResults);
 
   return {
     courses,
@@ -575,7 +595,7 @@ export async function importStudents(input: ImportStudentsInput): Promise<Studen
 
 export async function createUploadReceipt(fileName: string, assignmentId: number, studentId: number, file?: File | null): Promise<UploadReceipt> {
   if (!shouldUseHttpApi()) {
-    return mockApi.createUploadReceipt(fileName);
+    return mockApi.createUploadReceipt(fileName, assignmentId, studentId);
   }
 
   try {
@@ -601,7 +621,7 @@ export async function createUploadReceipt(fileName: string, assignmentId: number
     if (shouldUseStrictHttpApi()) {
       throw error;
     }
-    return mockApi.createUploadReceipt(fileName);
+    return mockApi.createUploadReceipt(fileName, assignmentId, studentId);
   }
 }
 

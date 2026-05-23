@@ -6,6 +6,21 @@ AUTH_USERNAME="${AUTH_USERNAME:-owner}"
 AUTH_PASSWORD="${AUTH_PASSWORD:-trainmark}"
 AUTH_EXPECTED_ROLE="${AUTH_EXPECTED_ROLE:-COURSE_OWNER}"
 SMOKE_DRY_RUN="${SMOKE_DRY_RUN:-0}"
+PYTHON_BIN="${PYTHON_BIN:-}"
+
+if [[ -z "$PYTHON_BIN" ]]; then
+  for candidate in python3 python py; do
+    if command -v "$candidate" >/dev/null 2>&1 && "$candidate" --version >/dev/null 2>&1; then
+      PYTHON_BIN="$candidate"
+      break
+    fi
+  done
+fi
+
+if [[ -z "$PYTHON_BIN" ]]; then
+  echo "[auth-strict] Python 3 is required. Set PYTHON_BIN to a Python executable." >&2
+  exit 1
+fi
 
 post_json() {
   local label="$1"
@@ -85,22 +100,22 @@ expect_post_failure() {
 
 api_field() {
   local expression="$1"
-  python3 -c "import json, sys; payload=json.load(sys.stdin); print($expression)"
+  "$PYTHON_BIN" -c "import json, sys; payload=json.load(sys.stdin); print($expression)"
 }
 
 assert_success_role() {
   local expected_role="$1"
-  python3 -c 'import json, sys; expected = sys.argv[1]; payload = json.load(sys.stdin); roles = payload.get("data", {}).get("user", payload.get("data", {})).get("roles", []); raise SystemExit(0 if payload.get("success") is True and expected in roles else 1)' "$expected_role"
+  "$PYTHON_BIN" -c 'import json, sys; expected = sys.argv[1]; payload = json.load(sys.stdin); roles = payload.get("data", {}).get("user", payload.get("data", {})).get("roles", []); raise SystemExit(0 if payload.get("success") is True and expected in roles else 1)' "$expected_role"
 }
 
 assert_success() {
-  python3 -c 'import json, sys; payload = json.load(sys.stdin); raise SystemExit(0 if payload.get("success") is True else 1)'
+  "$PYTHON_BIN" -c 'import json, sys; payload = json.load(sys.stdin); raise SystemExit(0 if payload.get("success") is True else 1)'
 }
 
 assert_failure() {
   local response="$1"
   local expected_message="$2"
-  python3 -c 'import json, sys; body, code = sys.stdin.read().rstrip("\n").rsplit("\n", 1); payload = json.loads(body); expected = sys.argv[1]; ok = code == "400" and payload.get("success") is False and expected in payload.get("message", ""); raise SystemExit(0 if ok else 1)' "$expected_message" <<< "$response"
+  "$PYTHON_BIN" -c 'import json, sys; body, code = sys.stdin.read().rstrip("\n").rsplit("\n", 1); payload = json.loads(body); expected = sys.argv[1]; ok = code == "400" and payload.get("success") is False and expected in payload.get("message", ""); raise SystemExit(0 if ok else 1)' "$expected_message" <<< "$response"
 }
 
 unknown_access_token() {

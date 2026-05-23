@@ -44,6 +44,15 @@ public class InMemoryUploadStore implements UploadStore {
   }
 
   @Override
+  public Long findUploadStudentId(String uploadId) {
+    var upload = pendingUploads.get(uploadId);
+    if (upload == null) {
+      throw new IllegalArgumentException("Upload session not found: " + uploadId);
+    }
+    return upload.request().studentId();
+  }
+
+  @Override
   public SubmissionReceipt completeUpload(CompleteUploadRequest request) {
     var upload = pendingUploads.remove(request.uploadId());
     if (upload == null) {
@@ -95,7 +104,13 @@ public class InMemoryUploadStore implements UploadStore {
     if (submission == null || objectKey == null) {
       throw new IllegalArgumentException("Submission file not found: " + submissionId);
     }
-    return new SubmissionFileDescriptor(submissionId, submission.fileName(), objectKey);
+    return new SubmissionFileDescriptor(
+        submissionId,
+        submission.assignmentId(),
+        submission.studentId(),
+        submission.fileName(),
+        objectKey
+    );
   }
 
   private void validateUpload(CompleteUploadRequest request, PendingUpload upload) {

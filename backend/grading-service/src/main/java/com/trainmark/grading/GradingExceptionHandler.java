@@ -1,6 +1,7 @@
 package com.trainmark.grading;
 
 import com.trainmark.shared.ApiResponse;
+import com.trainmark.shared.TrainMarkAccessDeniedException;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import org.springframework.http.HttpStatus;
@@ -27,6 +28,13 @@ public class GradingExceptionHandler {
   public ResponseEntity<ApiResponse<Void>> handleBadRequest(IllegalArgumentException exception) {
     return ResponseEntity
         .status(HttpStatus.BAD_REQUEST)
+        .body(ApiResponse.fail(exception.getMessage()));
+  }
+
+  @ExceptionHandler(TrainMarkAccessDeniedException.class)
+  public ResponseEntity<ApiResponse<Void>> handleAccessDenied(TrainMarkAccessDeniedException exception) {
+    return ResponseEntity
+        .status(HttpStatus.FORBIDDEN)
         .body(ApiResponse.fail(exception.getMessage()));
   }
 

@@ -12,5 +12,5 @@ SERVICE="$1"
 cd "$ROOT_DIR"
 
 mvn -f backend/pom.xml -N install
-mvn -f backend/pom.xml -pl shared install -DskipTests
-mvn -f backend/pom.xml -pl "$SERVICE" -Pdev spring-boot:run
+mvn -f backend/shared/pom.xml install -DskipTests
+mvn -f "backend/$SERVICE/pom.xml" -Pdev spring-boot:run

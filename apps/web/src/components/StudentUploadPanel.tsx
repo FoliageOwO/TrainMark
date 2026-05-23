@@ -1,6 +1,7 @@
 import { CheckCircle2, Clock3, FileText, UploadCloud } from 'lucide-react';
-import { resolveApiAssetUrl, shouldUseHttpApi } from '../api/httpApi';
+import { fetchApiAssetBlobUrl, shouldUseHttpApi } from '../api/httpApi';
 import type { SubmissionTask, UploadReceipt } from '../api/types';
+import { toChineseFileName } from '../utils/displayText';
 
 type StudentUploadPanelProps = {
   receipt: UploadReceipt | null;
@@ -29,11 +30,24 @@ export function StudentUploadPanel({
   onFileSelect,
   onTaskSelect,
 }: StudentUploadPanelProps) {
+  const openSubmissionFile = async (submissionId: number, fileName: string) => {
+    const url = await fetchApiAssetBlobUrl(`/api/submissions/${submissionId}/file`);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = toChineseFileName(fileName) || '实训报告';
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    if (url.startsWith('blob:')) {
+      window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+    }
+  };
+
   return (
     <article className="panel">
       <div className="panel-heading">
         <div>
-          <p className="eyebrow">Upload</p>
+          <p className="eyebrow">报告上传</p>
           <h3>上传报告</h3>
         </div>
         <UploadCloud size={22} />
@@ -49,7 +63,7 @@ export function StudentUploadPanel({
         >
           <UploadCloud size={24} />
           <strong>拖拽报告到这里</strong>
-          <span>PDF / Word / JPG / PNG，最大 50MB</span>
+          <span>支持 PDF、Word、JPG、PNG，最大 50MB</span>
           <input
             type="file"
             accept=".pdf,.doc,.docx,.png,.jpg,.jpeg,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,image/png,image/jpeg"
@@ -96,7 +110,9 @@ export function StudentUploadPanel({
               <strong>提交成功</strong>
               <span>回执 #{receipt.submissionId} · 版本 {receipt.version}</span>
               {shouldUseHttpApi() && (
-                <a href={resolveApiAssetUrl(`/api/submissions/${receipt.submissionId}/file`)} rel="noreferrer" target="_blank">查看原文件</a>
+                <button className="link-button" type="button" onClick={() => openSubmissionFile(receipt.submissionId, receipt.fileName)}>
+                  查看原文件
+                </button>
               )}
             </div>
           </div>

@@ -58,7 +58,7 @@ export function TeacherRosterPanel({
       <article className="panel roster-panel">
         <div className="panel-heading">
           <div>
-            <p className="eyebrow">Roster Import</p>
+            <p className="eyebrow">名单导入</p>
             <h3>学生名单导入</h3>
           </div>
           <span className="status-pill">粘贴导入</span>
@@ -102,7 +102,7 @@ export function TeacherRosterPanel({
       <article className="panel roster-panel">
         <div className="panel-heading">
           <div>
-            <p className="eyebrow">Directory</p>
+            <p className="eyebrow">组织目录</p>
             <h3>组织与学生</h3>
           </div>
           <span className="status-pill">{students.length} 名学生</span>

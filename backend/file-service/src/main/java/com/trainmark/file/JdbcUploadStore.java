@@ -62,6 +62,23 @@ public class JdbcUploadStore implements UploadStore {
   }
 
   @Override
+  public Long findUploadStudentId(String uploadId) {
+    var sql = "SELECT student_id FROM upload_sessions WHERE upload_id = ? AND status = 'INITIALIZED'";
+    try (var connection = connect();
+        var statement = connection.prepareStatement(sql)) {
+      statement.setObject(1, UUID.fromString(uploadId));
+      try (var results = statement.executeQuery()) {
+        if (results.next()) {
+          return results.getLong("student_id");
+        }
+      }
+    } catch (SQLException error) {
+      throw new IllegalStateException("Failed to find upload session", error);
+    }
+    throw new IllegalArgumentException("Upload session not found: " + uploadId);
+  }
+
+  @Override
   public SubmissionReceipt completeUpload(CompleteUploadRequest request) {
     try (var connection = connect()) {
       connection.setAutoCommit(false);
@@ -153,7 +170,7 @@ public class JdbcUploadStore implements UploadStore {
   @Override
   public SubmissionFileDescriptor getSubmissionFile(Long submissionId) {
     var sql = """
-        SELECT id, COALESCE(file_name, '未命名报告') AS file_name, object_key
+        SELECT id, assignment_id, student_id, COALESCE(file_name, '未命名报告') AS file_name, object_key
         FROM submissions
         WHERE id = ?
         """;
@@ -164,6 +181,8 @@ public class JdbcUploadStore implements UploadStore {
         if (results.next()) {
           return new SubmissionFileDescriptor(
               results.getLong("id"),
+              results.getLong("assignment_id"),
+              results.getLong("student_id"),
               results.getString("file_name"),
               results.getString("object_key")
           );

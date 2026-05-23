@@ -73,6 +73,10 @@ public class UploadService {
     return store.completeUpload(request);
   }
 
+  public Long findUploadStudentId(String uploadId) {
+    return store.findUploadStudentId(uploadId);
+  }
+
   public Collection<SubmissionSummary> listSubmissions(Long assignmentId, Long studentId) {
     return store.listSubmissions(assignmentId, studentId);
   }
@@ -84,6 +88,10 @@ public class UploadService {
     } catch (IOException error) {
       throw new UncheckedIOException("Failed to read upload object", error);
     }
+  }
+
+  public SubmissionFileDescriptor getSubmissionFileDescriptor(Long submissionId) {
+    return store.getSubmissionFile(submissionId);
   }
 
   public UploadObjectSummary storeContent(String uploadId, String objectKey, String contentType, long size, java.io.InputStream content) {

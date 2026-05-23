@@ -1,6 +1,7 @@
 package com.trainmark.file;
 
 import com.trainmark.shared.ApiResponse;
+import com.trainmark.shared.AuthenticatedUser;
 import com.trainmark.shared.dto.CompleteUploadRequest;
 import com.trainmark.shared.dto.InitializeUploadRequest;
 import com.trainmark.shared.dto.InitializeUploadResponse;
@@ -9,6 +10,7 @@ import com.trainmark.shared.dto.UploadObjectSummary;
 import jakarta.validation.Valid;
 import java.io.IOException;
 import org.springframework.http.MediaType;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -27,12 +29,24 @@ public class UploadController {
   }
 
   @PostMapping("/init")
-  public ApiResponse<InitializeUploadResponse> initialize(@Valid @RequestBody InitializeUploadRequest request) {
+  public ApiResponse<InitializeUploadResponse> initialize(
+      @Valid @RequestBody InitializeUploadRequest request,
+      @RequestHeader(name = AuthenticatedUser.USER_ID_HEADER, required = false) String userId,
+      @RequestHeader(name = AuthenticatedUser.USERNAME_HEADER, required = false) String username,
+      @RequestHeader(name = AuthenticatedUser.ROLES_HEADER, required = false) String roles
+  ) {
+    currentUser(userId, username, roles).requireStudentOwner(request.studentId());
     return ApiResponse.ok(uploadService.initialize(request));
   }
 
   @PostMapping("/complete")
-  public ApiResponse<SubmissionReceipt> complete(@Valid @RequestBody CompleteUploadRequest request) {
+  public ApiResponse<SubmissionReceipt> complete(
+      @Valid @RequestBody CompleteUploadRequest request,
+      @RequestHeader(name = AuthenticatedUser.USER_ID_HEADER, required = false) String userId,
+      @RequestHeader(name = AuthenticatedUser.USERNAME_HEADER, required = false) String username,
+      @RequestHeader(name = AuthenticatedUser.ROLES_HEADER, required = false) String roles
+  ) {
+    currentUser(userId, username, roles).requireStudentOwner(uploadService.findUploadStudentId(request.uploadId()));
     return ApiResponse.ok(uploadService.complete(request));
   }
 
@@ -40,8 +54,12 @@ public class UploadController {
   public ApiResponse<UploadObjectSummary> uploadContent(
       @RequestParam(name = "uploadId") String uploadId,
       @RequestParam(name = "objectKey") String objectKey,
-      @RequestParam(name = "file") MultipartFile file
+      @RequestParam(name = "file") MultipartFile file,
+      @RequestHeader(name = AuthenticatedUser.USER_ID_HEADER, required = false) String userId,
+      @RequestHeader(name = AuthenticatedUser.USERNAME_HEADER, required = false) String username,
+      @RequestHeader(name = AuthenticatedUser.ROLES_HEADER, required = false) String roles
   ) throws IOException {
+    currentUser(userId, username, roles).requireStudentOwner(uploadService.findUploadStudentId(uploadId));
     return ApiResponse.ok(uploadService.storeContent(
         uploadId,
         objectKey,
@@ -49,5 +67,9 @@ public class UploadController {
         file.getSize(),
         file.getInputStream()
     ));
+  }
+
+  private AuthenticatedUser currentUser(String userId, String username, String roles) {
+    return AuthenticatedUser.fromHeaders(userId, username, roles);
   }
 }

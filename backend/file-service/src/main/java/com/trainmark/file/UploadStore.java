@@ -10,6 +10,8 @@ import java.util.Collection;
 public interface UploadStore {
   void saveUploadSession(String uploadId, InitializeUploadRequest request, String objectKey, OffsetDateTime expiresAt);
 
+  Long findUploadStudentId(String uploadId);
+
   SubmissionReceipt completeUpload(CompleteUploadRequest request);
 
   Collection<SubmissionSummary> listSubmissions(Long assignmentId, Long studentId);

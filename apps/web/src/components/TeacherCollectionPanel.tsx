@@ -1,7 +1,8 @@
 import type { CSSProperties } from 'react';
 import { Bell, CheckCircle2, Download } from 'lucide-react';
-import { resolveApiAssetUrl, shouldUseHttpApi } from '../api/httpApi';
+import { fetchApiAssetBlobUrl, shouldUseHttpApi } from '../api/httpApi';
 import type { CollectionOverview, ReminderResult, SubmissionSummary, UnsubmittedStudent } from '../api/types';
+import { toChineseFileName } from '../utils/displayText';
 
 const submissionStatusText: Record<SubmissionSummary['status'], string> = {
   NOT_SUBMITTED: '未提交',
@@ -39,13 +40,25 @@ export function TeacherCollectionPanel({
   const submittedReports = submissions
     .filter((submission) => submission.assignmentId === selectedAssignmentId)
     .slice(0, 6);
+  const openSubmissionFile = async (submission: SubmissionSummary) => {
+    const url = await fetchApiAssetBlobUrl(`/api/submissions/${submission.id}/file`);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = toChineseFileName(submission.fileName) || '实训报告';
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    if (url.startsWith('blob:')) {
+      window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+    }
+  };
 
   return (
     <section className="management-grid">
       <article className="panel collection-panel">
         <div className="panel-heading">
           <div>
-            <p className="eyebrow">Submission Collection</p>
+            <p className="eyebrow">报告收集</p>
             <h3>报告收集看板</h3>
           </div>
           <button className="ghost-button" type="button" onClick={onRemindUnsubmitted}>
@@ -75,7 +88,7 @@ export function TeacherCollectionPanel({
       <article className="panel collection-panel">
         <div className="panel-heading">
           <div>
-            <p className="eyebrow">Submitted Reports</p>
+            <p className="eyebrow">已交报告</p>
             <h3>已交报告</h3>
           </div>
           <span className="status-pill">{submittedReports.length} 份可查看</span>
@@ -90,15 +103,15 @@ export function TeacherCollectionPanel({
             {submittedReports.map((submission) => (
               <div className="submitted-report-row" key={submission.id}>
                 <div>
-                  <strong>{submission.fileName}</strong>
+                  <strong>{toChineseFileName(submission.fileName)}</strong>
                   <span>{submission.studentName} · {submission.studentNo} · V{submission.version}</span>
                 </div>
                 <div className="submitted-report-actions">
                   <small>{submissionStatusText[submission.status]}</small>
                   {shouldUseHttpApi() && (
-                    <a href={resolveApiAssetUrl(`/api/submissions/${submission.id}/file`)} rel="noreferrer" target="_blank">
+                    <button className="link-button" type="button" onClick={() => openSubmissionFile(submission)}>
                       <Download size={14} /> 原文件
-                    </a>
+                    </button>
                   )}
                 </div>
               </div>
@@ -110,7 +123,7 @@ export function TeacherCollectionPanel({
       <article className="panel collection-panel">
         <div className="panel-heading">
           <div>
-            <p className="eyebrow">Unsubmitted</p>
+            <p className="eyebrow">未交名单</p>
             <h3>未交名单</h3>
           </div>
           <span className="status-pill">{unsubmittedStudents.length} 人待提醒</span>

@@ -1,7 +1,8 @@
 import { useEffect, useState, type RefObject } from 'react';
 import { FileCheck2, FileText, X, ZoomIn, ZoomOut } from 'lucide-react';
-import { resolveApiAssetUrl } from '../api/httpApi';
+import { fetchApiAssetBlobUrl } from '../api/httpApi';
 import type { AppealSummary, GradingResultSummary } from '../api/types';
+import { toChineseFileName, toChineseText } from '../utils/displayText';
 
 const appealStatusText = {
   SUBMITTED: '待处理',
@@ -24,6 +25,8 @@ export function StudentResultsPanel({
 }: StudentResultsPanelProps) {
   const [viewingResult, setViewingResult] = useState<GradingResultSummary | null>(null);
   const [pdfZoom, setPdfZoom] = useState(100);
+  const [annotationPreviewUrl, setAnnotationPreviewUrl] = useState<string | null>(null);
+  const [annotationPreviewError, setAnnotationPreviewError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!viewingResult) return;
@@ -41,12 +44,63 @@ export function StudentResultsPanel({
     setPdfZoom(100);
   };
 
+  const downloadAnnotation = async (result: GradingResultSummary) => {
+    if (!result.annotationPdfUrl) {
+      return;
+    }
+    const url = await fetchApiAssetBlobUrl(result.annotationPdfUrl);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `${toChineseFileName(result.fileName).replace(/\.[^.]+$/, '') || '批注'}-批注.pdf`;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    if (url.startsWith('blob:')) {
+      window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+    }
+  };
+
+  useEffect(() => {
+    let cancelled = false;
+    let blobUrl: string | null = null;
+    setAnnotationPreviewUrl(null);
+    setAnnotationPreviewError(null);
+
+    if (!viewingResult?.annotationPdfUrl) {
+      return undefined;
+    }
+
+    fetchApiAssetBlobUrl(viewingResult.annotationPdfUrl)
+      .then((url) => {
+        if (cancelled) {
+          if (url.startsWith('blob:')) {
+            URL.revokeObjectURL(url);
+          }
+          return;
+        }
+        blobUrl = url.startsWith('blob:') ? url : null;
+        setAnnotationPreviewUrl(url);
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setAnnotationPreviewError('批注文件加载失败，请确认教师已发布批注且当前账号有查看权限。');
+        }
+      });
+
+    return () => {
+      cancelled = true;
+      if (blobUrl) {
+        URL.revokeObjectURL(blobUrl);
+      }
+    };
+  }, [viewingResult]);
+
   return (
     <>
       <article className="panel wide-panel" ref={resultsRef}>
         <div className="panel-heading">
           <div>
-            <p className="eyebrow">Published Results</p>
+            <p className="eyebrow">已发布成绩</p>
             <h3>成绩与批注</h3>
           </div>
           <FileCheck2 size={22} />
@@ -66,14 +120,14 @@ export function StudentResultsPanel({
                   <small>{result.studentName} · {result.studentNo}</small>
                 </div>
                 <div className="published-detail">
-                  <strong>{result.fileName}</strong>
-                  <p>{result.overallComment}</p>
+                  <strong>{toChineseFileName(result.fileName)}</strong>
+                  <p>{toChineseText(result.overallComment)}</p>
                   <div className="review-item-list compact">
                     {result.items.map((item) => (
                       <div className="student-score-row" key={item.rubricItemId}>
-                        <span>{item.title}</span>
+                        <span>{toChineseText(item.title)}</span>
                         <b>{item.teacherScore}/{item.maxScore}</b>
-                        <small>{item.deductionReason}</small>
+                        <small>{toChineseText(item.deductionReason)}</small>
                       </div>
                     ))}
                   </div>
@@ -81,7 +135,9 @@ export function StudentResultsPanel({
                     <button className="ghost-button" type="button" onClick={() => openAnnotationPreview(result)}>
                       <FileText size={14} /> 查看批注
                     </button>
-                    <a className="primary-button" href={resolveApiAssetUrl(result.annotationPdfUrl)} rel="noreferrer" target="_blank">下载批注 PDF</a>
+                    <button className="primary-button" type="button" onClick={() => downloadAnnotation(result)} disabled={!result.annotationPdfUrl}>
+                      下载批注 PDF
+                    </button>
                     <button className="ghost-button" type="button" onClick={() => onSubmitAppeal(result.id, null)}>提交申诉</button>
                   </div>
                 </div>
@@ -97,8 +153,8 @@ export function StudentResultsPanel({
             appeals.map((appeal) => (
               <div className="student-appeal-row" key={appeal.id}>
                 <span>{appealStatusText[appeal.status]} · 结果 #{appeal.resultId}</span>
-                <small>{appeal.requestedChange}</small>
-                {appeal.teacherReply && <small>{appeal.teacherReply}</small>}
+                <small>{toChineseText(appeal.requestedChange)}</small>
+                {appeal.teacherReply && <small>{toChineseText(appeal.teacherReply)}</small>}
               </div>
             ))
           )}
@@ -111,7 +167,7 @@ export function StudentResultsPanel({
           <div className="pdf-viewer-modal-content">
             <div className="pdf-viewer-modal-header">
               <div>
-                <strong>{viewingResult.fileName}</strong>
+                <strong>{toChineseFileName(viewingResult.fileName)}</strong>
                 <span>批注预览</span>
               </div>
               <div className="pdf-viewer-modal-actions">
@@ -128,9 +184,23 @@ export function StudentResultsPanel({
               </div>
             </div>
             <div className="pdf-viewer-modal-body" style={{ transform: `scale(${pdfZoom / 100})`, transformOrigin: 'top center' }}>
-              <div className="pdf-page mock-annotated-page">
+              {annotationPreviewUrl ? (
+                <iframe
+                  className="pdf-iframe"
+                  src={annotationPreviewUrl}
+                  title={`批注 PDF - ${viewingResult.studentName}`}
+                />
+              ) : viewingResult.annotationPdfUrl ? (
+                <div className="pdf-page mock-annotated-page">
+                  <div className="pdf-annotation-header">
+                    <h4>{toChineseFileName(viewingResult.fileName)}</h4>
+                    <div className="pdf-annotation-score">{annotationPreviewError ?? '正在加载批注 PDF'}</div>
+                  </div>
+                </div>
+              ) : (
+                <div className="pdf-page mock-annotated-page">
                 <div className="pdf-annotation-header">
-                  <h4>{viewingResult.fileName}</h4>
+                  <h4>{toChineseFileName(viewingResult.fileName)}</h4>
                   <div className="pdf-annotation-score">总分 {viewingResult.teacherScore} / 100</div>
                 </div>
                 <div className="pdf-annotation-body">
@@ -153,10 +223,11 @@ export function StudentResultsPanel({
                   </div>
                   <div className="pdf-annotation-footer">
                     <strong>教师总评：</strong>
-                    <p>{viewingResult.overallComment}</p>
+                    <p>{toChineseText(viewingResult.overallComment)}</p>
                   </div>
                 </div>
               </div>
+              )}
             </div>
           </div>
         </div>

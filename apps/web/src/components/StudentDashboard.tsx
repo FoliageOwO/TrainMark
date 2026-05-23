@@ -105,7 +105,7 @@ export function StudentDashboard({ tasks, publishedResults, appeals, userId, use
       <article className="panel wide-panel">
         <div className="panel-heading">
           <div>
-            <p className="eyebrow">My Tasks</p>
+            <p className="eyebrow">我的任务</p>
             <h3>我的实训任务</h3>
           </div>
           <GraduationCap size={22} />

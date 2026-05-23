@@ -8,7 +8,7 @@ export function TeacherOperationsPanel() {
       <article className="panel wide-panel">
         <div className="panel-heading">
           <div>
-            <p className="eyebrow">Grading Pipeline</p>
+            <p className="eyebrow">批改流水线</p>
             <h3>AI 批改流水线</h3>
           </div>
           <span className="status-pill">运行正常</span>
@@ -26,7 +26,7 @@ export function TeacherOperationsPanel() {
       <article className="panel">
         <div className="panel-heading">
           <div>
-            <p className="eyebrow">Operations</p>
+            <p className="eyebrow">运行能力</p>
             <h3>生产运维能力</h3>
           </div>
           <Users size={22} />

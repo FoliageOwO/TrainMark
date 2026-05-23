@@ -24,6 +24,7 @@ import type {
   StudentImportPreview,
   StudentImportResult,
   StudentImportRow,
+  SubmissionSummary,
   SubmissionTask,
   TeachingClassSummary,
   UploadReceipt,
@@ -92,6 +93,21 @@ const collectionOverview: CollectionOverview = {
   reviewed: 12,
   published: 0,
 };
+
+const submissions: SubmissionSummary[] = [
+  {
+    id: 1,
+    assignmentId: 1,
+    studentId: 2,
+    studentName: '张三',
+    studentNo: '2024010101',
+    fileName: 'JavaWeb综合实训报告-张三-2024010101.pdf',
+    objectKey: 'assignments/1/students/2/report.pdf',
+    version: 1,
+    status: 'PUBLISHED',
+    submittedAt: '2026-05-10T20:18:00+08:00',
+  },
+];
 
 const unsubmittedStudents: UnsubmittedStudent[] = [
   { studentId: 12, studentNo: '2024010112', name: '周明', className: '软件2401班', email: 'zhouming@trainmark.local' },
@@ -287,12 +303,12 @@ const auditLogs: AuditLogSummary[] = [
 ];
 
 const systemSettings: SystemSettingSummary[] = [
-  { key: 'ai.ocr.provider', name: 'OCR Provider', value: 'LOCAL_DETERMINISTIC', category: 'AI', sensitive: false },
-  { key: 'ai.scoring.provider', name: 'Scoring Provider', value: 'LOCAL_RULES', category: 'AI', sensitive: false },
-  { key: 'upload.max-file-size-mb', name: 'Max Upload Size', value: '50', category: 'FILE', sensitive: false },
-  { key: 'export.retention-days', name: 'Export Retention', value: '30', category: 'EXPORT', sensitive: false },
-  { key: 'notification.default-channels', name: 'Default Reminder Channels', value: 'IN_APP,EMAIL,WECHAT_WORK', category: 'NOTIFICATION', sensitive: false },
-  { key: 'security.jwt-secret', name: 'JWT Secret', value: '******', category: 'SECURITY', sensitive: true },
+  { key: 'ai.ocr.provider', name: '文档识别服务', value: 'LOCAL_DETERMINISTIC', category: 'AI', sensitive: false },
+  { key: 'ai.scoring.provider', name: '语义评分服务', value: 'LOCAL_RULES', category: 'AI', sensitive: false },
+  { key: 'upload.max-file-size-mb', name: '最大上传大小', value: '50', category: 'FILE', sensitive: false },
+  { key: 'export.retention-days', name: '导出文件保留天数', value: '30', category: 'EXPORT', sensitive: false },
+  { key: 'notification.default-channels', name: '默认催交通道', value: 'IN_APP,EMAIL,WECHAT_WORK', category: 'NOTIFICATION', sensitive: false },
+  { key: 'security.jwt-secret', name: '登录令牌密钥', value: '******', category: 'SECURITY', sensitive: true },
 ];
 
 export const mockApi = {
@@ -416,7 +432,12 @@ export const mockApi = {
   },
   getCollectionOverview(assignmentId?: number): CollectionOverview {
     if (assignmentId === undefined || assignmentId === collectionOverview.assignmentId) {
-      return collectionOverview;
+      const submitted = submissions.filter((item) => item.assignmentId === collectionOverview.assignmentId).length;
+      return {
+        ...collectionOverview,
+        submitted: Math.max(collectionOverview.submitted, submitted),
+        unsubmitted: Math.max(0, collectionOverview.totalStudents - Math.max(collectionOverview.submitted, submitted)),
+      };
     }
     return {
       assignmentId,
@@ -431,6 +452,13 @@ export const mockApi = {
   },
   listUnsubmittedStudents(assignmentId?: number): UnsubmittedStudent[] {
     return assignmentId === undefined || assignmentId === collectionOverview.assignmentId ? unsubmittedStudents : [];
+  },
+  listSubmissions(assignmentId?: number, studentId?: number): SubmissionSummary[] {
+    return submissions
+      .filter((item) => assignmentId === undefined || item.assignmentId === assignmentId)
+      .filter((item) => studentId === undefined || item.studentId === studentId)
+      .sort((a, b) => Date.parse(b.submittedAt) - Date.parse(a.submittedAt))
+      .map((item) => ({ ...item }));
   },
   remindUnsubmitted(): ReminderResult {
     return {
@@ -692,12 +720,33 @@ export const mockApi = {
       createdAt: new Date().toISOString(),
     };
   },
-  createUploadReceipt(fileName: string): UploadReceipt {
-    return {
-      submissionId: 2026051001,
+  createUploadReceipt(fileName: string, assignmentId = 1, studentId = 2): UploadReceipt {
+    const student = userDirectory.find((item) => item.id === studentId);
+    const submittedAt = new Date().toISOString();
+    const version = submissions.filter((item) => item.assignmentId === assignmentId && item.studentId === studentId).length + 1;
+    const submissionId = Math.max(0, ...submissions.map((item) => item.id)) + 1;
+    submissions.unshift({
+      id: submissionId,
+      assignmentId,
+      studentId,
+      studentName: student?.name ?? '张三',
+      studentNo: student?.studentNo ?? student?.username ?? '2024010101',
       fileName,
-      version: 1,
-      submittedAt: new Date().toISOString(),
+      objectKey: `assignments/${assignmentId}/students/${studentId}/${fileName}`,
+      version,
+      status: 'SUBMITTED',
+      submittedAt,
+    });
+    const task = studentTasks.find((item) => item.id === assignmentId);
+    if (task) {
+      task.status = '已提交';
+      task.score = undefined;
+    }
+    return {
+      submissionId,
+      fileName,
+      version,
+      submittedAt,
       status: '已提交',
     };
   },

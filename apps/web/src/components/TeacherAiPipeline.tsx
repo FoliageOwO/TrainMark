@@ -2,10 +2,11 @@ import { useState, type FormEvent } from 'react';
 import { FileText, Plus, Sparkles } from 'lucide-react';
 import type { CreateRubricInput } from '../api/httpApi';
 import type { AssignmentSummary, GradingJobSummary, OcrJobSummary, RubricSummary } from '../api/types';
+import { toChineseText } from '../utils/displayText';
 
 const gradingStatusText = {
   PENDING: '等待中',
-  OCR_RUNNING: 'OCR中',
+  OCR_RUNNING: '识别中',
   STRUCTURING: '结构化',
   SCORING: '评分中',
   ANNOTATING: '生成批注',
@@ -21,6 +22,13 @@ const ocrStatusText = {
   STRUCTURING: '结构化',
   COMPLETED: '已完成',
   FAILED: '失败',
+};
+
+const ocrBlockTypeText: Record<OcrJobSummary['blocks'][number]['type'], string> = {
+  heading: '标题',
+  paragraph: '段落',
+  table: '表格',
+  image: '图片',
 };
 
 type TeacherAiPipelineProps = {
@@ -80,7 +88,7 @@ export function TeacherAiPipeline({
         <article className="panel rubric-panel">
           <div className="panel-heading">
             <div>
-              <p className="eyebrow">Rubric</p>
+              <p className="eyebrow">评分标准</p>
               <h3>评分标准</h3>
             </div>
             <button className="ghost-button" type="button" onClick={() => setShowRubricForm((value) => !value)}>
@@ -93,7 +101,7 @@ export function TeacherAiPipeline({
                 适用任务
                 <select name="assignmentId" required defaultValue={assignments[0]?.id ?? ''}>
                   {assignments.map((assignment) => (
-                    <option key={assignment.id} value={assignment.id}>{assignment.title}</option>
+                    <option key={assignment.id} value={assignment.id}>{toChineseText(assignment.title)}</option>
                   ))}
                 </select>
               </label>
@@ -151,7 +159,7 @@ export function TeacherAiPipeline({
             <>
               <div className="rubric-summary">
                 <div>
-                  <strong>{rubric.name}</strong>
+                  <strong>{toChineseText(rubric.name)}</strong>
                   <span>总分 {rubric.totalScore} · {rubric.items.length} 个评分项</span>
                 </div>
                 <span className="score-chip">可解释评分</span>
@@ -160,8 +168,8 @@ export function TeacherAiPipeline({
                 {rubric.items.map((item) => (
                   <div className="rubric-row" key={item.id}>
                     <div>
-                      <strong>{item.title}</strong>
-                      <span>{item.courseOutcomeCode} · {item.points[0]?.title ?? '待配置得分点'}</span>
+                      <strong>{toChineseText(item.title)}</strong>
+                      <span>{item.courseOutcomeCode} · {toChineseText(item.points[0]?.title ?? '待配置得分点')}</span>
                     </div>
                     <b>{item.score} 分</b>
                   </div>
@@ -171,7 +179,7 @@ export function TeacherAiPipeline({
           ) : (
             <div className="empty-result">
               <strong>暂无评分标准</strong>
-              <span>先为实训任务创建评分标准，再启动 AI 批改。</span>
+              <span>先为实训任务创建评分标准，再启动智能批改。</span>
             </div>
           )}
         </article>
@@ -179,7 +187,7 @@ export function TeacherAiPipeline({
         <article className="panel grading-panel">
           <div className="panel-heading">
             <div>
-              <p className="eyebrow">AI Grading</p>
+              <p className="eyebrow">智能批改</p>
               <h3>批改队列</h3>
             </div>
             <button className="ghost-button" type="button" onClick={onStartGrading} disabled={!rubric}>
@@ -212,11 +220,11 @@ export function TeacherAiPipeline({
         <article className="panel ocr-panel">
           <div className="panel-heading">
             <div>
-              <p className="eyebrow">OCR Pipeline</p>
+              <p className="eyebrow">文档识别</p>
               <h3>文档识别与结构化</h3>
             </div>
             <button className="ghost-button" type="button" onClick={onStartOcr} disabled={!canStartOcr}>
-              <FileText size={15} /> 启动 OCR
+              <FileText size={15} /> 启动识别
             </button>
           </div>
           <div className="ocr-job-list">
@@ -224,7 +232,7 @@ export function TeacherAiPipeline({
               <div className="ocr-job-card" key={job.id}>
                 <div className="assignment-title">
                   <FileText size={18} />
-                  <strong>OCR 任务 #{job.id}</strong>
+                  <strong>识别任务 #{job.id}</strong>
                 </div>
                 <div className="assignment-meta">
                   <span>{job.pageCount} 页</span>
@@ -244,7 +252,7 @@ export function TeacherAiPipeline({
         <article className="panel ocr-panel">
           <div className="panel-heading">
             <div>
-              <p className="eyebrow">Structured Blocks</p>
+              <p className="eyebrow">结构化内容</p>
               <h3>结构识别结果</h3>
             </div>
             <span className="status-pill">可用于评分</span>
@@ -253,8 +261,8 @@ export function TeacherAiPipeline({
             {ocrJobs[0]?.blocks.map((block) => (
               <div className="ocr-block-row" key={`${block.type}-${block.page}-${block.title}`}>
                 <div>
-                  <strong>{block.title}</strong>
-                  <span>{block.type} · 第 {block.page} 页</span>
+                  <strong>{toChineseText(block.title)}</strong>
+                  <span>{ocrBlockTypeText[block.type]} · 第 {block.page} 页</span>
                 </div>
                 <b>{block.confidence}%</b>
               </div>

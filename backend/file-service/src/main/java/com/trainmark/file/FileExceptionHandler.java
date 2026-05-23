@@ -1,6 +1,7 @@
 package com.trainmark.file;
 
 import com.trainmark.shared.ApiResponse;
+import com.trainmark.shared.TrainMarkAccessDeniedException;
 import java.io.UncheckedIOException;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -28,6 +29,13 @@ public class FileExceptionHandler {
   public ResponseEntity<ApiResponse<Void>> handleBadRequest(IllegalArgumentException exception) {
     return ResponseEntity
         .status(HttpStatus.BAD_REQUEST)
+        .body(ApiResponse.fail(exception.getMessage()));
+  }
+
+  @ExceptionHandler(TrainMarkAccessDeniedException.class)
+  public ResponseEntity<ApiResponse<Void>> handleAccessDenied(TrainMarkAccessDeniedException exception) {
+    return ResponseEntity
+        .status(HttpStatus.FORBIDDEN)
         .body(ApiResponse.fail(exception.getMessage()));
   }
 

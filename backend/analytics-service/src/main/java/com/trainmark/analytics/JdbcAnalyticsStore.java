@@ -225,14 +225,15 @@ public class JdbcAnalyticsStore implements AnalyticsStore {
         SELECT
           gri.rubric_item_id,
           gri.title,
-          gri.course_outcome_code,
+          ri.course_outcome_code,
           AVG(gri.max_score - gri.teacher_score) AS average_lost_score,
-          COUNT(*) FILTER (gri.teacher_score < gri.max_score) AS affected_count,
+          COUNT(*) FILTER (WHERE gri.teacher_score < gri.max_score) AS affected_count,
           COUNT(*) AS total_count
         FROM grading_result_items gri
         JOIN grading_results gr ON gr.id = gri.result_id
+        LEFT JOIN rubric_items ri ON ri.id = gri.rubric_item_id
         WHERE gr.assignment_id = ?
-        GROUP BY gri.rubric_item_id, gri.title, gri.course_outcome_code
+        GROUP BY gri.rubric_item_id, gri.title, ri.course_outcome_code
         ORDER BY average_lost_score DESC
         """;
     try (var connection = connect();
@@ -306,16 +307,17 @@ public class JdbcAnalyticsStore implements AnalyticsStore {
   public List<CourseOutcomeAchievementSummary> computeCourseOutcomes(Long assignmentId) {
     var sql = """
         SELECT
-          gri.course_outcome_code,
-          gri.title,
+          ri.course_outcome_code,
+          COALESCE(ri.title, gri.title) AS title,
           AVG(gri.teacher_score) AS avg_score,
           AVG(gri.max_score) AS avg_max
         FROM grading_result_items gri
         JOIN grading_results gr ON gr.id = gri.result_id
+        LEFT JOIN rubric_items ri ON ri.id = gri.rubric_item_id
         WHERE gr.assignment_id = ?
-          AND gri.course_outcome_code IS NOT NULL
-        GROUP BY gri.course_outcome_code, gri.title
-        ORDER BY gri.course_outcome_code
+          AND ri.course_outcome_code IS NOT NULL
+        GROUP BY ri.course_outcome_code, COALESCE(ri.title, gri.title)
+        ORDER BY ri.course_outcome_code
         """;
     try (var connection = connect();
         var statement = connection.prepareStatement(sql)) {

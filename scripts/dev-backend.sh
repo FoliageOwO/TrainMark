@@ -32,14 +32,14 @@ trap stop_services EXIT INT TERM
 echo "Starting backend services. Logs: $LOG_DIR"
 
 mvn -f "$ROOT_DIR/backend/pom.xml" -N install
-mvn -f "$ROOT_DIR/backend/pom.xml" -pl shared install -DskipTests
+mvn -f "$ROOT_DIR/backend/shared/pom.xml" install -DskipTests
 
 for service in "${services[@]}"; do
   log_file="$LOG_DIR/$service.log"
   : > "$log_file"
   (
     cd "$ROOT_DIR"
-    mvn -f backend/pom.xml -pl "$service" -Pdev spring-boot:run
+    mvn -f "backend/$service/pom.xml" -Pdev spring-boot:run
   ) > "$log_file" 2>&1 &
   pid=$!
   pids+=("$pid")

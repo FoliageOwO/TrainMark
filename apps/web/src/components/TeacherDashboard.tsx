@@ -408,7 +408,7 @@ export function TeacherDashboard({
             <article className="panel wide-panel">
               <div className="panel-heading">
                 <div>
-                  <p className="eyebrow">Manual Review</p>
+                  <p className="eyebrow">人工复核</p>
                   <h3>人工复核工作区</h3>
                 </div>
                 <span className="status-pill">暂无结果</span>

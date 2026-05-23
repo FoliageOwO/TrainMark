@@ -32,6 +32,20 @@ const routeRoleMap: Record<string, RoleCode> = {
   teacher: 'TEACHER',
 };
 
+const sectionToNavLabel: Record<string, string> = {
+  overview: '工作台',
+  courses: '课程与班级',
+  assignments: '实训任务',
+  collection: '报告收集',
+  'ai-pipeline': 'AI 批改中心',
+  review: '人工复核',
+  analytics: '失分分析',
+  roster: '工作台',
+  appeals: '人工复核',
+  similarity: 'AI 批改中心',
+  operations: '工作台',
+};
+
 function getRoleFromLocation(): RoleCode {
   if (typeof window === 'undefined') {
     return 'TEACHER';
@@ -71,7 +85,7 @@ function writeSectionToLocation(section: string) {
 
 export function App() {
   const [user, setUser] = useState<UserProfile>(() => mockApi.login(getRoleFromLocation()));
-  const [activeNav, setActiveNav] = useState('工作台');
+  const [activeNav, setActiveNav] = useState(() => sectionToNavLabel[getSectionFromLocation()] ?? '工作台');
   const [teacherSection, setTeacherSection] = useState(getSectionFromLocation);
   const [selectedCourseId, setSelectedCourseId] = useState(1);
   const [workspaceData, setWorkspaceData] = useState<WorkspaceData | null>(null);
@@ -89,25 +103,12 @@ export function App() {
     '系统管理': 'roster',
   };
 
-  const sectionToNavLabel: Record<string, string> = {
-    overview: '工作台',
-    courses: '课程与班级',
-    assignments: '实训任务',
-    collection: '报告收集',
-    'ai-pipeline': 'AI 批改中心',
-    review: '人工复核',
-    analytics: '失分分析',
-    roster: '工作台',
-    appeals: '人工复核',
-    similarity: 'AI 批改中心',
-    operations: '工作台',
-  };
-
   const handleNavChange = (label: string) => {
     setActiveNav(label);
     const mapped = teacherNavMap[label];
     if (mapped && primaryRole !== 'STUDENT' && primaryRole !== 'ADMIN') {
       setTeacherSection(mapped);
+      writeSectionToLocation(mapped);
     }
   };
 

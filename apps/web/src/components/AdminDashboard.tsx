@@ -32,6 +32,57 @@ const roleText: Record<RoleCode, string> = {
   ADMIN: '管理员',
 };
 
+const auditActionText: Record<string, string> = {
+  UPLOAD_COMPLETE: '报告提交完成',
+  OCR_COMPLETE: '文档识别完成',
+  GRADING_START: '启动智能批改',
+  GRADING_COMPLETE: '智能批改完成',
+  REVIEW_UPDATE: '复核更新',
+  REVIEW_APPROVE: '复核通过',
+  GRADE_PUBLISH: '发布成绩',
+  GRADE_WITHDRAW: '撤回成绩',
+  GRADE_EXPORT: '导出成绩',
+  APPEAL_SUBMIT: '提交申诉',
+  APPEAL_RESOLVE: '处理申诉',
+};
+
+const resourceTypeText: Record<string, string> = {
+  SUBMISSION: '提交报告',
+  OCR_JOB: '识别任务',
+  GRADING_JOB: '批改任务',
+  GRADING_RESULT: '批改结果',
+  GRADE_EXPORT: '成绩导出',
+  APPEAL: '申诉',
+  USER: '用户',
+  ORGANIZATION: '组织',
+  SYSTEM_SETTING: '系统配置',
+};
+
+const settingCategoryText: Record<SystemSettingSummary['category'], string> = {
+  AI: '智能模型',
+  FILE: '文件',
+  EXPORT: '导出',
+  NOTIFICATION: '通知',
+  SECURITY: '安全',
+};
+
+const settingNameText: Record<string, string> = {
+  'ai.ocr.provider': '文档识别服务',
+  'ai.scoring.provider': '语义评分服务',
+  'upload.max-file-size-mb': '最大上传大小',
+  'export.retention-days': '导出文件保留天数',
+  'notification.default-channels': '默认催交通道',
+  'security.jwt-secret': '登录令牌密钥',
+};
+
+const settingValueText: Record<string, string> = {
+  LOCAL_DETERMINISTIC: '本地确定性识别',
+  LOCAL_RULES: '本地规则评分',
+  IN_APP: '站内信',
+  EMAIL: '邮件',
+  WECHAT_WORK: '企业微信',
+};
+
 export function AdminDashboard({ organizations, users, auditLogs, systemSettings, onWorkspaceRefresh }: AdminDashboardProps) {
   const [organizationRows, setOrganizationRows] = useState(organizations);
   const [userRows, setUserRows] = useState(users);
@@ -140,7 +191,7 @@ export function AdminDashboard({ organizations, users, auditLogs, systemSettings
         <article className="panel roster-panel">
           <div className="panel-heading">
             <div>
-              <p className="eyebrow">Directory</p>
+              <p className="eyebrow">组织目录</p>
               <h3>组织与账号状态</h3>
             </div>
             <ShieldCheck size={22} />
@@ -238,7 +289,7 @@ export function AdminDashboard({ organizations, users, auditLogs, systemSettings
         <article className="panel audit-panel">
           <div className="panel-heading">
             <div>
-              <p className="eyebrow">Audit Logs</p>
+              <p className="eyebrow">审计日志</p>
               <h3>关键操作审计</h3>
             </div>
             <span className="status-pill">最近 {auditLogs.length} 条</span>
@@ -246,8 +297,8 @@ export function AdminDashboard({ organizations, users, auditLogs, systemSettings
           <div className="audit-list">
             {auditLogs.map((log) => (
               <div className="audit-row" key={log.id}>
-                <span>{log.action} · {log.actorName}</span>
-                <small>{log.resourceType} #{log.resourceId} · {log.detail} · {formatDate(log.createdAt)}</small>
+                <span>{toAuditActionText(log.action)} · {log.actorName}</span>
+                <small>{toResourceTypeText(log.resourceType)} #{log.resourceId} · {log.detail} · {formatDate(log.createdAt)}</small>
               </div>
             ))}
           </div>
@@ -258,7 +309,7 @@ export function AdminDashboard({ organizations, users, auditLogs, systemSettings
         <article className="panel roster-panel">
           <div className="panel-heading">
             <div>
-              <p className="eyebrow">System Settings</p>
+              <p className="eyebrow">系统配置</p>
               <h3>系统与模型配置</h3>
             </div>
             <span className="status-pill">{aiSettings.length} 项 AI 配置</span>
@@ -268,8 +319,8 @@ export function AdminDashboard({ organizations, users, auditLogs, systemSettings
             {settingRows.map((setting) => (
               <form className="student-row setting-row" key={setting.key} onSubmit={handleUpdateSetting}>
                 <div>
-                  <strong>{setting.name}</strong>
-                  <span>{setting.key} · {setting.category}</span>
+                  <strong>{toSettingNameText(setting)}</strong>
+                  <span>{setting.key} · {settingCategoryText[setting.category]}</span>
                 </div>
                 <input type="hidden" name="key" value={setting.key} />
                 <label>
@@ -283,7 +334,7 @@ export function AdminDashboard({ organizations, users, auditLogs, systemSettings
                   />
                 </label>
                 <button className="primary-button" type="submit">保存</button>
-                <span className="status-pill">{setting.sensitive ? '敏感配置' : setting.value}</span>
+                <span className="status-pill">{setting.sensitive ? '敏感配置' : toSettingValueText(setting.value)}</span>
               </form>
             ))}
           </div>
@@ -301,4 +352,23 @@ function parseNullableNumber(value: FormDataEntryValue | null) {
 function optionalField(field: 'studentNo' | 'teacherNo' | 'email' | 'phone', formData: FormData) {
   const value = String(formData.get(field) ?? '').trim();
   return value ? { [field]: value } : {};
+}
+
+function toAuditActionText(action: string) {
+  return auditActionText[action] ?? action;
+}
+
+function toResourceTypeText(resourceType: string) {
+  return resourceTypeText[resourceType] ?? resourceType;
+}
+
+function toSettingNameText(setting: SystemSettingSummary) {
+  return settingNameText[setting.key] ?? setting.name;
+}
+
+function toSettingValueText(value: string) {
+  return value
+    .split(',')
+    .map((item) => settingValueText[item.trim()] ?? item.trim())
+    .join('、');
 }

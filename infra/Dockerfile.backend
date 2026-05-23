@@ -2,6 +2,8 @@ FROM eclipse-temurin:21-jre-alpine
 
 WORKDIR /app
 
+RUN apk add --no-cache font-noto-cjk
+
 COPY backend/gateway-service/target/*.jar ./gateway.jar
 COPY backend/auth-service/target/*.jar ./auth.jar
 COPY backend/user-service/target/*.jar ./user.jar

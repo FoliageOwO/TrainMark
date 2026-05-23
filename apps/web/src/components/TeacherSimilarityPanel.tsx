@@ -1,5 +1,6 @@
 import { ShieldCheck } from 'lucide-react';
 import type { SimilarityJobSummary } from '../api/types';
+import { toChineseText } from '../utils/displayText';
 
 type TeacherSimilarityPanelProps = {
   similarityJobs: SimilarityJobSummary[];
@@ -12,7 +13,7 @@ export function TeacherSimilarityPanel({ similarityJobs, onStartSimilarity }: Te
       <article className="panel similarity-panel">
         <div className="panel-heading">
           <div>
-            <p className="eyebrow">Similarity Check</p>
+            <p className="eyebrow">相似度检测</p>
             <h3>查重检测</h3>
           </div>
           <button className="ghost-button" type="button" onClick={onStartSimilarity}>
@@ -31,7 +32,7 @@ export function TeacherSimilarityPanel({ similarityJobs, onStartSimilarity }: Te
                   <div className={`similarity-match ${match.riskLevel.toLowerCase()}`} key={`${job.id}-${match.sourceSubmissionId}-${match.targetSubmissionId}`}>
                     <div>
                       <strong>{match.sourceStudentName} / {match.targetStudentName}</strong>
-                      <span>{match.matchedSection}</span>
+                      <span>{toChineseText(match.matchedSection)}</span>
                     </div>
                     <b>{Math.round(match.similarity * 100)}%</b>
                   </div>

@@ -1,7 +1,8 @@
-import type { FormEvent } from 'react';
+import { useEffect, useState, type FormEvent } from 'react';
 import { CheckCircle2, FileText } from 'lucide-react';
-import { resolveApiAssetUrl } from '../api/httpApi';
+import { fetchApiAssetBlobUrl } from '../api/httpApi';
 import type { GradePublicationAuditEntry, GradingResultSummary } from '../api/types';
+import { toChineseFileName, toChineseText } from '../utils/displayText';
 import { formatDate } from '../utils/formatDate';
 
 const reviewStatusText = {
@@ -39,13 +40,50 @@ export function TeacherReviewWorkspace({
   onWithdrawResult,
 }: TeacherReviewWorkspaceProps) {
   const selectedAudits = publicationAudits.filter((item) => item.resultId === selectedReview.id);
+  const [annotationPreviewUrl, setAnnotationPreviewUrl] = useState<string | null>(null);
+  const [annotationPreviewError, setAnnotationPreviewError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    let blobUrl: string | null = null;
+    setAnnotationPreviewUrl(null);
+    setAnnotationPreviewError(null);
+
+    if (!selectedReview.annotationPdfUrl) {
+      return undefined;
+    }
+
+    fetchApiAssetBlobUrl(selectedReview.annotationPdfUrl)
+      .then((url) => {
+        if (cancelled) {
+          if (url.startsWith('blob:')) {
+            URL.revokeObjectURL(url);
+          }
+          return;
+        }
+        blobUrl = url.startsWith('blob:') ? url : null;
+        setAnnotationPreviewUrl(url);
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setAnnotationPreviewError('批注文件加载失败，请确认后端服务已启动且当前账号有查看权限。');
+        }
+      });
+
+    return () => {
+      cancelled = true;
+      if (blobUrl) {
+        URL.revokeObjectURL(blobUrl);
+      }
+    };
+  }, [selectedReview.annotationPdfUrl]);
 
   return (
     <section className="review-layout">
       <article className="panel review-preview-panel">
         <div className="panel-heading">
           <div>
-            <p className="eyebrow">Manual Review</p>
+            <p className="eyebrow">人工复核</p>
             <h3>人工复核工作区</h3>
           </div>
           <span className="status-pill">{reviewStatusText[selectedReview.reviewStatus]}</span>
@@ -65,23 +103,28 @@ export function TeacherReviewWorkspace({
         </div>
         <div className="pdf-preview">
           <div className="pdf-toolbar">
-            <span>{selectedReview.fileName ?? '未命名报告'}</span>
+            <span>{toChineseFileName(selectedReview.fileName) || '未命名报告'}</span>
             <div className="pdf-toolbar-actions">
-              {selectedReview.annotationPdfUrl ? (
-                <a className="ghost-button compact-link" href={resolveApiAssetUrl(selectedReview.annotationPdfUrl)} rel="noreferrer" target="_blank">
+              {annotationPreviewUrl ? (
+                <a className="ghost-button compact-link" href={annotationPreviewUrl} rel="noreferrer" target="_blank">
                   <FileText size={14} /> 打开批注
                 </a>
               ) : null}
             </div>
           </div>
           <div className="pdf-viewer">
-            {selectedReview.annotationPdfUrl ? (
+            {annotationPreviewUrl ? (
               <iframe
                 className="pdf-iframe"
-                src={resolveApiAssetUrl(selectedReview.annotationPdfUrl) ?? undefined}
+                src={annotationPreviewUrl}
                 title={`批注 PDF - ${selectedReview.studentName}`}
-                sandbox="allow-scripts allow-same-origin"
               />
+            ) : selectedReview.annotationPdfUrl ? (
+              <div className="pdf-fallback">
+                <FileText size={48} />
+                <p>{annotationPreviewError ?? '正在加载批注 PDF'}</p>
+                <span>系统正在带登录状态读取批注文件，请稍候。</span>
+              </div>
             ) : (
               <div className="pdf-fallback">
                 <FileText size={48} />
@@ -94,8 +137,8 @@ export function TeacherReviewWorkspace({
         <div className="annotation-list">
           {selectedReview.annotations.map((annotation) => (
             <div className={`annotation-row ${annotation.severity}`} key={annotation.id}>
-              <strong>第 {annotation.page} 页 · {annotation.anchorText}</strong>
-              <span>{annotation.comment}</span>
+              <strong>第 {annotation.page} 页 · {toChineseText(annotation.anchorText)}</strong>
+              <span>{toChineseText(annotation.comment)}</span>
             </div>
           ))}
         </div>
@@ -138,14 +181,14 @@ export function TeacherReviewWorkspace({
         </div>
         <div className="overall-comment">
           <span>总评</span>
-          <p>{selectedReview.overallComment}</p>
+          <p>{toChineseText(selectedReview.overallComment)}</p>
         </div>
         <div className="review-item-list">
           {selectedReview.items.map((item) => (
             <form className="review-item-card" key={item.rubricItemId} onSubmit={(event) => onReviewItemSubmit(event, item.rubricItemId)}>
               <div className="review-item-heading">
                 <div>
-                  <strong>{item.title}</strong>
+                  <strong>{toChineseText(item.title)}</strong>
                   <span>AI {item.aiScore}/{item.maxScore} · 置信度 {item.confidence}%</span>
                 </div>
                 <label>
@@ -155,14 +198,14 @@ export function TeacherReviewWorkspace({
               </div>
               <div className="deduction-box">
                 <span>扣分原因</span>
-                <p>{item.deductionReason}</p>
+                <p>{toChineseText(item.deductionReason)}</p>
               </div>
               <div className="evidence-tags">
-                {item.evidence.map((evidence) => <span key={evidence}>{evidence}</span>)}
+                {item.evidence.map((evidence) => <span key={evidence}>{toChineseText(evidence)}</span>)}
               </div>
               <label className="comment-field">
                 教师评语
-                <textarea name="teacherComment" rows={2} defaultValue={item.teacherComment} />
+                <textarea name="teacherComment" rows={2} defaultValue={toChineseText(item.teacherComment)} />
               </label>
               <button className="ghost-button" type="submit">保存分项复核</button>
             </form>
@@ -178,8 +221,8 @@ export function TeacherReviewWorkspace({
           ) : (
             selectedAudits.map((audit) => (
               <div className="audit-row" key={audit.id}>
-                <span>{audit.action === 'PUBLISH' ? '发布' : '撤回'} · {audit.operatorName}</span>
-                <small>{audit.reason} · {formatDate(audit.createdAt)}</small>
+                <span>{audit.action === 'PUBLISH' ? '发布' : '撤回'} · {toChineseText(audit.operatorName)}</span>
+                <small>{toChineseText(audit.reason)} · {formatDate(audit.createdAt)}</small>
               </div>
             ))
           )}

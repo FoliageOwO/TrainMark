@@ -56,7 +56,6 @@ type AppChromeProps = {
 
 export function AppChrome({
   activeNav,
-  apiModeLabel,
   children,
   primaryRole,
   user,
@@ -65,7 +64,6 @@ export function AppChrome({
   onRoleChange,
 }: AppChromeProps) {
   const [notifOpen, setNotifOpen] = useState(false);
-  const roleHint = roleOptions.find((item) => item.role === primaryRole)?.hint;
 
   return (
     <main className="app-shell">

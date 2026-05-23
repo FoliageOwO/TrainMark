@@ -3606,6 +3606,61 @@ pnpm lint:web
 pnpm build:web
 ```
 
+学生数据隔离与资源访问控制已补齐：
+
+- 已新增共享 `AuthenticatedUser` 与 `TrainMarkAccessDeniedException`，统一解析 gateway 转发的 `X-TrainMark-User-Id`、`X-TrainMark-Username` 和 `X-TrainMark-Roles`。
+- file-service 已限制学生上传初始化、上传内容写入、上传完成、提交列表和原文件下载只能访问当前学生自己的数据；教师、课程负责人、督导和管理员保留工作台查看能力。
+- grading-service 已限制学生只能查看自己的已发布成绩、已发布批注和自己的申诉；复核、发布、撤回、发布审计、成绩导出和导出资源下载仅允许教职工角色访问。
+- API smoke dry-run 已新增学生越权负向清单，覆盖学生访问成绩导出、导出文件、替他人初始化上传、访问他人提交文件和显式查询他人提交列表。
+
+验证命令：
+
+```bash
+E:/Git/bin/bash.exe -n scripts/smoke-api.sh
+SMOKE_DRY_RUN=1 E:/Git/bin/bash.exe scripts/smoke-api.sh
+```
+
+当前本机 PATH 只有 Java 11，项目要求 Java 21，且未安装 Maven；因此本轮未在当前 shell 复跑后端 Maven 打包。
+
+Windows Bash 脚本入口已修复：
+
+- 已新增 `scripts/run-bash-script.mjs`，优先使用 PATH 中的 `bash`，找不到时自动尝试 Git Bash 常见安装路径，并支持 `TRAINMARK_BASH` 显式指定。
+- 已将根目录 `package.json` 中的 `verify:*`、`smoke:*`、`dev:*`、备份恢复、迁移和本地部署脚本统一切换到该启动器，避免 Windows PowerShell 下 `bash` 不在 PATH 时直接失败。
+- `pnpm smoke:api` 已能在当前 PowerShell 会话中通过 Git Bash 执行 dry-run。
+
+验证命令：
+
+```bash
+node -e "JSON.parse(require('fs').readFileSync('package.json','utf8')); console.log('package.json ok')"
+SMOKE_DRY_RUN=1 pnpm smoke:api
+```
+
+前端学生申诉数据源已与权限边界对齐：
+
+- 学生端加载申诉列表时显式请求 `/api/grading/results/appeals?studentId={userId}`，mock fallback 同步过滤当前学生，减少 HTTP/mock 行为差异。
+- 学生端工作区加载已跳过教师导出、统计、查重、管理端和批改队列等受限接口，严格 HTTP 模式下不再因为学生身份访问教师接口触发 403。
+- 已清理 `AppChrome` 中遗留的未使用变量，恢复前端 lint 通过。
+
+验证命令：
+
+```bash
+pnpm lint:web
+pnpm build:web
+```
+
+前端导航与 mock 提交反馈已修复：
+
+- 教师端初始导航现在会根据 URL `section` 参数同步高亮与内容区，左侧导航点击也会同步写回 `section`，避免地址栏显示 `assignments` 但页面停在“人工复核”。
+- 前端 mock 模式新增共享提交列表；学生端提交报告后会写入 `mockApi.listSubmissions()`，教师端“报告收集”可立即看到对应报告。
+- mock 收集概览会根据共享提交列表同步已交/未交数量，学生任务状态也会在提交后更新为“已提交”。
+
+验证命令：
+
+```bash
+pnpm lint:web
+pnpm build:web
+```
+
 ## 已提交记录
 
 主要提交：

@@ -1,4 +1,5 @@
 import type { AppealSummary } from '../api/types';
+import { toChineseText } from '../utils/displayText';
 
 const appealStatusText = {
   SUBMITTED: '待处理',
@@ -17,7 +18,7 @@ export function TeacherAppealPanel({ appeals, onResolveAppeal }: TeacherAppealPa
       <article className="panel appeal-panel">
         <div className="panel-heading">
           <div>
-            <p className="eyebrow">Appeals</p>
+            <p className="eyebrow">成绩申诉</p>
             <h3>学生申诉处理</h3>
           </div>
           <span className="status-pill">{appeals.filter((item) => item.status === 'SUBMITTED').length} 条待处理</span>
@@ -32,9 +33,9 @@ export function TeacherAppealPanel({ appeals, onResolveAppeal }: TeacherAppealPa
                 </div>
                 <b>{appealStatusText[appeal.status]}</b>
               </div>
-              <p>{appeal.reason}</p>
-              <div className="appeal-request">{appeal.requestedChange}</div>
-              {appeal.teacherReply && <div className="appeal-reply">{appeal.teacherReply}</div>}
+              <p>{toChineseText(appeal.reason)}</p>
+              <div className="appeal-request">{toChineseText(appeal.requestedChange)}</div>
+              {appeal.teacherReply && <div className="appeal-reply">{toChineseText(appeal.teacherReply)}</div>}
               {appeal.status === 'SUBMITTED' && (
                 <div className="publication-buttons">
                   <button className="primary-button" type="button" onClick={() => onResolveAppeal(appeal.id, true)}>采纳申诉</button>

@@ -27,7 +27,12 @@ echo "[verify] Strict auth smoke endpoint list"
 SMOKE_DRY_RUN=1 pnpm smoke:auth:strict
 
 echo "[verify] API route surface"
-rg -n "@(GetMapping|PostMapping|PatchMapping|RequestMapping)" backend/*-service/src/main/java -g "*.java" >/dev/null
+if command -v rg >/dev/null 2>&1; then
+  rg -n "@(GetMapping|PostMapping|PatchMapping|RequestMapping)" backend/*-service/src/main/java -g "*.java" >/dev/null
+else
+  find backend -path "backend/*-service/src/main/java/*" -name "*.java" \
+    -exec grep -En "@(GetMapping|PostMapping|PatchMapping|RequestMapping)" {} + >/dev/null
+fi
 
 echo "[verify] MVP launcher scripts"
 bash -n scripts/apply-db-migrations.sh
