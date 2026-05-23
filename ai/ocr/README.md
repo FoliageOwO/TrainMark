@@ -42,7 +42,7 @@ PaddleOCR 3.x Python `PaddleOCR(...).predict(...)` shape and emits the same
 `OcrResultSummary` JSON used by the backend. In local MVP environments where
 PaddleOCR is not installed or the normalized input artifact is not present, it
 falls back to deterministic blocks and marks the plain-text source as
-`PaddleOCR fallback`.
+`PaddleOCR 离线兜底`.
 
 ```bash
 python3 ai/ocr/paddleocr_provider.py \
@@ -84,3 +84,23 @@ in your custom command when the same production gate is required.
 
 You can still override the full command with `OCR_COMMAND` when production
 deployment needs a different Python environment, model path or wrapper script.
+
+## HTTP Provider
+
+生产部署可以把 PaddleOCR 做成独立 HTTP 服务，同时保留现有 provider JSON 契约。
+后端会把提交信息和文档预处理元数据发送到 `OCR_ENDPOINT`，并接受两种返回：
+原始 `OcrResultSummary` JSON，或 `{ "success": true, "data": ... }` 包装格式。
+
+```bash
+# 1. 启动项目内置桥接服务；生产环境也可以替换成自己的 PaddleOCR 服务。
+python3 ai/bridge_server.py
+
+# 2. 使用 HTTP provider 启动 ocr-service。
+OCR_PROVIDER=paddleocr-http \
+OCR_ENDPOINT=http://localhost:5000/api/ai/ocr/paddleocr \
+OCR_REQUIRE_REAL=true \
+pnpm dev:backend:ocr
+```
+
+如果桥接服务配置了 `TRAINMARK_AI_API_KEY`，后端也要把同一个值配置到
+`OCR_API_KEY`，请求时会通过 `Authorization: Bearer <key>` 发送。

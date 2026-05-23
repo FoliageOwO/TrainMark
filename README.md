@@ -160,6 +160,28 @@ cp .env.example .env
 | `POSTGRES_PASSWORD` | 数据库密码 | `trainmark_dev` |
 | `MINIO_ACCESS_KEY` | MinIO 访问密钥 | `trainmark` |
 
+## 真实 AI Provider
+
+本地默认仍可用 `local` 模式快速开发。要接入真实 OCR 和语义评分，先启动或部署一个 AI Provider HTTP 服务，再把后端切到 HTTP provider：
+
+```bash
+# 安装真实 AI Provider 依赖
+python -m pip install -r ai/requirements.txt
+
+# 启动内置桥接服务。生产环境也可以替换成独立 PaddleOCR/BGE 服务。
+python ai/bridge_server.py
+
+# 后端环境变量
+OCR_PROVIDER=paddleocr-http
+OCR_ENDPOINT=http://localhost:5000/api/ai/ocr/paddleocr
+SCORING_PROVIDER=semantic-http
+SCORING_ENDPOINT=http://localhost:5000/api/ai/scoring/semantic
+SCORING_MODEL=BAAI/bge-small-zh-v1.5
+TRAINMARK_REQUIRE_REAL_AI=1
+```
+
+`TRAINMARK_REQUIRE_REAL_AI=1` 会禁止离线兜底；如果 PaddleOCR 或 SentenceTransformer/BGE 模型没有安装成功，服务会直接报错，适合生产验收。
+
 ## 开发原则
 
 - **先闭环后增强** - 优先完成主流程

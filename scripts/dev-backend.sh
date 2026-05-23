@@ -31,15 +31,19 @@ trap stop_services EXIT INT TERM
 
 echo "Starting backend services. Logs: $LOG_DIR"
 
-mvn -f "$ROOT_DIR/backend/pom.xml" -N install
-mvn -f "$ROOT_DIR/backend/shared/pom.xml" install -DskipTests
+mvn -f "$ROOT_DIR/backend/pom.xml" package -DskipTests
 
 for service in "${services[@]}"; do
   log_file="$LOG_DIR/$service.log"
+  jar_file="$ROOT_DIR/backend/$service/target/$service-0.1.0-SNAPSHOT.jar"
+  if [[ ! -f "$jar_file" ]]; then
+    echo "Missing packaged jar: $jar_file" >&2
+    exit 1
+  fi
   : > "$log_file"
   (
     cd "$ROOT_DIR"
-    mvn -f "backend/$service/pom.xml" -Pdev spring-boot:run
+    java -jar "$jar_file"
   ) > "$log_file" 2>&1 &
   pid=$!
   pids+=("$pid")

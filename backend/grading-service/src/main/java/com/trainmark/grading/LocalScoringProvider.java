@@ -47,17 +47,18 @@ public class LocalScoringProvider implements ScoringProvider {
 
   private GradingItemReview scoreItem(RubricItemSummary item, String evidenceText) {
     if (item.points().isEmpty()) {
-      var aiScore = Math.round(item.score() * 0.88f);
+      var hasEvidence = hasMeaningfulEvidence(evidenceText);
+      var aiScore = hasEvidence ? Math.round(item.score() * 0.55f) : 0;
       return new GradingItemReview(
           item.id(),
           item.title(),
           item.score(),
           aiScore,
           aiScore,
-          "评分项未配置关键词或得分点，系统按结构完整度给出保守初评分。",
-          "请教师复核该分项证据后确认。",
-          78,
-          List.of(item.title() + "：未配置细分得分点，按报告结构完整度保守扣分")
+          hasEvidence ? "评分项未配置关键词或得分点，系统按正文证据给出低权重初评分。" : "未检测到可用于评分的报告正文或 OCR 文本，该评分项暂不给分。",
+          hasEvidence ? "请教师复核该分项证据后确认。" : "请教师确认学生是否提交了有效报告内容。",
+          hasEvidence ? 62 : 35,
+          List.of(hasEvidence ? item.title() + "：未配置细分得分点，仅按正文存在情况给出低权重初评分" : item.title() + "：无可用正文证据")
       );
     }
 
@@ -79,8 +80,8 @@ public class LocalScoringProvider implements ScoringProvider {
     }
 
     var aiScore = Math.min(item.score(), pointScores.stream().mapToInt(Integer::intValue).sum());
-    var matchRatio = totalTerms == 0 ? 0.82 : (double) matchedTerms / totalTerms;
-    var confidence = Math.min(96, Math.round(72 + (float) matchRatio * 24));
+    var matchRatio = totalTerms == 0 ? 0 : (double) matchedTerms / totalTerms;
+    var confidence = hasMeaningfulEvidence(evidenceText) ? Math.min(96, Math.round(62 + (float) matchRatio * 30)) : 35;
     return new GradingItemReview(
         item.id(),
         item.title(),
@@ -100,11 +101,28 @@ public class LocalScoringProvider implements ScoringProvider {
     terms.addAll(point.synonyms());
     terms.removeIf(String::isBlank);
     if (terms.isEmpty()) {
+      if (!hasMeaningfulEvidence(evidenceText)) {
+        return new PointScore(
+            0,
+            List.of(point.title() + "：未检测到可用于评分的报告正文或 OCR 文本"),
+            0,
+            0
+        );
+      }
       return new PointScore(
-          Math.round(budget * 0.82f),
-          List.of(point.title() + "：未配置关键词，按结构完整度保守评分"),
+          Math.round(budget * 0.35f),
+          List.of(point.title() + "：未配置关键词，仅按正文存在情况给出低权重初评分"),
           0,
           0
+      );
+    }
+
+    if (!hasMeaningfulEvidence(evidenceText)) {
+      return new PointScore(
+          0,
+          List.of(point.title() + "：未检测到可用于评分的报告正文或 OCR 文本"),
+          0,
+          terms.size()
       );
     }
 
@@ -116,7 +134,7 @@ public class LocalScoringProvider implements ScoringProvider {
         .filter(term -> !matched.contains(term))
         .toList();
     var ratio = (double) matched.size() / terms.size();
-    var score = Math.round(budget * (0.45f + 0.55f * (float) ratio));
+    var score = Math.round(budget * (float) ratio);
     var evidence = new ArrayList<String>();
     evidence.add(point.title() + "：命中 " + (matched.isEmpty() ? "无" : String.join("、", matched)));
     if (!missing.isEmpty()) {
@@ -126,25 +144,30 @@ public class LocalScoringProvider implements ScoringProvider {
   }
 
   private String evidenceText(ScoringRequest request) {
-    var terms = new LinkedHashSet<String>();
-    // Use actual file content text when available
     if (request.fileContentText() != null && !request.fileContentText().isBlank()) {
-      terms.add(request.fileContentText());
-    } else {
-      // Fallback to filename and hardcoded terms
-      terms.add(request.fileName());
-      terms.addAll(List.of("登录", "课程", "任务", "提交", "运行截图", "总结"));
-      var normalized = request.fileName().toLowerCase(Locale.ROOT);
-      if (normalized.contains("database") || normalized.contains("数据库")) {
-        terms.addAll(List.of("ER图", "表结构", "约束", "实体关系"));
-      }
+      return request.fileContentText();
     }
-    request.rubric().items().forEach(item -> item.points().forEach(point -> {
-      if (!point.keywords().isEmpty()) {
-        terms.add(point.keywords().getFirst());
-      }
-    }));
-    return String.join(" ", terms);
+    return "";
+  }
+
+  private boolean hasMeaningfulEvidence(String evidenceText) {
+    if (evidenceText == null || evidenceText.isBlank()) {
+      return false;
+    }
+    var compact = evidenceText.replaceAll("\\s+", "");
+    if (compact.length() >= 20) {
+      return true;
+    }
+    return tokenize(evidenceText).size() >= 3;
+  }
+
+  private List<String> tokenize(String value) {
+    var tokens = new LinkedHashSet<String>();
+    var matcher = java.util.regex.Pattern.compile("[A-Za-z0-9_]+|[\\u4e00-\\u9fff]{2,}").matcher(value);
+    while (matcher.find()) {
+      tokens.add(matcher.group().toLowerCase(Locale.ROOT));
+    }
+    return List.copyOf(tokens);
   }
 
   private record PointScore(int score, List<String> evidence, int matchedTerms, int totalTerms) {}

@@ -17,16 +17,22 @@ public class ScoringProviderConfig {
       "--student-name {studentName}",
       "--student-no {studentNo}",
       "--file-name {fileName}",
+      "--evidence-text {fileContentText}",
       "--rubric-json {rubricJson}");
 
   @Bean
   ScoringProvider scoringProvider(
       @Value("${trainmark.scoring.provider:local}") String provider,
       @Value("${trainmark.scoring.command:}") String command,
+      @Value("${trainmark.scoring.endpoint:}") String endpoint,
+      @Value("${trainmark.scoring.api-key:}") String apiKey,
       @Value("${trainmark.scoring.require-real:false}") boolean requireReal,
       @Value("${trainmark.scoring.timeout-seconds:90}") long timeoutSeconds,
       ObjectMapper objectMapper
   ) {
+    if ("semantic-http".equalsIgnoreCase(provider)) {
+      return new HttpScoringProvider(endpoint, apiKey, Duration.ofSeconds(timeoutSeconds), objectMapper);
+    }
     if ("command".equalsIgnoreCase(provider)) {
       if (command == null || command.isBlank()) {
         throw new IllegalStateException("trainmark.scoring.command is required when trainmark.scoring.provider=command");

@@ -49,11 +49,11 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--rubric-json")
     parser.add_argument("--evidence-text")
     parser.add_argument("--evidence-file")
-    parser.add_argument("--model", default="sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2")
+    parser.add_argument("--model", default="BAAI/bge-small-zh-v1.5")
     parser.add_argument("--keyword-weight", type=float, default=0.35)
     parser.add_argument("--semantic-weight", type=float, default=0.45)
     parser.add_argument("--structure-weight", type=float, default=0.20)
-    parser.add_argument("--require-real", action="store_true", help="fail instead of using lexical fallback when the model cannot load")
+    parser.add_argument("--require-real", action="store_true", help="语义模型不可用时直接失败，不使用关键词兜底")
     return parser.parse_args()
 
 
@@ -90,6 +90,26 @@ def normalize_weights(args: argparse.Namespace) -> tuple[float, float, float]:
     if total <= 0:
         return 0.35, 0.45, 0.20
     return args.keyword_weight / total, args.semantic_weight / total, args.structure_weight / total
+
+
+def has_meaningful_evidence(evidence_text: str) -> bool:
+    compact = re.sub(r"\s+", "", evidence_text)
+    if len(compact) >= 20:
+        return True
+    return len(tokenize(evidence_text)) >= 3
+
+
+def structure_ratio(evidence_text: str) -> float:
+    compact_length = len(re.sub(r"\s+", "", evidence_text))
+    if compact_length == 0:
+        return 0.0
+    if compact_length < 20:
+        return 0.12
+    if compact_length < 80:
+        return 0.35
+    if compact_length < 300:
+        return 0.62
+    return 0.82
 
 
 def point_terms(point: dict[str, Any]) -> list[str]:
@@ -129,17 +149,17 @@ def tokenize(value: str) -> set[str]:
 
 class SemanticScorer:
     def __init__(self, model_name: str, require_real: bool) -> None:
-        self.source = "semantic fallback"
+        self.source = "语义关键词兜底"
         self.model = None
         try:
             from sentence_transformers import SentenceTransformer  # type: ignore
 
             self.model = SentenceTransformer(model_name)
-            self.source = "SentenceTransformers"
+            self.source = "SentenceTransformers 语义模型"
         except Exception as error:  # noqa: BLE001 - model runtime is optional.
             if require_real:
-                raise RuntimeError(f"SentenceTransformers model is required but unavailable: {error}") from error
-            print(f"[semantic-provider] SentenceTransformers unavailable, using fallback: {error}", file=sys.stderr)
+                raise RuntimeError(f"SentenceTransformers 语义模型必须可用，但当前加载失败：{error}") from error
+            print(f"[semantic-provider] SentenceTransformers 不可用，使用语义关键词兜底：{error}", file=sys.stderr)
 
     def similarity(self, evidence_text: str, expected_text: str) -> float:
         if self.model is None:
@@ -158,13 +178,17 @@ def score_point(
     scorer: SemanticScorer,
     weights: tuple[float, float, float],
 ) -> tuple[int, list[str], int, int, float]:
+    if not has_meaningful_evidence(evidence_text):
+        title = point.get("title", "得分点")
+        return 0, [f"{title}：未检测到可用于评分的报告正文或 OCR 文本"], 0, len(point_terms(point)), 0.0
+
     terms = point_terms(point)
     ratio, matched, missing = keyword_ratio(terms, evidence_text)
     expected_text = " ".join(terms) or str(point.get("title", "得分点"))
     semantic_score = scorer.similarity(evidence_text, expected_text)
-    structure_score = 0.82 if len(evidence_text) >= 20 else 0.55
+    structure_score = structure_ratio(evidence_text)
     combined = weights[0] * ratio + weights[1] * semantic_score + weights[2] * structure_score
-    point_score = round(budget * (0.4 + 0.6 * combined))
+    point_score = round(budget * combined)
     evidence = [
         f"{point.get('title', '得分点')}：关键词命中 {', '.join(matched) if matched else '无'}",
         f"{point.get('title', '得分点')}：语义相似度 {round(semantic_score * 100)}%",
@@ -183,8 +207,20 @@ def score_item(
     points = item.get("points") or []
     max_score = int(item["score"])
     if not points:
+        if not has_meaningful_evidence(evidence_text):
+            return {
+                "rubricItemId": item["id"],
+                "title": item["title"],
+                "maxScore": max_score,
+                "aiScore": 0,
+                "teacherScore": 0,
+                "deductionReason": "未检测到可用于评分的报告正文或 OCR 文本，该评分项暂不给分。",
+                "teacherComment": "请教师确认学生是否提交了有效报告内容。",
+                "confidence": 35,
+                "evidence": [f"{item['title']}：无可用正文证据"],
+            }
         semantic_score = scorer.similarity(evidence_text, str(item["title"]))
-        ai_score = round(max_score * (0.72 + 0.2 * semantic_score))
+        ai_score = round(max_score * (0.30 + 0.55 * semantic_score + 0.15 * structure_ratio(evidence_text)))
         return {
             "rubricItemId": item["id"],
             "title": item["title"],
@@ -222,7 +258,12 @@ def score_item(
 
     ai_score = min(max_score, sum(point_scores))
     avg_semantic = sum(semantic_scores) / len(semantic_scores) if semantic_scores else 0.82
-    confidence = min(96, round(70 + avg_semantic * 18 + (matched_terms / total_terms if total_terms else 0.82) * 8))
+    evidence_available = has_meaningful_evidence(evidence_text)
+    confidence = (
+        min(96, round(70 + avg_semantic * 18 + (matched_terms / total_terms if total_terms else 0.82) * 8))
+        if evidence_available
+        else 35
+    )
     return {
         "rubricItemId": item["id"],
         "title": item["title"],
@@ -241,6 +282,13 @@ def build_result(args: argparse.Namespace, rubric: dict[str, Any], scorer: Seman
     items = [score_item(item, evidence_text, scorer, weights) for item in rubric.get("items", [])]
     score = sum(item["teacherScore"] for item in items)
     file_name = args.file_name or f"自动批改报告-{args.submission_id}.pdf"
+    evidence_available = has_meaningful_evidence(evidence_text)
+    confidence = min(94, round(sum(item["confidence"] for item in items) / len(items))) if items else 30
+    overall_comment = (
+        f"语义评分已完成初评，评分来源：{scorer.source}。建议教师复核低置信度分项。"
+        if evidence_available
+        else "未检测到可用于评分的报告正文或 OCR 文本，本次 AI 初评不给分，请教师确认学生提交内容。"
+    )
     return {
         "id": args.result_id,
         "assignmentId": args.assignment_id,
@@ -254,10 +302,10 @@ def build_result(args: argparse.Namespace, rubric: dict[str, Any], scorer: Seman
         "totalScore": int(rubric.get("totalScore", sum(item["maxScore"] for item in items))),
         "aiScore": score,
         "teacherScore": score,
-        "confidence": min(94, round(sum(item["confidence"] for item in items) / len(items))) if items else 80,
+        "confidence": confidence,
         "reviewStatus": "NEEDS_REVIEW",
         "publicationStatus": "NOT_PUBLISHED",
-        "overallComment": f"语义评分已完成初评，评分来源：{scorer.source}。建议教师复核低置信度分项。",
+        "overallComment": overall_comment,
         "reviewedAt": None,
         "publishedAt": None,
         "items": items,

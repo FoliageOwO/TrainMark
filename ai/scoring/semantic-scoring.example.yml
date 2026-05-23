@@ -1,6 +1,6 @@
 provider: semantic-scoring
 runtime:
-  model: trainmark-semantic-reranker
+  model: BAAI/bge-small-zh-v1.5
   timeout_seconds: 90
   max_tokens_per_report: 24000
 rules:

@@ -25,6 +25,8 @@ trainmark:
     store: ${TRAINMARK_OCR_STORE:memory}
     provider: ${OCR_PROVIDER:local}
     command: ${OCR_COMMAND:}
+    endpoint: ${OCR_ENDPOINT:}
+    api-key: ${OCR_API_KEY:}
     require-real: ${OCR_REQUIRE_REAL:false}
     timeout-seconds: ${OCR_TIMEOUT_SECONDS:60}
     queue:

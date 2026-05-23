@@ -40,6 +40,8 @@ trainmark:
   scoring:
     provider: ${SCORING_PROVIDER:local}
     command: ${SCORING_COMMAND:}
+    endpoint: ${SCORING_ENDPOINT:}
+    api-key: ${SCORING_API_KEY:}
     require-real: ${SCORING_REQUIRE_REAL:false}
     timeout-seconds: ${SCORING_TIMEOUT_SECONDS:90}
   annotation:

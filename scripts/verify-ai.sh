@@ -3,7 +3,16 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 TMP_DIR="$(mktemp -d)"
-trap 'rm -rf "$TMP_DIR"' EXIT
+BRIDGE_PID=""
+
+cleanup() {
+  if [[ -n "$BRIDGE_PID" ]]; then
+    kill "$BRIDGE_PID" 2>/dev/null || true
+  fi
+  rm -rf "$TMP_DIR"
+}
+
+trap cleanup EXIT
 export PYTHONIOENCODING="${PYTHONIOENCODING:-utf-8}"
 
 REAL_AI_ARGS=()
@@ -64,7 +73,7 @@ path = sys.argv[2]
 with open(path, "r", encoding="utf-8") as file:
     payload = json.load(file)
 
-fallback_terms = ("fallback", "deterministic")
+fallback_terms = ("fallback", "deterministic", "兜底")
 
 
 def strings(value):
@@ -99,6 +108,7 @@ echo "[verify:ai] Python syntax"
   ai/ocr/paddleocr_provider.py \
   ai/scoring/local_provider.py \
   ai/scoring/semantic_provider.py \
+  ai/bridge_server.py \
   ai/annotation/local_provider.py
 
 echo "[verify:ai] Document preprocessing"
@@ -134,7 +144,7 @@ json_field_exists "$TMP_DIR/paddleocr-result.json" "payload.get('jobId') == 1002
 if [[ "${TRAINMARK_REQUIRE_REAL_AI:-0}" == "1" ]]; then
   require_no_ai_fallback "PaddleOCR provider" "$TMP_DIR/paddleocr-result.json"
 else
-  grep -q 'PaddleOCR fallback' "$TMP_DIR/paddleocr-result.json"
+  grep -q 'PaddleOCR 离线兜底' "$TMP_DIR/paddleocr-result.json"
 fi
 
 echo "[verify:ai] Scoring provider"
@@ -162,6 +172,99 @@ json_field_exists "$TMP_DIR/grading-result.json" "payload.get('id') == 2001 and 
 "$PYTHON_BIN" -m json.tool "$TMP_DIR/semantic-grading-result.json" >/dev/null
 json_field_exists "$TMP_DIR/semantic-grading-result.json" "payload.get('id') == 2002 and payload.get('aiScore', 0) > 0 and len(payload.get('items', [])) > 0"
 require_no_ai_fallback "Semantic scoring provider" "$TMP_DIR/semantic-grading-result.json"
+
+echo "[verify:ai] HTTP provider bridge"
+BRIDGE_TEST_PORT="$("$PYTHON_BIN" - <<'PY'
+import socket
+
+with socket.socket() as sock:
+    sock.bind(("127.0.0.1", 0))
+    print(sock.getsockname()[1])
+PY
+)"
+BRIDGE_PORT="$BRIDGE_TEST_PORT" \
+TRAINMARK_REQUIRE_REAL_AI=0 \
+TRAINMARK_AI_API_KEY=verify-key \
+"$PYTHON_BIN" ai/bridge_server.py > "$TMP_DIR/bridge.log" 2>&1 &
+BRIDGE_PID=$!
+
+"$PYTHON_BIN" - "$BRIDGE_TEST_PORT" <<'PY'
+import json
+import sys
+import time
+import urllib.error
+import urllib.request
+
+port = sys.argv[1]
+base = f"http://127.0.0.1:{port}"
+
+
+def request(path, payload=None, token=None):
+    data = None if payload is None else json.dumps(payload).encode("utf-8")
+    headers = {"Content-Type": "application/json"}
+    if token:
+        headers["Authorization"] = f"Bearer {token}"
+    req = urllib.request.Request(base + path, data=data, headers=headers, method="GET" if data is None else "POST")
+    with urllib.request.urlopen(req, timeout=3) as response:
+        return response.status, json.loads(response.read().decode("utf-8"))
+
+
+for _ in range(40):
+    try:
+        status, payload = request("/health")
+        if status == 200 and payload["data"]["status"] == "UP":
+            break
+    except Exception:
+        time.sleep(0.25)
+else:
+    raise SystemExit("AI provider bridge did not become healthy")
+
+try:
+    request("/api/ai/ocr/paddleocr", {"jobId": 1, "submissionId": 1, "objectKey": "missing.pdf"})
+except urllib.error.HTTPError as error:
+    if error.code != 401:
+        raise
+else:
+    raise SystemExit("AI provider bridge accepted missing API key")
+
+status, ocr = request(
+    "/api/ai/ocr/paddleocr",
+    {"jobId": 3001, "submissionId": 11, "objectKey": "database-report.pdf", "normalizedObjectKey": "missing.pdf"},
+    "verify-key",
+)
+assert status == 200 and ocr["success"] and ocr["data"]["jobId"] == 3001 and ocr["data"]["blocks"]
+
+rubric = {
+    "totalScore": 100,
+    "items": [
+        {
+            "id": 1,
+            "title": "需求与设计",
+            "score": 100,
+            "points": [
+                {"title": "功能模块完整", "score": 60, "keywords": ["登录", "课程", "任务", "提交"]},
+                {"title": "数据库设计合理", "score": 40, "keywords": ["ER图", "表结构", "约束"]},
+            ],
+        }
+    ],
+}
+status, scoring = request(
+    "/api/ai/scoring/semantic",
+    {
+        "resultId": 3002,
+        "assignmentId": 1,
+        "submissionId": 12,
+        "studentId": 2,
+        "studentName": "张三",
+        "studentNo": "2024010101",
+        "fileName": "database-report.pdf",
+        "fileContentText": "登录 课程 任务 提交 ER图 表结构 约束",
+        "rubric": rubric,
+    },
+    "verify-key",
+)
+assert status == 200 and scoring["success"] and scoring["data"]["id"] == 3002 and scoring["data"]["items"]
+PY
 
 echo "[verify:ai] Annotation provider"
 "$PYTHON_BIN" ai/annotation/local_provider.py \

@@ -19,10 +19,15 @@ public class OcrProviderConfig {
   OcrProvider ocrProvider(
       @Value("${trainmark.ocr.provider:local}") String provider,
       @Value("${trainmark.ocr.command:}") String command,
+      @Value("${trainmark.ocr.endpoint:}") String endpoint,
+      @Value("${trainmark.ocr.api-key:}") String apiKey,
       @Value("${trainmark.ocr.require-real:false}") boolean requireReal,
       @Value("${trainmark.ocr.timeout-seconds:60}") long timeoutSeconds,
       ObjectMapper objectMapper
   ) {
+    if ("paddleocr-http".equalsIgnoreCase(provider)) {
+      return new HttpOcrProvider(endpoint, apiKey, Duration.ofSeconds(timeoutSeconds), objectMapper);
+    }
     if ("command".equalsIgnoreCase(provider)) {
       if (command == null || command.isBlank()) {
         throw new IllegalStateException("trainmark.ocr.command is required when trainmark.ocr.provider=command");

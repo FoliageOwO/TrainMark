@@ -127,3 +127,27 @@ required.
 
 You can still override the full command with `SCORING_COMMAND` when production
 deployment needs a specific model path, Python environment or scoring wrapper.
+
+## HTTP Provider
+
+生产部署可以把语义评分做成独立 HTTP 服务，同时保留现有
+`GradingResultSummary` JSON 契约。后端会把真实 OCR/文件证据文本放到
+`fileContentText`，连同当前评分标准、提交信息和学生信息一起发送到
+`SCORING_ENDPOINT`；provider 可以返回原始评分 JSON，或
+`{ "success": true, "data": ... }` 包装格式。
+
+```bash
+# 1. 启动项目内置桥接服务；生产环境也可以替换成自己的 BGE/SentenceTransformer 服务。
+SCORING_MODEL=BAAI/bge-small-zh-v1.5 \
+TRAINMARK_REQUIRE_REAL_AI=1 \
+python3 ai/bridge_server.py
+
+# 2. 使用 HTTP provider 启动 grading-service。
+SCORING_PROVIDER=semantic-http \
+SCORING_ENDPOINT=http://localhost:5000/api/ai/scoring/semantic \
+SCORING_REQUIRE_REAL=true \
+pnpm dev:backend:grading
+```
+
+如果桥接服务配置了 `TRAINMARK_AI_API_KEY`，后端也要把同一个值配置到
+`SCORING_API_KEY`，请求时会通过 `Authorization: Bearer <key>` 发送。

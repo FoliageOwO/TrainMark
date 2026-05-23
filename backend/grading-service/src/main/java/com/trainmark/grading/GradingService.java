@@ -408,7 +408,7 @@ public class GradingService {
     if (ocrText != null && !ocrText.isBlank()) {
       return ocrText;
     }
-    return (fileName == null ? "" : fileName) + " " + (objectKey == null ? "" : objectKey);
+    return "";
   }
 
   private String latestOcrText(Long submissionId) {

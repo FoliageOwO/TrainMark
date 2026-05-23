@@ -143,7 +143,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--normalized-object-key", default="")
     parser.add_argument("--language", default="ch")
     parser.add_argument("--engine", default="paddle", choices=["paddle", "transformers"])
-    parser.add_argument("--require-real", action="store_true", help="fail instead of falling back when PaddleOCR cannot run")
+    parser.add_argument("--require-real", action="store_true", help="PaddleOCR 不可用时直接失败，不使用离线兜底")
     return parser.parse_args()
 
 
@@ -158,21 +158,21 @@ def main() -> None:
             blocks = recognize_with_paddle(input_path, args)
         except Exception as error:  # noqa: BLE001 - provider boundary logs and falls back.
             if args.require_real:
-                raise RuntimeError(f"PaddleOCR is required but unavailable: {error}") from error
-            print(f"[paddleocr-provider] PaddleOCR unavailable, using fallback: {error}", file=sys.stderr)
-            source = "PaddleOCR fallback"
+                raise RuntimeError(f"PaddleOCR 必须可用，但当前调用失败：{error}") from error
+            print(f"[paddleocr-provider] PaddleOCR 不可用，使用离线兜底：{error}", file=sys.stderr)
+            source = "PaddleOCR 离线兜底"
             blocks = infer_blocks(args.object_key)
     else:
         if args.require_real:
-            raise FileNotFoundError(f"PaddleOCR input not found: {input_path}")
-        print(f"[paddleocr-provider] input not found, using fallback: {input_path}", file=sys.stderr)
-        source = "PaddleOCR fallback"
+            raise FileNotFoundError(f"PaddleOCR 输入文件不存在：{input_path}")
+        print(f"[paddleocr-provider] 输入文件不存在，使用离线兜底：{input_path}", file=sys.stderr)
+        source = "PaddleOCR 离线兜底"
         blocks = infer_blocks(args.object_key)
 
     if not blocks:
         if args.require_real:
-            raise RuntimeError("PaddleOCR returned no text blocks")
-        source = "PaddleOCR fallback"
+            raise RuntimeError("PaddleOCR 没有返回可用文本块")
+        source = "PaddleOCR 离线兜底"
         blocks = infer_blocks(args.object_key)
 
     print(json.dumps(result_payload(args.job_id, args.submission_id, blocks, source), ensure_ascii=False, indent=2))

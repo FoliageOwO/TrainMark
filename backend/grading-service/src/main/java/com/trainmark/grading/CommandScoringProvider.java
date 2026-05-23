@@ -29,6 +29,7 @@ public class CommandScoringProvider implements ScoringProvider {
           .replace("{studentName}", shellQuote(request.studentName()))
           .replace("{studentNo}", shellQuote(request.studentNo()))
           .replace("{fileName}", shellQuote(request.fileName()))
+          .replace("{fileContentText}", shellQuote(request.fileContentText() == null ? "" : request.fileContentText()))
           .replace("{rubricJson}", shellQuote(objectMapper.writeValueAsString(request.rubric())));
       var processBuilder = new ProcessBuilder(shellCommand(command));
       processBuilder.directory(workspaceRoot().toFile());
