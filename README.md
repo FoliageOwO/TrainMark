@@ -1,309 +1,130 @@
-# TrainMark AI（智训批）
+# TrainMark AI
 
-面向高校实训场景的**实训报告智能批改与管理系统**。
+高校实训场景下的实训报告智能批改与管理系统。
 
-## 快速开始
+这个仓库现在按一个常见的全栈项目来理解就够了：
 
-### 本地开发（无需 Docker）
+- `apps/web/`: 前端 Web 应用
+- `backend/`: Spring Boot 后端服务
+- `infra/`: PostgreSQL、Redis、RabbitMQ、MinIO、Nginx 等本地基础设施
+- `ai/`: OCR、评分、批注相关的 AI provider 与 bridge
+- `scripts/`: 开发、验证、运维脚本，已按职责分组
+
+## 先看启动
+
+### 1. 只看前端界面
 
 ```bash
-# 1. 安装依赖
 pnpm install
-
-# 2. 启动前端（内存 mock 模式，独立演示）
-pnpm dev:web
-
-# 访问 http://localhost:5173
+pnpm start:web
 ```
 
-### 完整本地开发（含后端和数据库）
+- 访问 `http://localhost:5173`
+- 这是前端 mock 模式，不依赖后端
+- 当前页面数据默认来自 `apps/web/src/api/mockApi.ts`
+
+### 2. 只启动后端
 
 ```bash
-# 一键启动所有服务（前端 + 后端 + PostgreSQL + Redis + MinIO）
-pnpm dev:mvp:jdbc
+pnpm start:backend
 ```
 
-### 完整本地开发（含真实 AI Provider）
+- 会打包并启动所有 Spring Boot 服务
+- 日志在 `.logs/backend/`
+- 适合后端联调或排查单个服务问题
 
-如果要验证真实 OCR 和语义评分，需要先启动 AI Provider bridge，再启动完整项目。
-
-**终端 1：启动 AI Provider bridge**
-
-Windows PowerShell：
-
-```powershell
-cd E:\学习\工程实训\TrainMark
-
-# 首次使用需要安装依赖。建议使用系统 Python，而不是其它项目自带的嵌入式 Python。
-py -3.13 -m pip install -r ai/requirements.txt
-
-# 严格真实 AI 模式：PaddleOCR/BGE 不可用时直接报错，不走离线兜底。
-$env:TRAINMARK_REQUIRE_REAL_AI="1"
-$env:SCORING_MODEL="BAAI/bge-small-zh-v1.5"
-py -3.13 ai/bridge_server.py
-```
-
-Linux/macOS：
+### 3. 启动完整本地栈
 
 ```bash
-cd ~/TrainMark
-python3 -m pip install -r ai/requirements.txt
-
-export TRAINMARK_REQUIRE_REAL_AI=1
-export SCORING_MODEL=BAAI/bge-small-zh-v1.5
-python3 ai/bridge_server.py
+pnpm start:stack
 ```
 
-看到下面输出表示 AI bridge 已启动：
+这条命令会串起完整开发链路：
+
+1. 启动 `infra/docker-compose.yml` 里的本地基础设施
+2. 检查并补齐本地数据库迁移
+3. 启动所有后端服务
+4. 等待 API smoke 检查通过
+5. 以前端 HTTP 模式启动 Web
+
+如果你只想在“已有数据库 / 已有基础设施”的前提下跑前后端，不想自动起 Docker，可用：
+
+```bash
+pnpm start:stack:http
+```
+
+## 常用命令
+
+| 命令 | 用途 |
+| --- | --- |
+| `pnpm start:web` | 前端 mock 模式 |
+| `pnpm start:backend` | 启动全部后端服务 |
+| `pnpm start:stack` | 启动完整本地开发环境 |
+| `pnpm infra:up` | 单独启动本地基础设施 |
+| `pnpm infra:down` | 停止本地基础设施 |
+| `pnpm infra:restart` | 重启本地基础设施 |
+| `pnpm infra:reset` | 重建本地基础设施并清空卷数据 |
+| `pnpm infra:status` | 查看本地基础设施状态 |
+| `pnpm db:migrate:local` | 对本地 PostgreSQL 执行迁移补齐 |
+| `pnpm start:service:auth` | 只启动单个后端服务 |
+| `pnpm verify:stack` | 校验前端、后端、AI、smoke 脚本主链路 |
+| `pnpm verify:ai` | 校验 AI provider/bridge |
+| `pnpm smoke:api` | 跑 API smoke |
+| `pnpm ops:backup:local` | 备份本地 PostgreSQL 和 MinIO |
+| `pnpm ops:restore:local` | 恢复本地备份 |
+| `pnpm ops:release:local` | 生成本地发布包 |
+| `pnpm ops:images:export` | 构建并导出生产镜像 |
+
+## 项目结构
 
 ```text
-[ai-bridge] AI Provider bridge started: http://localhost:5000
-[ai-bridge] requireRealAi=True scoringModel=BAAI/bge-small-zh-v1.5
-```
-
-**终端 2：启动完整项目，并把后端切到 AI HTTP Provider**
-
-Windows PowerShell：
-
-```powershell
-cd E:\学习\工程实训\TrainMark
-
-$env:OCR_PROVIDER="paddleocr-http"
-$env:OCR_ENDPOINT="http://localhost:5000/api/ai/ocr/paddleocr"
-$env:SCORING_PROVIDER="semantic-http"
-$env:SCORING_ENDPOINT="http://localhost:5000/api/ai/scoring/semantic"
-$env:TRAINMARK_REQUIRE_REAL_AI="1"
-
-pnpm dev:mvp:jdbc
-```
-
-Linux/macOS：
-
-```bash
-cd ~/TrainMark
-
-export OCR_PROVIDER=paddleocr-http
-export OCR_ENDPOINT=http://localhost:5000/api/ai/ocr/paddleocr
-export SCORING_PROVIDER=semantic-http
-export SCORING_ENDPOINT=http://localhost:5000/api/ai/scoring/semantic
-export TRAINMARK_REQUIRE_REAL_AI=1
-
-pnpm dev:mvp:jdbc
-```
-
-浏览器访问：
-
-```text
-http://localhost:5173/?role=teacher&section=ai-pipeline
-```
-
-启动批改后，如果 AI bridge 终端出现下面请求，说明后端已经在调用真实 AI Provider：
-
-```text
-[ai-bridge] "POST /api/ai/ocr/paddleocr HTTP/1.1" 200 -
-[ai-bridge] "POST /api/ai/scoring/semantic HTTP/1.1" 200 -
-```
-
-### 云端服务器部署
-
-```bash
-# 一键部署到生产服务器
-./scripts/deploy-server.sh
-```
-
-详细部署说明见下方 [云端部署](#云端部署) 章节。
-
-## 目录结构
-
-```
 TrainMark/
-├── apps/web/          # 前端 (React + Vite)
-├── backend/           # 后端 (Spring Boot)
-├── ai/                # AI 服务 (OCR、评分、批注)
-├── infra/             # Docker 基础设施配置
-├── scripts/           # 开发和部署脚本
-└── docs/              # 文档
+├── apps/
+│   └── web/                # React + Vite 前端
+├── backend/                # Spring Boot 微服务
+├── infra/                  # docker compose 与生产镜像配置
+├── ai/                     # OCR / 评分 / 批注 provider 与 bridge
+├── scripts/
+│   ├── dev/                # 开发启动脚本
+│   ├── verify/             # smoke / verify 脚本
+│   ├── ops/                # 备份 / 发布 / 部署 / 迁移
+│   └── lib/                # 通用脚本运行器
+├── docs/
+│   └── API.md              # API 说明
+├── PROJECT.md              # 项目说明
+└── PROGRESS.md             # 开发过程记录
 ```
 
-## 云端部署
+脚本清单见 `scripts/README.md`。
 
-### 前提条件
+## 关于那些原来看不懂的名字
 
-- 服务器已安装 Docker 和 Docker Compose
-- 服务器已有 Nginx/OpenResty 运行
+- `mvp`: 这里实际表示“把前后端主链路跑起来的联调入口”
+- `jdbc`: 表示后端数据存储显式切到 PostgreSQL 等真实基础设施，而不是纯内存模式
+- `smoke`: 表示轻量联通性检查，不是完整测试
+- `ops`: 表示运维/发布类脚本，不是日常开发入口
 
-### 部署步骤
-
-**本地电脑执行（构建镜像）：**
+现在建议你优先只记住这三条：
 
 ```bash
-# 1. 构建并导出镜像
-./scripts/build-and-export.sh
-
-# 2. 传输到服务器
-scp deployments/images/*.tar.gz root@你的服务器IP:~/TrainMark/
-scp -r . root@你的服务器IP:~/TrainMark/
+pnpm start:web
+pnpm start:backend
+pnpm start:stack
 ```
 
-**服务器执行（启动服务）：**
-
-```bash
-# 1. 复制配置
-cd ~/TrainMark
-cp .env.example .env
-nano .env  # 修改密码
-
-# 2. 加载镜像并启动
-./scripts/start-server.sh
-```
-
-### 配置服务器 Nginx 反向代理
-
-在服务器现有的 Nginx/OpenResty 配置中添加：
-
-```nginx
-server {
-    listen 80;
-    server_name your-domain.com;
-
-    location / {
-        proxy_pass http://127.0.0.1:30081;
-    }
-
-    location /api/ {
-        proxy_pass http://127.0.0.1:30080;
-    }
-}
-```
-
-### 手动部署
-
-```bash
-# 启动所有服务
-docker compose -f infra/docker-compose.prod.yml up -d
-
-# 查看日志
-docker compose -f infra/docker-compose.prod.yml logs -f
-
-# 停止服务
-docker compose -f infra/docker-compose.prod.yml down
-```
-
-### 服务端口说明
-
-所有服务仅监听 `127.0.0.1`，不占用服务器 80/443 端口：
-
-| 服务 | 监听地址 | 说明 |
-|------|----------|------|
-| 前端 | `127.0.0.1:30081` | 静态文件 + API 转发 |
-| 后端 | `127.0.0.1:30080` | API 服务 |
-| PostgreSQL | 内部网络 | 数据库 (不暴露端口) |
-| Redis | 内部网络 | 缓存 (不暴露端口) |
-| MinIO | 内部网络 | 对象存储 (不暴露端口) |
-| RabbitMQ | 内部网络 | 消息队列 (不暴露端口) |
-
-### 默认账号
-
-| 角色 | 用户名 | 密码 |
-|------|--------|------|
-| 管理员 | admin | admin123 |
-| 教师 | teacher | teacher123 |
-| 学生 | 2024010101 | student123 |
-
-**生产环境必须修改默认密码！**
-
-## 本地开发命令
-
-| 命令 | 说明 |
-|------|------|
-| `pnpm dev:web` | 启动前端 |
-| `pnpm dev:backend` | 启动所有后端服务 |
-| `pnpm dev:infra` | 启动基础设施 (PostgreSQL, Redis, MinIO) |
-| `pnpm dev:mvp:jdbc` | 一键启动完整开发环境 |
-| `pnpm build:web` | 构建前端 |
-| `pnpm build:backend` | 构建后端 |
-| `pnpm smoke:api` | 运行 API 冒烟测试 |
-
-## 环境变量
-
-复制 `.env.example` 为 `.env` 并根据需要修改：
-
-```bash
-cp .env.example .env
-```
-
-核心配置项：
-
-| 变量 | 说明 | 默认值 |
-|------|------|--------|
-| `VITE_API_MODE` | 前端数据模式 (mock/http) | `mock` |
-| `POSTGRES_PORT` | PostgreSQL 端口 | `55432` |
-| `POSTGRES_PASSWORD` | 数据库密码 | `trainmark_dev` |
-| `MINIO_ACCESS_KEY` | MinIO 访问密钥 | `trainmark` |
+其余命令都属于专项操作。
 
 ## 真实 AI Provider
 
-本地默认仍可用 `local` 模式快速开发。完整验收或生产部署建议使用 HTTP Provider：
+默认本地开发可以不接真实 AI。需要验证 PaddleOCR / 语义评分 HTTP provider 时：
 
-| 能力 | 本地快速模式 | 真实 AI HTTP 模式 |
-|------|--------------|-------------------|
-| OCR | `OCR_PROVIDER=local` | `OCR_PROVIDER=paddleocr-http` |
-| 语义评分 | `SCORING_PROVIDER=local` | `SCORING_PROVIDER=semantic-http` |
-| OCR 地址 | 无需配置 | `OCR_ENDPOINT=http://localhost:5000/api/ai/ocr/paddleocr` |
-| 评分地址 | 无需配置 | `SCORING_ENDPOINT=http://localhost:5000/api/ai/scoring/semantic` |
-| 严格真实 AI | `TRAINMARK_REQUIRE_REAL_AI=0` | `TRAINMARK_REQUIRE_REAL_AI=1` |
+1. 先阅读 `ai/ocr/README.md` 和 `ai/scoring/README.md`
+2. 单独启动 `ai/bridge_server.py`
+3. 再用 `pnpm start:stack` 启动整套本地环境，并通过环境变量把后端 provider 切到 HTTP 模式
 
-### 本地 AI bridge 环境变量
+这部分属于专项验收能力，不是普通启动路径。
 
-| 变量 | 说明 | 默认值 |
-|------|------|--------|
-| `BRIDGE_PORT` | AI bridge 监听端口 | `5000` |
-| `TRAINMARK_REQUIRE_REAL_AI` | 是否禁止离线兜底 | `0` |
-| `SCORING_MODEL` | SentenceTransformer/BGE 模型 | `BAAI/bge-small-zh-v1.5` |
-| `OCR_LANGUAGE` | OCR 语言 | `ch` |
-| `OCR_ENGINE` | OCR 引擎 | `paddle` |
-| `TRAINMARK_AI_API_KEY` | AI bridge API key；为空时不校验 | 空 |
+## 兼容说明
 
-### 后端 AI Provider 环境变量
-
-| 变量 | 说明 | 示例 |
-|------|------|------|
-| `OCR_PROVIDER` | OCR Provider 类型 | `paddleocr-http` |
-| `OCR_ENDPOINT` | OCR HTTP Provider 地址 | `http://localhost:5000/api/ai/ocr/paddleocr` |
-| `OCR_API_KEY` | OCR Provider Bearer Token | 可空 |
-| `SCORING_PROVIDER` | 评分 Provider 类型 | `semantic-http` |
-| `SCORING_ENDPOINT` | 语义评分 HTTP Provider 地址 | `http://localhost:5000/api/ai/scoring/semantic` |
-| `SCORING_API_KEY` | 评分 Provider Bearer Token | 可空 |
-
-`TRAINMARK_REQUIRE_REAL_AI=1` 会禁止离线兜底；如果 PaddleOCR 或 SentenceTransformer/BGE 模型没有安装成功，AI bridge 会直接报错，适合生产验收。
-
-### 生产部署 AI Provider
-
-生产环境可以继续使用本项目内置的 `ai/bridge_server.py`，也可以替换为独立部署的 PaddleOCR/BGE 服务。替换时只需要保持 HTTP JSON 契约一致，并把后端环境变量指向生产地址：
-
-```bash
-OCR_PROVIDER=paddleocr-http
-OCR_ENDPOINT=https://ai.example.com/api/ai/ocr/paddleocr
-OCR_API_KEY=替换为生产密钥
-
-SCORING_PROVIDER=semantic-http
-SCORING_ENDPOINT=https://ai.example.com/api/ai/scoring/semantic
-SCORING_API_KEY=替换为生产密钥
-
-TRAINMARK_REQUIRE_REAL_AI=1
-```
-
-如果 AI bridge 配置了 `TRAINMARK_AI_API_KEY`，后端的 `OCR_API_KEY` 和 `SCORING_API_KEY` 要使用同一个值。
-
-## 开发原则
-
-- **先闭环后增强** - 优先完成主流程
-- **AI 可解释** - 所有 AI 评分都有得分点和扣分原因
-- **教师可复核** - 成绩发布前允许复核和修正
-- **全程留痕** - 所有操作记录审计日志
-
-## 文档
-
-- [完整产品计划](./PROJECT.md)
-- [API 接口文档](./docs/API.md)
-- [基础设施说明](./infra/README.md)
+- 旧的 `pnpm dev:*`、`pnpm verify:mvp`、`pnpm smoke:mvp:*` 仍然保留，避免打断已有习惯
+- 新文档统一以 `start:*`、`verify:*`、`ops:*` 为主

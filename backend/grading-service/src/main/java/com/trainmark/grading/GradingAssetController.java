@@ -263,6 +263,7 @@ public class GradingAssetController {
   }
 
   private List<String> wrapText(PDFont font, float fontSize, String value, float maxWidth) throws IOException {
+    value = PdfFonts.normalize(value);
     if (value == null || value.isBlank()) {
       return List.of("");
     }
@@ -285,7 +286,7 @@ public class GradingAssetController {
   }
 
   private float textWidth(PDFont font, float fontSize, String value) throws IOException {
-    return font.getStringWidth(value) / 1000f * fontSize;
+    return font.getStringWidth(PdfFonts.normalize(value)) / 1000f * fontSize;
   }
 
   private PdfFonts loadFonts(PDDocument document) {
@@ -295,6 +296,7 @@ public class GradingAssetController {
         "C:/Windows/Fonts/msyh.ttc",
         "C:/Windows/Fonts/simhei.ttf",
         "C:/Windows/Fonts/simsun.ttc",
+        "/usr/share/fonts/truetype/droid/DroidSansFallbackFull.ttf",
         "/usr/share/fonts/noto-cjk/NotoSansCJK-Regular.ttc",
         "/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc",
         "/usr/share/fonts/truetype/wqy/wqy-microhei.ttc"
@@ -304,6 +306,7 @@ public class GradingAssetController {
         "C:/Windows/Fonts/msyhbd.ttc",
         "C:/Windows/Fonts/msyh.ttc",
         "C:/Windows/Fonts/simhei.ttf",
+        "/usr/share/fonts/truetype/droid/DroidSansFallbackFull.ttf",
         "/usr/share/fonts/noto-cjk/NotoSansCJK-Bold.ttc",
         "/usr/share/fonts/noto-cjk/NotoSansCJK-Regular.ttc",
         "/usr/share/fonts/opentype/noto/NotoSansCJK-Bold.ttc",
@@ -383,7 +386,23 @@ public class GradingAssetController {
 
   private record PdfFonts(PDFont heading, PDFont body) {
     String text(String value) {
-      return value;
+      return normalize(value);
+    }
+
+    static String normalize(String value) {
+      if (value == null || value.isEmpty()) {
+        return value == null ? "" : value;
+      }
+      var builder = new StringBuilder(value.length());
+      for (var index = 0; index < value.length(); index += 1) {
+        var character = value.charAt(index);
+        if (character >= '!' && character <= '~') {
+          builder.append((char) (character - '!' + '！'));
+          continue;
+        }
+        builder.append(character);
+      }
+      return builder.toString();
     }
   }
 

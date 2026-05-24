@@ -28,7 +28,7 @@ for (let index = 0; index < rawArgs.length; index += 1) {
 }
 
 if (!scriptPath) {
-  console.error('Usage: node scripts/run-bash-script.mjs <script> [...args]');
+  console.error('Usage: node scripts/lib/run-bash-script.mjs <script> [...args]');
   process.exit(1);
 }
 

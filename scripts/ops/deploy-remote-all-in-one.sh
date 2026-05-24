@@ -1,14 +1,14 @@
 #!/usr/bin/env bash
 set -euo pipefail
 if [ -z "${1:-}" ]; then
-  echo "用法: ./scripts/deploy-all.sh root@你的服务器IP"
+  echo "用法: ./scripts/ops/deploy-remote-all-in-one.sh root@你的服务器IP"
   exit 1
 fi
 SERVER="$1"
 echo "=========================================="
 echo "  TrainMark AI 一键部署"
 echo "=========================================="
-ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 cd "$ROOT_DIR"
 # 1. 本地构建后端 JAR
 echo "[1/4] 本地构建后端 JAR..."

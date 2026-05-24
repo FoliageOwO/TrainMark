@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 LOG_DIR="$ROOT_DIR/.logs/backend"
 mkdir -p "$LOG_DIR"
 
@@ -31,19 +31,16 @@ trap stop_services EXIT INT TERM
 
 echo "Starting backend services. Logs: $LOG_DIR"
 
-mvn -f "$ROOT_DIR/backend/pom.xml" package -DskipTests
+# Install the parent POM and shared module once so service launches can reuse them.
+mvn -f "$ROOT_DIR/backend/pom.xml" -N install
+mvn -f "$ROOT_DIR/backend/shared/pom.xml" install -DskipTests
 
 for service in "${services[@]}"; do
   log_file="$LOG_DIR/$service.log"
-  jar_file="$ROOT_DIR/backend/$service/target/$service-0.1.0-SNAPSHOT.jar"
-  if [[ ! -f "$jar_file" ]]; then
-    echo "Missing packaged jar: $jar_file" >&2
-    exit 1
-  fi
   : > "$log_file"
   (
     cd "$ROOT_DIR"
-    java -jar "$jar_file"
+    TRAINMARK_SKIP_BOOTSTRAP=1 bash "$ROOT_DIR/scripts/dev/backend-service.sh" "$service"
   ) > "$log_file" 2>&1 &
   pid=$!
   pids+=("$pid")

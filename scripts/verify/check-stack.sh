@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 
 cd "$ROOT_DIR"
 
@@ -35,8 +35,8 @@ else
 fi
 
 echo "[verify] MVP launcher scripts"
-bash -n scripts/apply-db-migrations.sh
-bash -n scripts/dev-mvp.sh
-bash -n scripts/dev-mvp-jdbc.sh
+bash -n scripts/ops/db-migrate-local.sh
+bash -n scripts/dev/fullstack.sh
+bash -n scripts/dev/fullstack-jdbc.sh
 
 echo "[verify] MVP verification completed"

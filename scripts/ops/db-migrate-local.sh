@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 POSTGRES_CONTAINER="${POSTGRES_CONTAINER:-trainmark-postgres}"
 POSTGRES_DB="${POSTGRES_DB:-trainmark_ai}"
 POSTGRES_USER="${POSTGRES_USER:-trainmark}"

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 DEPLOY_ROOT="${DEPLOY_ROOT:-$ROOT_DIR/deployments}"
 TIMESTAMP="$(date +%Y%m%d-%H%M%S)"
 RELEASE_DIR="${RELEASE_DIR:-$DEPLOY_ROOT/$TIMESTAMP}"

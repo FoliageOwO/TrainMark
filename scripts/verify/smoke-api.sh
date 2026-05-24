@@ -26,6 +26,28 @@ if [[ -z "$PYTHON_BIN" ]]; then
   exit 1
 fi
 
+supports_inline_progress() {
+  [[ -t 1 && "${TERM:-}" != "dumb" ]]
+}
+
+progress_update() {
+  local message="$1"
+  if supports_inline_progress; then
+    printf '\r\033[2K%s' "$message" >&2
+  else
+    printf '%s\n' "$message" >&2
+  fi
+}
+
+progress_done() {
+  local message="$1"
+  if supports_inline_progress; then
+    printf '\r\033[2K%s\n' "$message" >&2
+  else
+    printf '%s\n' "$message" >&2
+  fi
+}
+
 check_url() {
   local label="$1"
   local url="$2"
@@ -45,7 +67,7 @@ check_url() {
   fi
 
   while true; do
-    echo "[smoke] $label (attempt $attempt/$SMOKE_RETRIES)"
+    progress_update "[smoke] $label (attempt $attempt/$SMOKE_RETRIES)"
     download_path="$(mktemp)"
     curl_status=0
     if curl_output="$(curl --noproxy '*' --fail --silent --show-error --connect-timeout 2 --max-time 10 \
@@ -55,6 +77,7 @@ check_url() {
       "$url" 2>&1)"; then
       if [[ -s "$download_path" ]]; then
         rm -f "$download_path"
+        progress_done "[smoke] $label ok ($attempt/$SMOKE_RETRIES)"
         return
       fi
       curl_status=0
@@ -64,6 +87,7 @@ check_url() {
     fi
     rm -f "$download_path"
     if ((attempt >= SMOKE_RETRIES)); then
+      progress_done "[smoke] $label failed ($attempt/$SMOKE_RETRIES)"
       echo "[smoke] $label failed: curl_exit=$curl_status $curl_output" >&2
       return 1
     fi
@@ -91,11 +115,13 @@ check_url_fast() {
   fi
 
   while true; do
-    echo "[smoke] $label (attempt $attempt/$SMOKE_RETRIES)"
+    progress_update "[smoke] $label (attempt $attempt/$SMOKE_RETRIES)"
     if curl --noproxy '*' --fail --silent --show-error --max-time 5 "${auth_args[@]}" "$url" >/dev/null; then
+      progress_done "[smoke] $label ok ($attempt/$SMOKE_RETRIES)"
       return
     fi
     if ((attempt >= SMOKE_RETRIES)); then
+      progress_done "[smoke] $label failed ($attempt/$SMOKE_RETRIES)"
       return 1
     fi
     attempt=$((attempt + 1))
@@ -120,11 +146,13 @@ check_api() {
   fi
 
   while true; do
-    echo "[smoke] API $label (attempt $attempt/$SMOKE_RETRIES)"
+    progress_update "[smoke] API $label (attempt $attempt/$SMOKE_RETRIES)"
     if response="$(curl --noproxy '*' --fail --silent --show-error --max-time 5 "${auth_args[@]}" "$url")" && api_success "$response"; then
+      progress_done "[smoke] API $label ok ($attempt/$SMOKE_RETRIES)"
       return
     fi
     if ((attempt >= SMOKE_RETRIES)); then
+      progress_done "[smoke] API $label failed ($attempt/$SMOKE_RETRIES)"
       return 1
     fi
     attempt=$((attempt + 1))
@@ -149,12 +177,14 @@ get_api() {
   fi
 
   while true; do
-    echo "[smoke] API $label (attempt $attempt/$SMOKE_RETRIES)" >&2
+    progress_update "[smoke] API $label (attempt $attempt/$SMOKE_RETRIES)"
     if response="$(curl --noproxy '*' --fail --silent --show-error --max-time 5 "${auth_args[@]}" "$url")" && api_success "$response"; then
+      progress_done "[smoke] API $label ok ($attempt/$SMOKE_RETRIES)"
       printf '%s' "$response"
       return
     fi
     if ((attempt >= SMOKE_RETRIES)); then
+      progress_done "[smoke] API $label failed ($attempt/$SMOKE_RETRIES)"
       return 1
     fi
     attempt=$((attempt + 1))
@@ -175,13 +205,15 @@ check_api_auth() {
   fi
 
   while true; do
-    echo "[smoke] API $label (attempt $attempt/$SMOKE_RETRIES)"
+    progress_update "[smoke] API $label (attempt $attempt/$SMOKE_RETRIES)"
     if response="$(curl --noproxy '*' --fail --silent --show-error --max-time 5 \
       -H "Authorization: Bearer $token" \
       "$url")" && api_success "$response"; then
+      progress_done "[smoke] API $label ok ($attempt/$SMOKE_RETRIES)"
       return
     fi
     if ((attempt >= SMOKE_RETRIES)); then
+      progress_done "[smoke] API $label failed ($attempt/$SMOKE_RETRIES)"
       return 1
     fi
     attempt=$((attempt + 1))
@@ -266,7 +298,7 @@ post_json() {
   fi
 
   while true; do
-    echo "[smoke] POST $label (attempt $attempt/$SMOKE_RETRIES)" >&2
+    progress_update "[smoke] POST $label (attempt $attempt/$SMOKE_RETRIES)"
     if response="$(curl --noproxy '*' --silent --show-error --max-time 5 -w $'\n%{http_code}' \
       "${auth_args[@]}" \
       -H 'Content-Type: application/json; charset=utf-8' \
@@ -275,12 +307,14 @@ post_json() {
       http_code="${response##*$'\n'}"
       response_body="${response%$'\n'*}"
       if [[ "$http_code" =~ ^2[0-9][0-9]$ ]] && api_success "$response_body"; then
+        progress_done "[smoke] POST $label ok ($attempt/$SMOKE_RETRIES)"
         printf '%s' "$response_body"
         return
       fi
       echo "[smoke] POST $label failed: HTTP $http_code ${response_body:-<empty response>}" >&2
     fi
     if ((attempt >= SMOKE_RETRIES)); then
+      progress_done "[smoke] POST $label failed ($attempt/$SMOKE_RETRIES)"
       return 1
     fi
     attempt=$((attempt + 1))
@@ -308,7 +342,7 @@ patch_json() {
   fi
 
   while true; do
-    echo "[smoke] PATCH $label (attempt $attempt/$SMOKE_RETRIES)" >&2
+    progress_update "[smoke] PATCH $label (attempt $attempt/$SMOKE_RETRIES)"
     if response="$(curl --noproxy '*' --silent --show-error --max-time 5 -w $'\n%{http_code}' \
       -X PATCH \
       "${auth_args[@]}" \
@@ -318,12 +352,14 @@ patch_json() {
       http_code="${response##*$'\n'}"
       response_body="${response%$'\n'*}"
       if [[ "$http_code" =~ ^2[0-9][0-9]$ ]] && api_success "$response_body"; then
+        progress_done "[smoke] PATCH $label ok ($attempt/$SMOKE_RETRIES)"
         printf '%s' "$response_body"
         return
       fi
       echo "[smoke] PATCH $label failed: HTTP $http_code ${response_body:-<empty response>}" >&2
     fi
     if ((attempt >= SMOKE_RETRIES)); then
+      progress_done "[smoke] PATCH $label failed ($attempt/$SMOKE_RETRIES)"
       return 1
     fi
     attempt=$((attempt + 1))
@@ -344,15 +380,17 @@ post_auth() {
   fi
 
   while true; do
-    echo "[smoke] POST $label (attempt $attempt/$SMOKE_RETRIES)" >&2
+    progress_update "[smoke] POST $label (attempt $attempt/$SMOKE_RETRIES)"
     if response="$(curl --noproxy '*' --fail --silent --show-error --max-time 5 \
       -X POST \
       -H "Authorization: Bearer $token" \
       "$url")" && api_success "$response"; then
+      progress_done "[smoke] POST $label ok ($attempt/$SMOKE_RETRIES)"
       printf '%s' "$response"
       return
     fi
     if ((attempt >= SMOKE_RETRIES)); then
+      progress_done "[smoke] POST $label failed ($attempt/$SMOKE_RETRIES)"
       return 1
     fi
     attempt=$((attempt + 1))
@@ -385,7 +423,7 @@ put_upload_content() {
   fi
 
   while true; do
-    echo "[smoke] PUT multipart $label (attempt $attempt/$SMOKE_RETRIES)" >&2
+    progress_update "[smoke] PUT multipart $label (attempt $attempt/$SMOKE_RETRIES)"
     if response="$(curl --noproxy '*' --fail --silent --show-error --max-time 5 \
       -X PUT \
       "${auth_args[@]}" \
@@ -393,10 +431,12 @@ put_upload_content() {
       -F "objectKey=$object_key" \
       -F "file=@$curl_file_path;type=application/pdf" \
       "$url")" && api_success "$response"; then
+      progress_done "[smoke] PUT multipart $label ok ($attempt/$SMOKE_RETRIES)"
       printf '%s' "$response"
       return
     fi
     if ((attempt >= SMOKE_RETRIES)); then
+      progress_done "[smoke] PUT multipart $label failed ($attempt/$SMOKE_RETRIES)"
       return 1
     fi
     attempt=$((attempt + 1))

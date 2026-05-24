@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 COMPOSE_FILE="${TRAINMARK_COMPOSE_FILE:-$ROOT_DIR/infra/docker-compose.yml}"
 
 POSTGRES_DB="${POSTGRES_DB:-trainmark_ai}"
@@ -34,16 +34,16 @@ export MINIO_SECRET_KEY
 export MINIO_BUCKET
 
 if [[ "${TRAINMARK_SKIP_INFRA:-0}" != "1" ]]; then
-  echo "[dev:mvp:jdbc] Starting local infrastructure"
+  echo "[start:stack] Starting local infrastructure"
   docker compose -f "$COMPOSE_FILE" up -d
 else
-  echo "[dev:mvp:jdbc] Skipping infrastructure startup"
+  echo "[start:stack] Skipping infrastructure startup"
 fi
 
 if [[ "${TRAINMARK_SKIP_DB_MIGRATIONS:-0}" != "1" ]]; then
-  bash "$ROOT_DIR/scripts/apply-db-migrations.sh"
+  bash "$ROOT_DIR/scripts/ops/db-migrate-local.sh"
 else
-  echo "[dev:mvp:jdbc] Skipping database migration check"
+  echo "[start:stack] Skipping database migration check"
 fi
 
 export TRAINMARK_AUTH_STORE="${TRAINMARK_AUTH_STORE:-jdbc}"
@@ -102,5 +102,5 @@ export TRAINMARK_ADMIN_JDBC_URL="${TRAINMARK_ADMIN_JDBC_URL:-$TRAINMARK_JDBC_URL
 export TRAINMARK_ADMIN_JDBC_USERNAME="${TRAINMARK_ADMIN_JDBC_USERNAME:-$TRAINMARK_JDBC_USERNAME}"
 export TRAINMARK_ADMIN_JDBC_PASSWORD="${TRAINMARK_ADMIN_JDBC_PASSWORD:-$TRAINMARK_JDBC_PASSWORD}"
 
-echo "[dev:mvp:jdbc] JDBC URL: $TRAINMARK_JDBC_URL"
-exec bash "$ROOT_DIR/scripts/dev-mvp.sh"
+echo "[start:stack] JDBC URL: $TRAINMARK_JDBC_URL"
+exec bash "$ROOT_DIR/scripts/dev/fullstack.sh"

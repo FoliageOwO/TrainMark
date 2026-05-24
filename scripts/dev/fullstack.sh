@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 LOG_DIR="$ROOT_DIR/.logs"
 BACKEND_LOG="$LOG_DIR/dev-mvp-backend.log"
 
@@ -20,32 +20,32 @@ trap stop_backend EXIT INT TERM
 
 cd "$ROOT_DIR"
 
-echo "[dev:mvp] Starting backend services"
-bash scripts/dev-backend.sh > "$BACKEND_LOG" 2>&1 &
+echo "[start:stack:http] Starting backend services"
+bash scripts/dev/backend-all.sh > "$BACKEND_LOG" 2>&1 &
 backend_pid="$!"
 
-echo "[dev:mvp] Backend supervisor pid=$backend_pid"
-echo "[dev:mvp] Backend supervisor log: $BACKEND_LOG"
-echo "[dev:mvp] Service logs: $ROOT_DIR/.logs/backend"
-echo "[dev:mvp] Waiting for API smoke checks"
+echo "[start:stack:http] Backend supervisor pid=$backend_pid"
+echo "[start:stack:http] Backend supervisor log: $BACKEND_LOG"
+echo "[start:stack:http] Service logs: $ROOT_DIR/.logs/backend"
+echo "[start:stack:http] Waiting for API smoke checks"
 
 SMOKE_RETRIES="${SMOKE_RETRIES:-60}" \
 SMOKE_RETRY_DELAY_SECONDS="${SMOKE_RETRY_DELAY_SECONDS:-2}" \
 pnpm smoke:api
 
 if [[ "${TRAINMARK_STRICT_AUTH_SMOKE:-0}" == "1" ]]; then
-  echo "[dev:mvp] Running strict auth smoke checks"
+  echo "[start:stack:http] Running strict auth smoke checks"
   pnpm smoke:auth:strict
 fi
 
-echo "[dev:mvp] API is ready"
+echo "[start:stack:http] API is ready"
 
 if [[ "${TRAINMARK_MVP_SMOKE_ONLY:-0}" == "1" ]]; then
-  echo "[dev:mvp] Smoke-only mode completed"
+  echo "[start:stack:http] Smoke-only mode completed"
   exit 0
 fi
 
-echo "[dev:mvp] Starting web app in HTTP mode"
+echo "[start:stack:http] Starting web app in HTTP mode"
 
 VITE_API_MODE="${VITE_API_MODE:-http}" \
 VITE_API_BASE_URL="${VITE_API_BASE_URL:-http://localhost:8080}" \
