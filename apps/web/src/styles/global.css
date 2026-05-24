@@ -296,6 +296,11 @@ button:focus-visible {
   opacity: 0.5;
 }
 
+.primary-button.compact {
+  padding: 7px 11px;
+  font-size: 12px;
+}
+
 .ghost-button {
   display: inline-flex;
   gap: 6px;
@@ -759,6 +764,11 @@ button:focus-visible {
   box-shadow: var(--shadow-sm);
 }
 
+.assignment-card.selected {
+  border-color: var(--brand);
+  background: var(--brand-light);
+}
+
 .assignment-title {
   display: flex;
   gap: 8px;
@@ -802,6 +812,12 @@ button:focus-visible {
   font-size: 11px;
   border-radius: 6px;
   background: var(--bg-elevated);
+}
+
+.assignment-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
 }
 
 /* Assignment form */
@@ -2296,6 +2312,15 @@ button:focus-visible {
   border: 0;
   background: transparent;
   cursor: pointer;
+}
+
+.danger-link {
+  display: inline-flex;
+  gap: 4px;
+  align-items: center;
+  color: var(--danger) !important;
+  font-size: 12px;
+  font-weight: 600;
 }
 
 /* Org chain */

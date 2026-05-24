@@ -94,6 +94,10 @@ public class UploadService {
     return store.getSubmissionFile(submissionId);
   }
 
+  public void deleteSubmission(Long submissionId) {
+    store.deleteSubmission(submissionId);
+  }
+
   public UploadObjectSummary storeContent(String uploadId, String objectKey, String contentType, long size, java.io.InputStream content) {
     validateObjectContent(objectKey, contentType, size);
     try {

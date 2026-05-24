@@ -23,6 +23,87 @@ pnpm dev:web
 pnpm dev:mvp:jdbc
 ```
 
+### 完整本地开发（含真实 AI Provider）
+
+如果要验证真实 OCR 和语义评分，需要先启动 AI Provider bridge，再启动完整项目。
+
+**终端 1：启动 AI Provider bridge**
+
+Windows PowerShell：
+
+```powershell
+cd E:\学习\工程实训\TrainMark
+
+# 首次使用需要安装依赖。建议使用系统 Python，而不是其它项目自带的嵌入式 Python。
+py -3.13 -m pip install -r ai/requirements.txt
+
+# 严格真实 AI 模式：PaddleOCR/BGE 不可用时直接报错，不走离线兜底。
+$env:TRAINMARK_REQUIRE_REAL_AI="1"
+$env:SCORING_MODEL="BAAI/bge-small-zh-v1.5"
+py -3.13 ai/bridge_server.py
+```
+
+Linux/macOS：
+
+```bash
+cd ~/TrainMark
+python3 -m pip install -r ai/requirements.txt
+
+export TRAINMARK_REQUIRE_REAL_AI=1
+export SCORING_MODEL=BAAI/bge-small-zh-v1.5
+python3 ai/bridge_server.py
+```
+
+看到下面输出表示 AI bridge 已启动：
+
+```text
+[ai-bridge] AI Provider bridge started: http://localhost:5000
+[ai-bridge] requireRealAi=True scoringModel=BAAI/bge-small-zh-v1.5
+```
+
+**终端 2：启动完整项目，并把后端切到 AI HTTP Provider**
+
+Windows PowerShell：
+
+```powershell
+cd E:\学习\工程实训\TrainMark
+
+$env:OCR_PROVIDER="paddleocr-http"
+$env:OCR_ENDPOINT="http://localhost:5000/api/ai/ocr/paddleocr"
+$env:SCORING_PROVIDER="semantic-http"
+$env:SCORING_ENDPOINT="http://localhost:5000/api/ai/scoring/semantic"
+$env:TRAINMARK_REQUIRE_REAL_AI="1"
+
+pnpm dev:mvp:jdbc
+```
+
+Linux/macOS：
+
+```bash
+cd ~/TrainMark
+
+export OCR_PROVIDER=paddleocr-http
+export OCR_ENDPOINT=http://localhost:5000/api/ai/ocr/paddleocr
+export SCORING_PROVIDER=semantic-http
+export SCORING_ENDPOINT=http://localhost:5000/api/ai/scoring/semantic
+export TRAINMARK_REQUIRE_REAL_AI=1
+
+pnpm dev:mvp:jdbc
+```
+
+浏览器访问：
+
+```text
+http://localhost:5173/?role=teacher&section=ai-pipeline
+```
+
+启动批改后，如果 AI bridge 终端出现下面请求，说明后端已经在调用真实 AI Provider：
+
+```text
+[ai-bridge] "POST /api/ai/ocr/paddleocr HTTP/1.1" 200 -
+[ai-bridge] "POST /api/ai/scoring/semantic HTTP/1.1" 200 -
+```
+
 ### 云端服务器部署
 
 ```bash
@@ -162,25 +243,57 @@ cp .env.example .env
 
 ## 真实 AI Provider
 
-本地默认仍可用 `local` 模式快速开发。要接入真实 OCR 和语义评分，先启动或部署一个 AI Provider HTTP 服务，再把后端切到 HTTP provider：
+本地默认仍可用 `local` 模式快速开发。完整验收或生产部署建议使用 HTTP Provider：
+
+| 能力 | 本地快速模式 | 真实 AI HTTP 模式 |
+|------|--------------|-------------------|
+| OCR | `OCR_PROVIDER=local` | `OCR_PROVIDER=paddleocr-http` |
+| 语义评分 | `SCORING_PROVIDER=local` | `SCORING_PROVIDER=semantic-http` |
+| OCR 地址 | 无需配置 | `OCR_ENDPOINT=http://localhost:5000/api/ai/ocr/paddleocr` |
+| 评分地址 | 无需配置 | `SCORING_ENDPOINT=http://localhost:5000/api/ai/scoring/semantic` |
+| 严格真实 AI | `TRAINMARK_REQUIRE_REAL_AI=0` | `TRAINMARK_REQUIRE_REAL_AI=1` |
+
+### 本地 AI bridge 环境变量
+
+| 变量 | 说明 | 默认值 |
+|------|------|--------|
+| `BRIDGE_PORT` | AI bridge 监听端口 | `5000` |
+| `TRAINMARK_REQUIRE_REAL_AI` | 是否禁止离线兜底 | `0` |
+| `SCORING_MODEL` | SentenceTransformer/BGE 模型 | `BAAI/bge-small-zh-v1.5` |
+| `OCR_LANGUAGE` | OCR 语言 | `ch` |
+| `OCR_ENGINE` | OCR 引擎 | `paddle` |
+| `TRAINMARK_AI_API_KEY` | AI bridge API key；为空时不校验 | 空 |
+
+### 后端 AI Provider 环境变量
+
+| 变量 | 说明 | 示例 |
+|------|------|------|
+| `OCR_PROVIDER` | OCR Provider 类型 | `paddleocr-http` |
+| `OCR_ENDPOINT` | OCR HTTP Provider 地址 | `http://localhost:5000/api/ai/ocr/paddleocr` |
+| `OCR_API_KEY` | OCR Provider Bearer Token | 可空 |
+| `SCORING_PROVIDER` | 评分 Provider 类型 | `semantic-http` |
+| `SCORING_ENDPOINT` | 语义评分 HTTP Provider 地址 | `http://localhost:5000/api/ai/scoring/semantic` |
+| `SCORING_API_KEY` | 评分 Provider Bearer Token | 可空 |
+
+`TRAINMARK_REQUIRE_REAL_AI=1` 会禁止离线兜底；如果 PaddleOCR 或 SentenceTransformer/BGE 模型没有安装成功，AI bridge 会直接报错，适合生产验收。
+
+### 生产部署 AI Provider
+
+生产环境可以继续使用本项目内置的 `ai/bridge_server.py`，也可以替换为独立部署的 PaddleOCR/BGE 服务。替换时只需要保持 HTTP JSON 契约一致，并把后端环境变量指向生产地址：
 
 ```bash
-# 安装真实 AI Provider 依赖
-python -m pip install -r ai/requirements.txt
-
-# 启动内置桥接服务。生产环境也可以替换成独立 PaddleOCR/BGE 服务。
-python ai/bridge_server.py
-
-# 后端环境变量
 OCR_PROVIDER=paddleocr-http
-OCR_ENDPOINT=http://localhost:5000/api/ai/ocr/paddleocr
+OCR_ENDPOINT=https://ai.example.com/api/ai/ocr/paddleocr
+OCR_API_KEY=替换为生产密钥
+
 SCORING_PROVIDER=semantic-http
-SCORING_ENDPOINT=http://localhost:5000/api/ai/scoring/semantic
-SCORING_MODEL=BAAI/bge-small-zh-v1.5
+SCORING_ENDPOINT=https://ai.example.com/api/ai/scoring/semantic
+SCORING_API_KEY=替换为生产密钥
+
 TRAINMARK_REQUIRE_REAL_AI=1
 ```
 
-`TRAINMARK_REQUIRE_REAL_AI=1` 会禁止离线兜底；如果 PaddleOCR 或 SentenceTransformer/BGE 模型没有安装成功，服务会直接报错，适合生产验收。
+如果 AI bridge 配置了 `TRAINMARK_AI_API_KEY`，后端的 `OCR_API_KEY` 和 `SCORING_API_KEY` 要使用同一个值。
 
 ## 开发原则
 

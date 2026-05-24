@@ -20,4 +20,6 @@ public interface CourseStore {
   Collection<AssignmentSummary> listAssignments(Long courseId);
 
   AssignmentSummary createAssignment(CreateAssignmentRequest request);
+
+  AssignmentSummary publishAssignment(Long assignmentId);
 }

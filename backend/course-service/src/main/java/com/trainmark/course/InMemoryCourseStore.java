@@ -89,6 +89,26 @@ public class InMemoryCourseStore implements CourseStore {
     return assignment;
   }
 
+  @Override
+  public AssignmentSummary publishAssignment(Long assignmentId) {
+    var assignment = assignments.get(assignmentId);
+    if (assignment == null) {
+      throw new IllegalArgumentException("Assignment not found: " + assignmentId);
+    }
+    var published = new AssignmentSummary(
+        assignment.id(),
+        assignment.courseId(),
+        assignment.title(),
+        assignment.deadline(),
+        assignment.totalScore(),
+        AssignmentStatus.PUBLISHED,
+        assignment.similarityCheckEnabled(),
+        assignment.aiGradingEnabled()
+    );
+    assignments.put(assignmentId, published);
+    return published;
+  }
+
   private void refreshCourseCounts(Long courseId) {
     var old = courses.get(courseId);
     if (old == null) {

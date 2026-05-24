@@ -424,11 +424,34 @@ export const mockApi = {
       similarityCheckEnabled: input.similarityCheckEnabled,
       aiGradingEnabled: input.aiGradingEnabled,
     };
-    assignments.push(assignment);
+    assignments.unshift(assignment);
     return assignment;
   },
+  publishAssignment(assignmentId: number): AssignmentSummary {
+    const assignment = assignments.find((item) => item.id === assignmentId);
+    if (!assignment) {
+      throw new Error(`Assignment not found: ${assignmentId}`);
+    }
+    assignment.status = 'PUBLISHED';
+    syncStudentTaskForAssignment(assignment);
+    demoNotifications.unshift({
+      id: Math.max(0, ...demoNotifications.map((item) => item.id)) + 1,
+      title: '任务发布',
+      message: `${assignment.title} 已发布，请及时查看并提交报告。`,
+      type: 'ASSIGNMENT_PUBLISHED',
+      isRead: false,
+      targetUrl: `/tasks/${assignment.id}`,
+      createdAt: new Date().toISOString(),
+    });
+    return { ...assignment };
+  },
   listStudentTasks(): SubmissionTask[] {
-    return studentTasks;
+    assignments
+      .filter((assignment) => assignment.status === 'PUBLISHED')
+      .forEach(syncStudentTaskForAssignment);
+    return studentTasks.filter((task) => assignments.some((assignment) => (
+      assignment.id === task.id && assignment.status === 'PUBLISHED'
+    )));
   },
   getCollectionOverview(assignmentId?: number): CollectionOverview {
     if (assignmentId === undefined || assignmentId === collectionOverview.assignmentId) {
@@ -709,7 +732,7 @@ export const mockApi = {
     return appeal;
   },
   startGradingJob(assignmentId = 1, rubricId = 1, submissionIds = [1]): GradingJobSummary {
-    return {
+    const job: GradingJobSummary = {
       id: gradingJobs.length + 1,
       assignmentId,
       rubricId,
@@ -719,6 +742,9 @@ export const mockApi = {
       confidence: 86,
       createdAt: new Date().toISOString(),
     };
+    gradingJobs.unshift(job);
+    createGradingResultsForSubmissions(assignmentId, submissionIds);
+    return job;
   },
   createUploadReceipt(fileName: string, assignmentId = 1, studentId = 2): UploadReceipt {
     const student = userDirectory.find((item) => item.id === studentId);
@@ -750,6 +776,41 @@ export const mockApi = {
       status: '已提交',
     };
   },
+  deleteSubmission(submissionId: number): void {
+    const submissionIndex = submissions.findIndex((item) => item.id === submissionId);
+    if (submissionIndex < 0) {
+      throw new Error(`Submission not found: ${submissionId}`);
+    }
+    const [submission] = submissions.splice(submissionIndex, 1);
+    for (let index = gradingResults.length - 1; index >= 0; index -= 1) {
+      if (gradingResults[index].submissionId === submissionId) {
+        gradingResults.splice(index, 1);
+      }
+    }
+    const latest = submissions
+      .filter((item) => item.assignmentId === submission.assignmentId && item.studentId === submission.studentId)
+      .sort((a, b) => Date.parse(b.submittedAt) - Date.parse(a.submittedAt))[0];
+    const task = studentTasks.find((item) => item.id === submission.assignmentId);
+    const publishedResult = gradingResults.find((item) => (
+      item.assignmentId === submission.assignmentId &&
+      item.studentId === submission.studentId &&
+      item.publicationStatus === 'PUBLISHED'
+    ));
+    if (task) {
+      if (publishedResult) {
+        task.status = '已发布成绩';
+        task.score = publishedResult.teacherScore;
+      } else if (latest) {
+        task.status = latest.status === 'PROCESSING' || latest.status === 'GRADED' || latest.status === 'REVIEWED'
+          ? '批改中'
+          : '已提交';
+        task.score = undefined;
+      } else {
+        task.status = '未提交';
+        task.score = undefined;
+      }
+    }
+  },
   listNotifications(userId: number, unreadOnly = false): NotificationItem[] {
     return demoNotifications
       .filter((n) => !unreadOnly || !n.isRead)
@@ -775,3 +836,104 @@ const demoNotifications: NotificationItem[] = [
   { id: 4, title: '成绩发布', message: '您的实训报告成绩已发布，请查看详情。', type: 'GRADE_PUBLISHED', isRead: true, targetUrl: '/results/1', createdAt: new Date(Date.now() - 30 * 60_000).toISOString() },
   { id: 5, title: '申诉处理', message: '您有一条申诉需要处理。', type: 'APPEAL', isRead: true, targetUrl: '/appeals/1', createdAt: new Date(Date.now() - 15 * 60_000).toISOString() },
 ];
+
+function syncStudentTaskForAssignment(assignment: AssignmentSummary) {
+  if (assignment.status !== 'PUBLISHED') {
+    return;
+  }
+  const existing = studentTasks.find((task) => task.id === assignment.id);
+  const course = courses.find((item) => item.id === assignment.courseId);
+  const latestSubmission = submissions
+    .filter((item) => item.assignmentId === assignment.id && item.studentId === users.STUDENT.id)
+    .sort((a, b) => Date.parse(b.submittedAt) - Date.parse(a.submittedAt))[0];
+  const publishedResult = gradingResults.find((item) => (
+    item.assignmentId === assignment.id &&
+    item.studentId === users.STUDENT.id &&
+    item.publicationStatus === 'PUBLISHED'
+  ));
+  const nextTask: SubmissionTask = {
+    id: assignment.id,
+    title: assignment.title,
+    courseName: course?.name ?? '未知课程',
+    deadline: assignment.deadline,
+    status: latestSubmission ? '已提交' : '未提交',
+  };
+  if (latestSubmission) {
+    nextTask.submissionId = latestSubmission.id;
+    nextTask.fileName = latestSubmission.fileName;
+    nextTask.version = latestSubmission.version;
+    nextTask.submittedAt = latestSubmission.submittedAt;
+    if (latestSubmission.status === 'PROCESSING' || latestSubmission.status === 'GRADED' || latestSubmission.status === 'REVIEWED') {
+      nextTask.status = '批改中';
+    }
+  }
+  if (publishedResult) {
+    nextTask.status = '已发布成绩';
+    nextTask.score = publishedResult.teacherScore;
+  }
+  if (existing) {
+    Object.assign(existing, nextTask);
+  } else {
+    studentTasks.unshift(nextTask);
+  }
+}
+
+function createGradingResultsForSubmissions(assignmentId: number, submissionIds: number[]) {
+  const assignment = assignments.find((item) => item.id === assignmentId);
+  const rubric = rubrics.find((item) => item.assignmentId === assignmentId) ?? rubrics[0];
+  const targetSubmissions = submissions.filter((item) => (
+    item.assignmentId === assignmentId && submissionIds.includes(item.id)
+  ));
+  targetSubmissions.forEach((submission) => {
+    if (gradingResults.some((result) => result.submissionId === submission.id)) {
+      return;
+    }
+    submission.status = 'REVIEWED';
+    const resultId = Math.max(0, ...gradingResults.map((item) => item.id)) + 1;
+    const items = (rubric?.items ?? []).map((item) => ({
+      rubricItemId: item.id,
+      title: item.title,
+      maxScore: item.score,
+      aiScore: Math.max(0, Math.round(item.score * 0.82)),
+      teacherScore: Math.max(0, Math.round(item.score * 0.82)),
+      deductionReason: '系统根据当前报告内容生成初评，建议教师结合原文复核。',
+      teacherComment: '请教师确认该分项得分和评语。',
+      confidence: 82,
+      evidence: ['学生提交报告', '评分标准关键点'],
+    }));
+    const teacherScore = items.reduce((total, item) => total + item.teacherScore, 0);
+    gradingResults.unshift({
+      id: resultId,
+      assignmentId,
+      submissionId: submission.id,
+      studentId: submission.studentId,
+      studentName: submission.studentName,
+      studentNo: submission.studentNo,
+      fileName: submission.fileName,
+      previewUrl: null,
+      annotationPdfUrl: null,
+      totalScore: assignment?.totalScore ?? rubric?.totalScore ?? 100,
+      aiScore: teacherScore,
+      teacherScore,
+      confidence: 82,
+      reviewStatus: 'NEEDS_REVIEW',
+      publicationStatus: 'NOT_PUBLISHED',
+      overallComment: 'AI 已生成初评结果，请教师完成复核后再发布成绩。',
+      reviewedAt: null,
+      publishedAt: null,
+      items,
+      annotations: [
+        {
+          id: resultId * 10 + 1,
+          page: 1,
+          anchorText: '学生提交报告',
+          comment: '请教师核对报告内容与评分标准是否匹配。',
+          severity: 'info',
+        },
+      ],
+    });
+  });
+  assignments
+    .filter((item) => item.status === 'PUBLISHED')
+    .forEach(syncStudentTaskForAssignment);
+}

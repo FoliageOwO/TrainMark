@@ -15,22 +15,29 @@ const statusText = {
 type TeacherAssignmentPanelProps = {
   assignments: AssignmentSummary[];
   classes: TeachingClassSummary[];
+  selectedAssignmentId: number;
   selectedCourseId: number;
   selectedCourseName: string;
   assignmentNotice: string;
   onCreateAssignment: (input: CreateAssignmentInput) => Promise<void>;
+  onPublishAssignment: (assignmentId: number) => Promise<void>;
+  onSelectAssignment: (assignmentId: number) => void;
 };
 
 export function TeacherAssignmentPanel({
   assignments,
   classes,
+  selectedAssignmentId,
   selectedCourseId,
   selectedCourseName,
   assignmentNotice,
   onCreateAssignment,
+  onPublishAssignment,
+  onSelectAssignment,
 }: TeacherAssignmentPanelProps) {
   const [showForm, setShowForm] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
+  const [publishingId, setPublishingId] = useState<number | null>(null);
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -58,6 +65,15 @@ export function TeacherAssignmentPanel({
       setShowForm(false);
     } finally {
       setIsCreating(false);
+    }
+  };
+
+  const handlePublish = async (assignmentId: number) => {
+    setPublishingId(assignmentId);
+    try {
+      await onPublishAssignment(assignmentId);
+    } finally {
+      setPublishingId(null);
     }
   };
 
@@ -111,7 +127,7 @@ export function TeacherAssignmentPanel({
       ) : (
         <div className="assignment-list">
           {assignments.map((item) => (
-            <div className="assignment-card" key={item.id}>
+            <div className={`assignment-card ${selectedAssignmentId === item.id ? 'selected' : ''}`} key={item.id}>
               <div className="assignment-title">
                 <FileText size={18} />
                 <strong>{item.title}</strong>
@@ -124,6 +140,25 @@ export function TeacherAssignmentPanel({
               <div className="assignment-flags">
                 <span>{item.aiGradingEnabled ? 'AI 批改' : '人工批改'}</span>
                 <span>{item.similarityCheckEnabled ? '查重开启' : '查重关闭'}</span>
+              </div>
+              <div className="assignment-actions">
+                <button
+                  className="ghost-button compact"
+                  type="button"
+                  onClick={() => onSelectAssignment(item.id)}
+                >
+                  {selectedAssignmentId === item.id ? '当前任务' : '设为当前'}
+                </button>
+                {item.status === 'DRAFT' && (
+                  <button
+                    className="primary-button compact"
+                    type="button"
+                    onClick={() => handlePublish(item.id)}
+                    disabled={publishingId === item.id}
+                  >
+                    {publishingId === item.id ? '发布中...' : '发布任务'}
+                  </button>
+                )}
               </div>
             </div>
           ))}

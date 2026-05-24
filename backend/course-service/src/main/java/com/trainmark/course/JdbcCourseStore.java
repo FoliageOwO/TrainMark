@@ -195,6 +195,48 @@ public class JdbcCourseStore implements CourseStore {
     }
   }
 
+  @Override
+  public AssignmentSummary publishAssignment(Long assignmentId) {
+    var sql = "UPDATE assignments SET status = ? WHERE id = ?";
+    try (var connection = connect();
+        var statement = connection.prepareStatement(sql)) {
+      statement.setString(1, AssignmentStatus.PUBLISHED.name());
+      statement.setLong(2, assignmentId);
+      if (statement.executeUpdate() == 0) {
+        throw new IllegalArgumentException("Assignment not found: " + assignmentId);
+      }
+      return findAssignment(connection, assignmentId);
+    } catch (SQLException error) {
+      throw new IllegalStateException("Failed to publish assignment", error);
+    }
+  }
+
+  private AssignmentSummary findAssignment(Connection connection, Long assignmentId) throws SQLException {
+    var sql = """
+        SELECT id, course_id, title, deadline, total_score, status, similarity_check_enabled, ai_grading_enabled
+        FROM assignments
+        WHERE id = ?
+        """;
+    try (var statement = connection.prepareStatement(sql)) {
+      statement.setLong(1, assignmentId);
+      try (var results = statement.executeQuery()) {
+        if (results.next()) {
+          return new AssignmentSummary(
+              results.getLong("id"),
+              results.getLong("course_id"),
+              results.getString("title"),
+              results.getObject("deadline", OffsetDateTime.class),
+              results.getInt("total_score"),
+              AssignmentStatus.valueOf(results.getString("status")),
+              results.getBoolean("similarity_check_enabled"),
+              results.getBoolean("ai_grading_enabled")
+          );
+        }
+      }
+    }
+    throw new IllegalArgumentException("Assignment not found: " + assignmentId);
+  }
+
   private AssignmentSummary insertAssignment(Connection connection, CreateAssignmentRequest request) throws SQLException {
     var sql = """
         INSERT INTO assignments (

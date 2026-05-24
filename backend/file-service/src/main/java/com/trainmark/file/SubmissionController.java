@@ -5,6 +5,7 @@ import com.trainmark.shared.AuthenticatedUser;
 import com.trainmark.shared.dto.SubmissionSummary;
 import java.nio.charset.StandardCharsets;
 import java.util.Collection;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.http.ContentDisposition;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseEntity;
@@ -57,6 +58,19 @@ public class SubmissionController {
             .build()
             .toString())
         .body(file.content());
+  }
+
+  @DeleteMapping("/{submissionId}")
+  public ApiResponse<Void> delete(
+      @PathVariable("submissionId") Long submissionId,
+      @RequestHeader(name = AuthenticatedUser.USER_ID_HEADER, required = false) String userId,
+      @RequestHeader(name = AuthenticatedUser.USERNAME_HEADER, required = false) String username,
+      @RequestHeader(name = AuthenticatedUser.ROLES_HEADER, required = false) String roles
+  ) {
+    var descriptor = uploadService.getSubmissionFileDescriptor(submissionId);
+    currentUser(userId, username, roles).requireStudentOwner(descriptor.studentId());
+    uploadService.deleteSubmission(submissionId);
+    return ApiResponse.ok(null);
   }
 
   private AuthenticatedUser currentUser(String userId, String username, String roles) {

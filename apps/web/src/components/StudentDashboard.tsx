@@ -3,7 +3,7 @@ import {
   CalendarClock,
   GraduationCap,
 } from 'lucide-react';
-import { createAppeal, createUploadReceipt } from '../api/httpApi';
+import { createAppeal, createUploadReceipt, deleteSubmission } from '../api/httpApi';
 import type { AppealSummary, GradingResultSummary, SubmissionTask, UploadReceipt } from '../api/types';
 import { formatDate } from '../utils/formatDate';
 import { StudentResultsPanel } from './StudentResultsPanel';
@@ -70,7 +70,17 @@ export function StudentDashboard({ tasks, publishedResults, appeals, userId, use
     const nextReceipt = await createUploadReceipt(selectedFileName, selectedTask.id, userId, selectedFile);
     setReceipt(nextReceipt);
     setTaskRows((current) => current.map((task) => (
-      task.id === selectedTask.id ? { ...task, status: '已提交', score: undefined } : task
+      task.id === selectedTask.id
+        ? {
+          ...task,
+          status: '已提交',
+          score: undefined,
+          submissionId: nextReceipt.submissionId,
+          fileName: nextReceipt.fileName,
+          version: nextReceipt.version,
+          submittedAt: nextReceipt.submittedAt,
+        }
+        : task
     )));
     await onWorkspaceRefresh();
   };
@@ -86,6 +96,26 @@ export function StudentDashboard({ tasks, publishedResults, appeals, userId, use
     setSelectedFile(null);
     setReceipt(null);
     setUploadProgress(36);
+  };
+
+  const handleDeleteSubmission = async (submissionId: number) => {
+    await deleteSubmission(submissionId);
+    setReceipt(null);
+    setTaskRows((current) => current.map((task) => (
+      task.submissionId === submissionId
+        ? {
+          ...task,
+          status: '未提交',
+          score: undefined,
+          submissionId: undefined,
+          fileName: undefined,
+          version: undefined,
+          submittedAt: undefined,
+        }
+        : task
+    )));
+    setUploadProgress(36);
+    await onWorkspaceRefresh();
   };
 
   const submitAppeal = async (resultId: number, rubricItemId: number | null) => {
@@ -158,6 +188,7 @@ export function StudentDashboard({ tasks, publishedResults, appeals, userId, use
         userName={userName}
         userStudentNo={userStudentNo}
         onConfirmUpload={confirmUpload}
+        onDeleteSubmission={handleDeleteSubmission}
         onFileNameChange={handleUploadFileNameChange}
         onFileSelect={selectUploadFile}
         onTaskSelect={handleUploadTaskSelect}

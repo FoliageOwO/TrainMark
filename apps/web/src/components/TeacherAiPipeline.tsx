@@ -33,24 +33,30 @@ const ocrBlockTypeText: Record<OcrJobSummary['blocks'][number]['type'], string> 
 
 type TeacherAiPipelineProps = {
   assignments: AssignmentSummary[];
+  selectedAssignmentId: number;
   rubric: RubricSummary | null;
   rubricNotice: string;
   gradingJobs: GradingJobSummary[];
   ocrJobs: OcrJobSummary[];
+  actionNotice: string;
   canStartOcr: boolean;
   onCreateRubric: (input: CreateRubricInput) => Promise<void>;
+  onSelectAssignment: (assignmentId: number) => void;
   onStartGrading: () => void;
   onStartOcr: () => void;
 };
 
 export function TeacherAiPipeline({
   assignments,
+  selectedAssignmentId,
   rubric,
   rubricNotice,
   gradingJobs,
   ocrJobs,
+  actionNotice,
   canStartOcr,
   onCreateRubric,
+  onSelectAssignment,
   onStartGrading,
   onStartOcr,
 }: TeacherAiPipelineProps) {
@@ -95,11 +101,24 @@ export function TeacherAiPipeline({
               <Plus size={15} /> 新建标准
             </button>
           </div>
+          <label className="file-name-field">
+            当前批改任务
+            <select
+              value={selectedAssignmentId}
+              onChange={(event) => onSelectAssignment(Number(event.target.value))}
+            >
+              {assignments.map((assignment) => (
+                <option key={assignment.id} value={assignment.id}>
+                  {toChineseText(assignment.title)} · {assignment.status === 'PUBLISHED' ? '已发布' : '草稿'}
+                </option>
+              ))}
+            </select>
+          </label>
           {showRubricForm && (
             <form className="assignment-create-form" onSubmit={handleSubmitRubric}>
               <label>
                 适用任务
-                <select name="assignmentId" required defaultValue={assignments[0]?.id ?? ''}>
+                <select name="assignmentId" required defaultValue={selectedAssignmentId || assignments[0]?.id || ''}>
                   {assignments.map((assignment) => (
                     <option key={assignment.id} value={assignment.id}>{toChineseText(assignment.title)}</option>
                   ))}
@@ -194,6 +213,7 @@ export function TeacherAiPipeline({
               <Sparkles size={15} /> 启动批改
             </button>
           </div>
+          {actionNotice && <div className="inline-success">{actionNotice}</div>}
           <div className="grading-job-list">
             {gradingJobs.map((job) => {
               const progress = job.totalSubmissions === 0 ? 0 : Math.round((job.completedSubmissions / job.totalSubmissions) * 100);

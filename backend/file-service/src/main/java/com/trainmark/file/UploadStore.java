@@ -17,4 +17,6 @@ public interface UploadStore {
   Collection<SubmissionSummary> listSubmissions(Long assignmentId, Long studentId);
 
   SubmissionFileDescriptor getSubmissionFile(Long submissionId);
+
+  void deleteSubmission(Long submissionId);
 }

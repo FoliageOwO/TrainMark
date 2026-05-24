@@ -20,6 +20,7 @@ const submissionStatusText: Record<SubmissionSummary['status'], string> = {
 type TeacherCollectionPanelProps = {
   collectionOverview: CollectionOverview;
   submissions: SubmissionSummary[];
+  selectedAssignmentTitle: string;
   selectedAssignmentId: number;
   unsubmittedStudents: UnsubmittedStudent[];
   reminderResult: ReminderResult | null;
@@ -29,6 +30,7 @@ type TeacherCollectionPanelProps = {
 export function TeacherCollectionPanel({
   collectionOverview,
   submissions,
+  selectedAssignmentTitle,
   selectedAssignmentId,
   unsubmittedStudents,
   reminderResult,
@@ -60,6 +62,7 @@ export function TeacherCollectionPanel({
           <div>
             <p className="eyebrow">报告收集</p>
             <h3>报告收集看板</h3>
+            <span className="panel-subtitle">{selectedAssignmentTitle}</span>
           </div>
           <button className="ghost-button" type="button" onClick={onRemindUnsubmitted}>
             <Bell size={15} /> 一键催交
@@ -90,6 +93,7 @@ export function TeacherCollectionPanel({
           <div>
             <p className="eyebrow">已交报告</p>
             <h3>已交报告</h3>
+            <span className="panel-subtitle">{selectedAssignmentTitle}</span>
           </div>
           <span className="status-pill">{submittedReports.length} 份可查看</span>
         </div>
@@ -125,6 +129,7 @@ export function TeacherCollectionPanel({
           <div>
             <p className="eyebrow">未交名单</p>
             <h3>未交名单</h3>
+            <span className="panel-subtitle">{selectedAssignmentTitle}</span>
           </div>
           <span className="status-pill">{unsubmittedStudents.length} 人待提醒</span>
         </div>

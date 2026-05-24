@@ -9,6 +9,7 @@ import {
   createOcrJob,
   createRubric,
   loadPublicationAudits,
+  publishAssignment,
   publishGradingResult,
   remindUnsubmitted,
   resolveAppeal,
@@ -109,26 +110,45 @@ export function TeacherDashboard({
   const [exportRows, setExportRows] = useState(gradeExports);
   const [ocrRows, setOcrRows] = useState(ocrJobs);
   const [assignmentRows, setAssignmentRows] = useState(assignments);
+  const [selectedAssignmentId, setSelectedAssignmentId] = useState(() => (
+    assignments.find((assignment) => assignment.courseId === selectedCourseId && assignment.status === 'PUBLISHED')?.id
+    ?? assignments.find((assignment) => assignment.courseId === selectedCourseId)?.id
+    ?? collectionOverview.assignmentId
+  ));
   const [rubricRows, setRubricRows] = useState<RubricSummary[]>(rubrics);
   const [studentRows, setStudentRows] = useState(students);
   const [studentImportResult, setStudentImportResult] = useState<StudentImportResult | null>(null);
   const [assignmentNotice, setAssignmentNotice] = useState('');
   const [rubricNotice, setRubricNotice] = useState('');
-  const selectedAssignmentId = assignmentRows.find((assignment) => assignment.courseId === selectedCourseId)?.id
-    ?? assignmentRows[0]?.id
-    ?? collectionOverview.assignmentId;
-  const rubric = rubricRows.find((item) => item.assignmentId === selectedAssignmentId) ?? rubricRows[0] ?? null;
+  const [actionNotice, setActionNotice] = useState('');
+  const selectedAssignment = assignmentRows.find((assignment) => assignment.id === selectedAssignmentId)
+    ?? assignmentRows.find((assignment) => assignment.courseId === selectedCourseId)
+    ?? assignmentRows[0]
+    ?? null;
+  const activeAssignmentId = selectedAssignment?.id ?? collectionOverview.assignmentId;
+  const rubric = rubricRows.find((item) => item.assignmentId === activeAssignmentId) ?? null;
   const visibleJobs = startedJob
     ? [startedJob, ...gradingJobs.filter((job) => job.id !== startedJob.id)]
     : gradingJobs;
   const selectedReview = reviewResults.find((item) => item.id === selectedReviewId) ?? reviewResults[0] ?? null;
   const ocrCandidate = submissions.find((submission) => (
-    submission.assignmentId === selectedAssignmentId && Boolean(submission.objectKey)
+    submission.assignmentId === activeAssignmentId && Boolean(submission.objectKey)
   )) ?? null;
 
   useEffect(() => {
     setAssignmentRows(assignments);
   }, [assignments]);
+
+  useEffect(() => {
+    setSelectedAssignmentId((current) => {
+      if (assignments.some((assignment) => assignment.id === current && assignment.courseId === selectedCourseId)) {
+        return current;
+      }
+      return assignments.find((assignment) => assignment.courseId === selectedCourseId && assignment.status === 'PUBLISHED')?.id
+        ?? assignments.find((assignment) => assignment.courseId === selectedCourseId)?.id
+        ?? collectionOverview.assignmentId;
+    });
+  }, [assignments, collectionOverview.assignmentId, selectedCourseId]);
 
   useEffect(() => {
     setRubricRows(rubrics);
@@ -189,12 +209,22 @@ export function TeacherDashboard({
 
   const handleStartGrading = async () => {
     if (!rubric) {
+      setActionNotice('请先为当前任务创建评分标准，再启动批改。');
       return;
     }
     const submissionIds = submissions
-      .filter((submission) => submission.assignmentId === rubric.assignmentId)
+      .filter((submission) => submission.assignmentId === activeAssignmentId)
       .map((submission) => submission.id);
-    setStartedJob(await createGradingJob(rubric.assignmentId, rubric.id, submissionIds.length > 0 ? submissionIds : [1]));
+    if (submissionIds.length === 0) {
+      setActionNotice('当前任务暂无学生提交，学生提交报告后才能启动批改。');
+      return;
+    }
+    const job = await createGradingJob(activeAssignmentId, rubric.id, submissionIds);
+    setStartedJob(job);
+    const latestReviewResults = mockApi.listGradingResults(activeAssignmentId);
+    setReviewResults(latestReviewResults);
+    setSelectedReviewId(latestReviewResults[0]?.id ?? 0);
+    setActionNotice(`已启动批改：${submissionIds.length} 份报告。`);
     await onWorkspaceRefresh();
   };
 
@@ -251,10 +281,15 @@ export function TeacherDashboard({
 
   const handleStartSimilarity = async () => {
     const submissionIds = submissions
-      .filter((submission) => submission.assignmentId === selectedAssignmentId)
+      .filter((submission) => submission.assignmentId === activeAssignmentId)
       .map((submission) => submission.id);
-    const job = await startSimilarityJob(selectedAssignmentId, submissionIds.length > 0 ? submissionIds : [1]);
+    if (submissionIds.length === 0) {
+      setActionNotice('当前任务暂无学生提交，学生提交报告后才能启动查重。');
+      return;
+    }
+    const job = await startSimilarityJob(activeAssignmentId, submissionIds);
     setSimilarityRows((current) => [job, ...current.filter((item) => item.id !== job.id)]);
+    setActionNotice(`已启动查重：${submissionIds.length} 份报告。`);
     await onWorkspaceRefresh();
   };
 
@@ -269,7 +304,7 @@ export function TeacherDashboard({
 
   const handleRemindUnsubmitted = async () => {
     const result = await remindUnsubmitted(
-      collectionOverview.assignmentId,
+      activeAssignmentId,
       unsubmittedStudents.map((student) => student.studentId),
     );
     setReminderResult(result);
@@ -277,7 +312,7 @@ export function TeacherDashboard({
   };
 
   const handleCreateGradeExport = async () => {
-    const exportJob = await createGradeExport(gradeStatistics.assignmentId, operatorName, 'CSV');
+    const exportJob = await createGradeExport(activeAssignmentId, operatorName, 'CSV');
     setExportRows((current) => [exportJob, ...current.filter((item) => item.id !== exportJob.id)]);
     await onWorkspaceRefresh();
   };
@@ -285,7 +320,18 @@ export function TeacherDashboard({
   const handleCreateAssignment = async (input: CreateAssignmentInput) => {
     const assignment = await createAssignment(input);
     setAssignmentRows((current) => [assignment, ...current.filter((item) => item.id !== assignment.id)]);
+    setSelectedAssignmentId(assignment.id);
     setAssignmentNotice(`已创建任务：${assignment.title}`);
+    setActionNotice('任务已保存为草稿，发布后学生端才会看到。');
+    await onWorkspaceRefresh();
+  };
+
+  const handlePublishAssignment = async (assignmentId: number) => {
+    const assignment = await publishAssignment(assignmentId);
+    setAssignmentRows((current) => current.map((item) => (item.id === assignment.id ? assignment : item)));
+    setSelectedAssignmentId(assignment.id);
+    setAssignmentNotice(`已发布任务：${assignment.title}`);
+    setActionNotice('任务已发布，学生端可以提交报告。');
     await onWorkspaceRefresh();
   };
 
@@ -306,19 +352,23 @@ export function TeacherDashboard({
   const collectionPanelProps = {
     collectionOverview,
     submissions,
-    selectedAssignmentId,
+    selectedAssignmentTitle: selectedAssignment?.title ?? '当前任务',
+    selectedAssignmentId: activeAssignmentId,
     unsubmittedStudents,
     reminderResult,
     onRemindUnsubmitted: handleRemindUnsubmitted,
   };
   const aiPipelineProps = {
     assignments: assignmentRows,
+    selectedAssignmentId: activeAssignmentId,
     rubric,
     rubricNotice,
     gradingJobs: visibleJobs,
     ocrJobs: ocrRows,
+    actionNotice,
     canStartOcr: Boolean(ocrCandidate),
     onCreateRubric: handleCreateRubric,
+    onSelectAssignment: setSelectedAssignmentId,
     onStartGrading: handleStartGrading,
     onStartOcr: handleStartOcr,
   };
@@ -365,10 +415,13 @@ export function TeacherDashboard({
   const assignmentPanelProps = {
     assignments: assignmentRows,
     classes,
+    selectedAssignmentId: activeAssignmentId,
     selectedCourseId,
     selectedCourseName: selectedCourse.name,
     assignmentNotice,
     onCreateAssignment: handleCreateAssignment,
+    onPublishAssignment: handlePublishAssignment,
+    onSelectAssignment: setSelectedAssignmentId,
   };
 
   const isOverview = section === 'overview';

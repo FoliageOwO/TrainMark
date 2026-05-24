@@ -1,4 +1,4 @@
-import { CheckCircle2, Clock3, FileText, UploadCloud } from 'lucide-react';
+import { CheckCircle2, Clock3, FileText, Trash2, UploadCloud } from 'lucide-react';
 import { fetchApiAssetBlobUrl, shouldUseHttpApi } from '../api/httpApi';
 import type { SubmissionTask, UploadReceipt } from '../api/types';
 import { toChineseFileName } from '../utils/displayText';
@@ -12,6 +12,7 @@ type StudentUploadPanelProps = {
   userName: string;
   userStudentNo: string;
   onConfirmUpload: () => void | Promise<void>;
+  onDeleteSubmission: (submissionId: number) => void | Promise<void>;
   onFileNameChange: (fileName: string) => void;
   onFileSelect: (file: File | null) => void;
   onTaskSelect: (taskId: number) => void;
@@ -26,10 +27,17 @@ export function StudentUploadPanel({
   userName,
   userStudentNo,
   onConfirmUpload,
+  onDeleteSubmission,
   onFileNameChange,
   onFileSelect,
   onTaskSelect,
 }: StudentUploadPanelProps) {
+  const activeSubmissionId = receipt?.submissionId ?? selectedTask?.submissionId;
+  const activeFileName = receipt?.fileName ?? selectedTask?.fileName;
+  const activeVersion = receipt?.version ?? selectedTask?.version;
+  const hasSubmittedReport = Boolean(activeSubmissionId);
+  const canDeleteSubmission = selectedTask?.status === '已提交';
+
   const openSubmissionFile = async (submissionId: number, fileName: string) => {
     const url = await fetchApiAssetBlobUrl(`/api/submissions/${submissionId}/file`);
     const link = document.createElement('a');
@@ -103,18 +111,27 @@ export function StudentUploadPanel({
         <div className="upload-progress" aria-label="上传进度">
           <span style={{ width: `${uploadProgress}%` }} />
         </div>
-        {receipt ? (
+        {hasSubmittedReport && activeSubmissionId ? (
           <div className="receipt-card">
             <CheckCircle2 size={18} />
             <div>
-              <strong>提交成功</strong>
-              <span>回执 #{receipt.submissionId} · 版本 {receipt.version}</span>
-              {shouldUseHttpApi() && (
-                <button className="link-button" type="button" onClick={() => openSubmissionFile(receipt.submissionId, receipt.fileName)}>
+              <strong>{receipt ? '提交成功' : '已提交报告'}</strong>
+              <span>回执 #{activeSubmissionId} · 版本 {activeVersion ?? 1}</span>
+              {shouldUseHttpApi() && activeFileName && (
+                <button className="link-button" type="button" onClick={() => openSubmissionFile(activeSubmissionId, activeFileName)}>
                   查看原文件
                 </button>
               )}
             </div>
+            {canDeleteSubmission && (
+              <button
+                className="link-button danger-link"
+                type="button"
+                onClick={() => onDeleteSubmission(activeSubmissionId)}
+              >
+                <Trash2 size={14} /> 撤回提交
+              </button>
+            )}
           </div>
         ) : (
           <button className="primary-button full-width" type="button" onClick={onConfirmUpload} disabled={!selectedTask}>

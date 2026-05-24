@@ -40,4 +40,8 @@ public class CourseService {
   public AssignmentSummary createAssignment(CreateAssignmentRequest request) {
     return store.createAssignment(request);
   }
+
+  public AssignmentSummary publishAssignment(Long assignmentId) {
+    return store.publishAssignment(assignmentId);
+  }
 }

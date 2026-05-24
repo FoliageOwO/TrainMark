@@ -113,6 +113,15 @@ public class InMemoryUploadStore implements UploadStore {
     );
   }
 
+  @Override
+  public void deleteSubmission(Long submissionId) {
+    if (!submissions.containsKey(submissionId)) {
+      throw new IllegalArgumentException("Submission file not found: " + submissionId);
+    }
+    submissions.remove(submissionId);
+    objectKeys.remove(submissionId);
+  }
+
   private void validateUpload(CompleteUploadRequest request, PendingUpload upload) {
     if (!upload.objectKey().equals(request.objectKey())) {
       throw new IllegalArgumentException("Upload object key does not match initialized session");

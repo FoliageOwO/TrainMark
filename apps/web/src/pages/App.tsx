@@ -91,6 +91,7 @@ export function App() {
   const [workspaceData, setWorkspaceData] = useState<WorkspaceData | null>(null);
   const [apiModeLabel, setApiModeLabel] = useState(shouldUseHttpApi() ? 'HTTP API' : 'Mock 数据');
   const [apiError, setApiError] = useState<string | null>(null);
+  const [apiSessionReady, setApiSessionReady] = useState(() => !shouldUseHttpApi());
 
   const teacherNavMap: Record<string, string> = {
     '工作台': 'overview',
@@ -159,16 +160,22 @@ export function App() {
     let cancelled = false;
     const syncRoleFromLocation = async () => {
       const role = getRoleFromLocation();
+      if (shouldUseHttpApi()) {
+        setApiSessionReady(false);
+        setApiModeLabel('HTTP API 登录中');
+      }
       try {
         const refreshedUser = await refreshCurrentSession();
         const nextUser = refreshedUser?.roles[0] === role ? refreshedUser : await loginAsRole(role);
         if (!cancelled) {
           setUser(nextUser);
           setApiError(null);
+          setApiSessionReady(true);
         }
       } catch (error) {
         if (!cancelled) {
           setApiError(errorMessage(error));
+          setApiSessionReady(false);
         }
       }
     };
@@ -199,23 +206,37 @@ export function App() {
 
   const handleRoleChange = async (role: RoleCode) => {
     writeRoleToLocation(role);
+    if (shouldUseHttpApi()) {
+      setApiSessionReady(false);
+      setWorkspaceData(null);
+      setApiModeLabel('HTTP API 登录中');
+    }
     try {
       setUser(await loginAsRole(role));
       setApiError(null);
+      setApiSessionReady(true);
     } catch (error) {
       setApiError(errorMessage(error));
+      setApiSessionReady(false);
     }
   };
 
   const handleLogout = async () => {
     const nextRole = getRoleFromLocation();
+    if (shouldUseHttpApi()) {
+      setApiSessionReady(false);
+      setWorkspaceData(null);
+      setApiModeLabel('HTTP API 登录中');
+    }
     try {
       await logoutCurrentSession();
       setWorkspaceData(null);
       setUser(await loginAsRole(nextRole));
       setApiError(null);
+      setApiSessionReady(true);
     } catch (error) {
       setApiError(errorMessage(error));
+      setApiSessionReady(false);
     }
   };
 
@@ -224,6 +245,11 @@ export function App() {
       setWorkspaceData(null);
       setApiModeLabel('Mock 数据');
       setApiError(null);
+      return;
+    }
+
+    if (!apiSessionReady) {
+      setApiModeLabel('HTTP API 登录中');
       return;
     }
 
@@ -246,10 +272,10 @@ export function App() {
     return () => {
       cancelled = true;
     };
-  }, [primaryRole, selectedCourseId, user.id]);
+  }, [apiSessionReady, primaryRole, selectedCourseId, user.id]);
 
   const refreshWorkspaceData = async () => {
-    if (!shouldUseHttpApi()) {
+    if (!shouldUseHttpApi() || !apiSessionReady) {
       return;
     }
     try {

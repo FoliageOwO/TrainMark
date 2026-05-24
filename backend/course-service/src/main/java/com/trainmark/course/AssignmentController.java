@@ -6,6 +6,7 @@ import com.trainmark.shared.dto.CreateAssignmentRequest;
 import jakarta.validation.Valid;
 import java.util.Collection;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -31,5 +32,10 @@ public class AssignmentController {
   @PostMapping
   public ApiResponse<AssignmentSummary> create(@Valid @RequestBody CreateAssignmentRequest request) {
     return ApiResponse.ok(courseService.createAssignment(request));
+  }
+
+  @PostMapping("/{assignmentId}/publish")
+  public ApiResponse<AssignmentSummary> publish(@PathVariable("assignmentId") Long assignmentId) {
+    return ApiResponse.ok(courseService.publishAssignment(assignmentId));
   }
 }

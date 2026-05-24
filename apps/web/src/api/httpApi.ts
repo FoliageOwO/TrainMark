@@ -347,6 +347,12 @@ function deriveStudentTasks(
       status: deriveTaskStatus(submission?.status, Boolean(result)),
       deadline: assignment.deadline,
       ...(result ? { score: result.teacherScore } : {}),
+      ...(submission ? {
+        submissionId: submission.id,
+        fileName: submission.fileName,
+        version: submission.version,
+        submittedAt: submission.submittedAt,
+      } : {}),
     };
   });
 }
@@ -409,6 +415,9 @@ async function getOr<T, R = T>(path: string, fallback: T, normalize?: (value: R)
 }
 
 export async function createGradingJob(assignmentId: number, rubricId: number, submissionIds: number[] = [1]): Promise<GradingJobSummary> {
+  if (submissionIds.length === 0) {
+    throw new Error('当前任务暂无学生提交，不能启动批改');
+  }
   return mutateOr(
     'POST',
     '/api/grading/jobs',
@@ -531,6 +540,9 @@ export async function remindUnsubmitted(assignmentId: number, studentIds: number
 }
 
 export async function startSimilarityJob(assignmentId: number, submissionIds: number[] = [1, 18, 43]): Promise<SimilarityJobSummary> {
+  if (submissionIds.length === 0) {
+    throw new Error('当前任务暂无学生提交，不能启动查重');
+  }
   return mutateOr(
     'POST',
     '/api/similarity/jobs',
@@ -545,6 +557,15 @@ export async function createAssignment(input: CreateAssignmentInput): Promise<As
     '/api/assignments',
     input,
     () => mockApi.createAssignment(input),
+  );
+}
+
+export async function publishAssignment(assignmentId: number): Promise<AssignmentSummary> {
+  return mutateOr(
+    'POST',
+    `/api/assignments/${assignmentId}/publish`,
+    {},
+    () => mockApi.publishAssignment(assignmentId),
   );
 }
 
@@ -625,6 +646,22 @@ export async function createUploadReceipt(fileName: string, assignmentId: number
   }
 }
 
+export async function deleteSubmission(submissionId: number): Promise<void> {
+  if (!shouldUseHttpApi()) {
+    mockApi.deleteSubmission(submissionId);
+    return;
+  }
+
+  try {
+    await request<void>(`/api/submissions/${submissionId}`, 'DELETE');
+  } catch (error) {
+    if (shouldUseStrictHttpApi()) {
+      throw error;
+    }
+    mockApi.deleteSubmission(submissionId);
+  }
+}
+
 async function uploadObjectContent(uploadId: string, objectKey: string, file: File): Promise<void> {
   const body = new FormData();
   body.append('uploadId', uploadId);
@@ -666,7 +703,7 @@ async function mutateOr<T, R = T>(
   }
 }
 
-async function request<T>(path: string, method: 'POST' | 'PATCH', body?: unknown, includeAuth = true): Promise<T> {
+async function request<T>(path: string, method: 'POST' | 'PATCH' | 'DELETE', body?: unknown, includeAuth = true): Promise<T> {
   const response = await fetch(`${API_BASE_URL}${path}`, {
     method,
     headers: authHeaders({ contentType: body === undefined ? undefined : 'application/json', includeAuth }),

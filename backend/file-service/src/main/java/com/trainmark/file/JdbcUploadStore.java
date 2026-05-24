@@ -194,6 +194,20 @@ public class JdbcUploadStore implements UploadStore {
     throw new IllegalArgumentException("Submission file not found: " + submissionId);
   }
 
+  @Override
+  public void deleteSubmission(Long submissionId) {
+    var sql = "DELETE FROM submissions WHERE id = ?";
+    try (var connection = connect();
+        var statement = connection.prepareStatement(sql)) {
+      statement.setLong(1, submissionId);
+      if (statement.executeUpdate() == 0) {
+        throw new IllegalArgumentException("Submission file not found: " + submissionId);
+      }
+    } catch (SQLException error) {
+      throw new IllegalStateException("Failed to delete submission", error);
+    }
+  }
+
   private PendingUpload findUpload(Connection connection, String uploadId) throws SQLException {
     var sql = """
         SELECT upload_id, assignment_id, student_id, file_name, object_key, checksum, expires_at
