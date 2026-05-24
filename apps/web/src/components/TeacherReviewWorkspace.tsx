@@ -80,30 +80,57 @@ export function TeacherReviewWorkspace({
 
   return (
     <section className="review-layout">
+      <article className="panel review-list-panel">
+        <div className="panel-heading">
+          <div>
+            <h3>待复核报告</h3>
+          </div>
+          <span className="status-pill">{reviewResults.length} 份</span>
+        </div>
+        <div className="table-shell">
+          <div className="table-scroll table-scroll-lg">
+            <table className="data-table review-table">
+              <thead>
+                <tr>
+                  <th>学生</th>
+                  <th>分数</th>
+                  <th>状态</th>
+                </tr>
+              </thead>
+              <tbody>
+                {reviewResults.map((result) => (
+                  <tr
+                    className={selectedReview.id === result.id ? 'is-selected is-clickable' : 'is-clickable'}
+                    key={result.id}
+                    onClick={() => onSelectReview(result.id)}
+                  >
+                    <td>
+                      <div className="table-primary">
+                        <strong>{result.studentName}</strong>
+                        <span>{result.studentNo}</span>
+                      </div>
+                    </td>
+                    <td>{result.teacherScore}/{result.totalScore}</td>
+                    <td>{reviewStatusText[result.reviewStatus]}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </article>
+
       <article className="panel review-preview-panel">
         <div className="panel-heading">
           <div>
-            <p className="eyebrow">人工复核</p>
-            <h3>人工复核工作区</h3>
+            <h3>{selectedReview.studentName}</h3>
+            <p className="panel-subtitle">{selectedReview.studentNo} · {toChineseFileName(selectedReview.fileName) || '未命名报告'}</p>
           </div>
           <span className="status-pill">{reviewStatusText[selectedReview.reviewStatus]}</span>
         </div>
-        <div className="review-switcher">
-          {reviewResults.map((result) => (
-            <button
-              className={selectedReview.id === result.id ? 'selected' : ''}
-              key={result.id}
-              type="button"
-              onClick={() => onSelectReview(result.id)}
-            >
-              <strong>{result.studentName}</strong>
-              <span>{result.studentNo} · {result.teacherScore}/{result.totalScore} 分</span>
-            </button>
-          ))}
-        </div>
         <div className="pdf-preview">
           <div className="pdf-toolbar">
-            <span>{toChineseFileName(selectedReview.fileName) || '未命名报告'}</span>
+            <span>批注预览</span>
             <div className="pdf-toolbar-actions">
               {annotationPreviewUrl ? (
                 <a className="ghost-button compact-link" href={annotationPreviewUrl} rel="noreferrer" target="_blank">
@@ -134,7 +161,7 @@ export function TeacherReviewWorkspace({
             )}
           </div>
         </div>
-        <div className="annotation-list">
+        <div className="annotation-list panel-scroll panel-scroll-md">
           {selectedReview.annotations.map((annotation) => (
             <div className={`annotation-row ${annotation.severity}`} key={annotation.id}>
               <strong>第 {annotation.page} 页 · {toChineseText(annotation.anchorText)}</strong>
@@ -145,6 +172,12 @@ export function TeacherReviewWorkspace({
       </article>
 
       <article className="panel review-score-panel">
+        <div className="panel-heading">
+          <div>
+            <h3>复核结果</h3>
+            <p className="panel-subtitle">{selectedReview.studentName} · {selectedReview.teacherScore}/{selectedReview.totalScore} 分</p>
+          </div>
+        </div>
         <div className="review-score-summary">
           <div>
             <span>AI 初评</span>
@@ -183,7 +216,7 @@ export function TeacherReviewWorkspace({
           <span>总评</span>
           <p>{toChineseText(selectedReview.overallComment)}</p>
         </div>
-        <div className="review-item-list">
+        <div className="review-item-list panel-scroll panel-scroll-xl">
           {selectedReview.items.map((item) => (
             <form className="review-item-card" key={item.rubricItemId} onSubmit={(event) => onReviewItemSubmit(event, item.rubricItemId)}>
               <div className="review-item-heading">

@@ -125,43 +125,64 @@ export function TeacherAssignmentPanel({
           <span>点击右上角"创建任务"开始配置</span>
         </div>
       ) : (
-        <div className="assignment-list">
-          {assignments.map((item) => (
-            <div className={`assignment-card ${selectedAssignmentId === item.id ? 'selected' : ''}`} key={item.id}>
-              <div className="assignment-title">
-                <FileText size={18} />
-                <strong>{item.title}</strong>
-              </div>
-              <div className="assignment-meta">
-                <span><CalendarClock size={14} /> {formatDate(item.deadline)}</span>
-                <span>{item.totalScore} 分</span>
-                <span className={`status-badge status-${item.status.toLowerCase()}`}>{statusText[item.status]}</span>
-              </div>
-              <div className="assignment-flags">
-                <span>{item.aiGradingEnabled ? 'AI 批改' : '人工批改'}</span>
-                <span>{item.similarityCheckEnabled ? '查重开启' : '查重关闭'}</span>
-              </div>
-              <div className="assignment-actions">
-                <button
-                  className="ghost-button compact"
-                  type="button"
-                  onClick={() => onSelectAssignment(item.id)}
-                >
-                  {selectedAssignmentId === item.id ? '当前任务' : '设为当前'}
-                </button>
-                {item.status === 'DRAFT' && (
-                  <button
-                    className="primary-button compact"
-                    type="button"
-                    onClick={() => handlePublish(item.id)}
-                    disabled={publishingId === item.id}
-                  >
-                    {publishingId === item.id ? '发布中...' : '发布任务'}
-                  </button>
-                )}
-              </div>
-            </div>
-          ))}
+        <div className="table-shell">
+          <div className="table-scroll table-scroll-lg">
+            <table className="data-table">
+              <thead>
+                <tr>
+                  <th>任务</th>
+                  <th>截止时间</th>
+                  <th>分值</th>
+                  <th>批改方式</th>
+                  <th>查重</th>
+                  <th>状态</th>
+                  <th className="actions-col">操作</th>
+                </tr>
+              </thead>
+              <tbody>
+                {assignments.map((item) => (
+                  <tr className={selectedAssignmentId === item.id ? 'is-selected' : ''} key={item.id}>
+                    <td>
+                      <div className="table-primary">
+                        <strong>{item.title}</strong>
+                        <span>{selectedAssignmentId === item.id ? '当前任务' : `任务 #${item.id}`}</span>
+                      </div>
+                    </td>
+                    <td>
+                      <span className="table-inline"><CalendarClock size={14} /> {formatDate(item.deadline)}</span>
+                    </td>
+                    <td>{item.totalScore} 分</td>
+                    <td>{item.aiGradingEnabled ? 'AI 批改' : '人工批改'}</td>
+                    <td>{item.similarityCheckEnabled ? '开启' : '关闭'}</td>
+                    <td>
+                      <span className={`status-badge status-${item.status.toLowerCase()}`}>{statusText[item.status]}</span>
+                    </td>
+                    <td>
+                      <div className="table-actions">
+                        <button
+                          className="ghost-button compact"
+                          type="button"
+                          onClick={() => onSelectAssignment(item.id)}
+                        >
+                          {selectedAssignmentId === item.id ? '当前任务' : '设为当前'}
+                        </button>
+                        {item.status === 'DRAFT' && (
+                          <button
+                            className="primary-button compact"
+                            type="button"
+                            onClick={() => handlePublish(item.id)}
+                            disabled={publishingId === item.id}
+                          >
+                            {publishingId === item.id ? '发布中...' : '发布任务'}
+                          </button>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
     </article>

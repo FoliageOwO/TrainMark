@@ -56,11 +56,10 @@ export function TeacherCollectionPanel({
   };
 
   return (
-    <section className="management-grid">
-      <article className="panel collection-panel">
+    <section className="collection-layout">
+      <article className="panel collection-panel collection-board-panel">
         <div className="panel-heading">
           <div>
-            <p className="eyebrow">报告收集</p>
             <h3>报告收集看板</h3>
             <span className="panel-subtitle">{selectedAssignmentTitle}</span>
           </div>
@@ -91,7 +90,6 @@ export function TeacherCollectionPanel({
       <article className="panel collection-panel">
         <div className="panel-heading">
           <div>
-            <p className="eyebrow">已交报告</p>
             <h3>已交报告</h3>
             <span className="panel-subtitle">{selectedAssignmentTitle}</span>
           </div>
@@ -103,23 +101,42 @@ export function TeacherCollectionPanel({
             <span>学生提交后，报告文件会出现在这里。</span>
           </div>
         ) : (
-          <div className="submitted-report-list">
-            {submittedReports.map((submission) => (
-              <div className="submitted-report-row" key={submission.id}>
-                <div>
-                  <strong>{toChineseFileName(submission.fileName)}</strong>
-                  <span>{submission.studentName} · {submission.studentNo} · V{submission.version}</span>
-                </div>
-                <div className="submitted-report-actions">
-                  <small>{submissionStatusText[submission.status]}</small>
-                  {shouldUseHttpApi() && (
-                    <button className="link-button" type="button" onClick={() => openSubmissionFile(submission)}>
-                      <Download size={14} /> 原文件
-                    </button>
-                  )}
-                </div>
-              </div>
-            ))}
+          <div className="table-shell">
+            <div className="table-scroll table-scroll-md">
+              <table className="data-table">
+                <thead>
+                  <tr>
+                    <th>学生</th>
+                    <th>文件</th>
+                    <th>版本</th>
+                    <th>状态</th>
+                    <th className="actions-col">操作</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {submittedReports.map((submission) => (
+                    <tr key={submission.id}>
+                      <td>
+                        <div className="table-primary">
+                          <strong>{submission.studentName}</strong>
+                          <span>{submission.studentNo}</span>
+                        </div>
+                      </td>
+                      <td>{toChineseFileName(submission.fileName)}</td>
+                      <td>V{submission.version}</td>
+                      <td>{submissionStatusText[submission.status]}</td>
+                      <td>
+                        {shouldUseHttpApi() && (
+                          <button className="link-button" type="button" onClick={() => openSubmissionFile(submission)}>
+                            <Download size={14} /> 原文件
+                          </button>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
         )}
       </article>
@@ -127,22 +144,34 @@ export function TeacherCollectionPanel({
       <article className="panel collection-panel">
         <div className="panel-heading">
           <div>
-            <p className="eyebrow">未交名单</p>
             <h3>未交名单</h3>
             <span className="panel-subtitle">{selectedAssignmentTitle}</span>
           </div>
           <span className="status-pill">{unsubmittedStudents.length} 人待提醒</span>
         </div>
-        <div className="unsubmitted-list">
-          {unsubmittedStudents.map((student) => (
-            <div className="unsubmitted-row" key={student.studentId}>
-              <div>
-                <strong>{student.name}</strong>
-                <span>{student.studentNo} · {student.className}</span>
-              </div>
-              <small>{student.email}</small>
-            </div>
-          ))}
+        <div className="table-shell">
+          <div className="table-scroll table-scroll-md">
+            <table className="data-table">
+              <thead>
+                <tr>
+                  <th>学生</th>
+                  <th>班级</th>
+                  <th>学号</th>
+                  <th>邮箱</th>
+                </tr>
+              </thead>
+              <tbody>
+                {unsubmittedStudents.map((student) => (
+                  <tr key={student.studentId}>
+                    <td>{student.name}</td>
+                    <td>{student.className}</td>
+                    <td>{student.studentNo}</td>
+                    <td>{student.email}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
       </article>
     </section>

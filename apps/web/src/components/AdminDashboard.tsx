@@ -273,16 +273,31 @@ export function AdminDashboard({ organizations, users, auditLogs, systemSettings
               <span key={item.id}>{item.name} · {organizationTypeText[item.type]}</span>
             ))}
           </div>
-          <div className="student-list">
-            {userRows.map((user) => (
-              <div className="student-row" key={user.id}>
-                <div>
-                  <strong>{user.name}</strong>
-                  <span>{user.studentNo ?? user.teacherNo ?? user.username} · {user.email ?? user.phone ?? '未填写联系方式'}</span>
-                </div>
-                <span className="status-pill">{user.roles.map((role) => roleText[role]).join(' / ')}</span>
-              </div>
-            ))}
+          <div className="table-shell">
+            <div className="table-scroll table-scroll-lg">
+              <table className="data-table">
+                <thead>
+                  <tr>
+                    <th>姓名</th>
+                    <th>账号</th>
+                    <th>联系方式</th>
+                    <th>角色</th>
+                    <th>状态</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {userRows.map((user) => (
+                    <tr key={user.id}>
+                      <td>{user.name}</td>
+                      <td>{user.studentNo ?? user.teacherNo ?? user.username}</td>
+                      <td>{user.email ?? user.phone ?? '未填写联系方式'}</td>
+                      <td>{user.roles.map((role) => roleText[role]).join(' / ')}</td>
+                      <td>{user.status}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
         </article>
 
@@ -294,13 +309,31 @@ export function AdminDashboard({ organizations, users, auditLogs, systemSettings
             </div>
             <span className="status-pill">最近 {auditLogs.length} 条</span>
           </div>
-          <div className="audit-list">
-            {auditLogs.map((log) => (
-              <div className="audit-row" key={log.id}>
-                <span>{toAuditActionText(log.action)} · {log.actorName}</span>
-                <small>{toResourceTypeText(log.resourceType)} #{log.resourceId} · {log.detail} · {formatDate(log.createdAt)}</small>
-              </div>
-            ))}
+          <div className="table-shell">
+            <div className="table-scroll table-scroll-lg">
+              <table className="data-table">
+                <thead>
+                  <tr>
+                    <th>操作</th>
+                    <th>执行人</th>
+                    <th>资源</th>
+                    <th>详情</th>
+                    <th>时间</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {auditLogs.map((log) => (
+                    <tr key={log.id}>
+                      <td>{toAuditActionText(log.action)}</td>
+                      <td>{log.actorName}</td>
+                      <td>{toResourceTypeText(log.resourceType)} #{log.resourceId}</td>
+                      <td>{log.detail}</td>
+                      <td>{formatDate(log.createdAt)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
         </article>
       </section>

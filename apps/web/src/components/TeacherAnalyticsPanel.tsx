@@ -43,7 +43,6 @@ export function TeacherAnalyticsPanel({
       <article className="panel analytics-panel">
         <div className="panel-heading">
           <div>
-            <p className="eyebrow">成绩分析</p>
             <h3>成绩统计</h3>
           </div>
           <button className="ghost-button" type="button" onClick={onCreateGradeExport}>
@@ -73,7 +72,7 @@ export function TeacherAnalyticsPanel({
           <span>难度系数 {gradeStatistics.difficultyIndex}</span>
           <span>区分度 {gradeStatistics.discriminationIndex}</span>
         </div>
-        <div className="audit-list">
+        <div className="audit-list panel-scroll panel-scroll-md">
           <strong>导出记录</strong>
           {gradeExports.map((item) => (
             <div className="audit-row" key={item.id}>
@@ -90,12 +89,11 @@ export function TeacherAnalyticsPanel({
       <article className="panel analytics-panel">
         <div className="panel-heading">
           <div>
-            <p className="eyebrow">失分点</p>
             <h3>高频失分点</h3>
           </div>
           <BarChart3 size={22} />
         </div>
-        <div className="loss-list">
+        <div className="loss-list panel-scroll panel-scroll-md">
           {lossPoints.map((item) => (
             <div className="loss-row" key={item.rubricItemId}>
               <div>
@@ -112,12 +110,11 @@ export function TeacherAnalyticsPanel({
       <article className="panel analytics-panel outcome-panel">
         <div className="panel-heading">
           <div>
-            <p className="eyebrow">课程目标</p>
             <h3>课程目标达成度</h3>
           </div>
           <span className="status-pill">目标值 75%</span>
         </div>
-        <div className="outcome-list">
+        <div className="outcome-list panel-scroll panel-scroll-md">
           {courseOutcomes.map((item) => (
             <div className="outcome-row" key={item.courseOutcomeCode}>
               <div className="outcome-title">

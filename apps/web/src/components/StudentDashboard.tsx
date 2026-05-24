@@ -30,6 +30,9 @@ export function StudentDashboard({ tasks, publishedResults, appeals, userId, use
   const resultsRef = useRef<HTMLDivElement>(null);
 
   const selectedTask = taskRows.find((task) => task.id === selectedTaskId) ?? taskRows[0];
+  const submittedCount = taskRows.filter((task) => task.status !== '未提交').length;
+  const pendingCount = Math.max(taskRows.length - submittedCount, 0);
+  const latestPublishedResult = publishedResults[0] ?? null;
 
   const selectUploadFile = (file: File | null) => {
     setSelectedFile(file);
@@ -132,43 +135,76 @@ export function StudentDashboard({ tasks, publishedResults, appeals, userId, use
 
   return (
     <section className="student-grid">
-      <article className="panel wide-panel">
+      <article className="student-hero panel wide-panel">
+        <div>
+          <h2>我的任务</h2>
+        </div>
+        <div className="student-hero-metrics">
+          <div>
+            <span>待提交</span>
+            <strong>{pendingCount}</strong>
+          </div>
+          <div>
+            <span>已提交</span>
+            <strong>{submittedCount}</strong>
+          </div>
+          <div>
+            <span>最近成绩</span>
+            <strong>{latestPublishedResult?.teacherScore ?? '--'}</strong>
+          </div>
+        </div>
+      </article>
+
+      <article className="panel wide-panel student-task-panel">
         <div className="panel-heading">
           <div>
-            <p className="eyebrow">我的任务</p>
-            <h3>我的实训任务</h3>
+            <h3>任务列表</h3>
           </div>
           <GraduationCap size={22} />
         </div>
-        <div className="student-task-list">
-          {taskRows.map((task) => (
-            <div className="student-task-card" key={task.id}>
-              <div>
-                <strong>{task.title}</strong>
-                <span>{task.courseName}</span>
-              </div>
-              <div className="assignment-meta">
-                <span><CalendarClock size={14} /> {formatDate(task.deadline)}</span>
-                <span className="status-pill">{task.status}</span>
-                {task.score !== undefined && <span className="score-chip">{task.score} 分</span>}
-              </div>
-              <button
-                className="primary-button"
-                type="button"
-                onClick={() => {
-                  if (task.status === '未提交') {
-                    setSelectedTaskId(task.id);
-                    setReceipt(null);
-                    setUploadProgress(36);
-                  } else {
-                    scrollToResults();
-                  }
-                }}
-              >
-                {task.status === '未提交' ? '立即上传' : '查看批注'}
-              </button>
-            </div>
-          ))}
+        <div className="table-shell">
+          <div className="table-scroll table-scroll-md">
+            <table className="data-table">
+              <thead>
+                <tr>
+                  <th>任务</th>
+                  <th>课程</th>
+                  <th>截止时间</th>
+                  <th>状态</th>
+                  <th>成绩</th>
+                  <th className="actions-col">操作</th>
+                </tr>
+              </thead>
+              <tbody>
+                {taskRows.map((task) => (
+                  <tr key={task.id}>
+                    <td>{task.title}</td>
+                    <td>{task.courseName}</td>
+                    <td><span className="table-inline"><CalendarClock size={14} /> {formatDate(task.deadline)}</span></td>
+                    <td>{task.status}</td>
+                    <td>{task.score !== undefined ? `${task.score} 分` : '-'}</td>
+                    <td>
+                      <button
+                        className={task.status === '未提交' ? 'primary-button compact' : 'ghost-button compact'}
+                        type="button"
+                        onClick={() => {
+                          if (task.status === '未提交') {
+                            setSelectedTaskId(task.id);
+                            setReceipt(null);
+                            setUploadProgress(36);
+                          } else {
+                            scrollToResults();
+                          }
+                        }}
+                      >
+                        {task.status === '未提交' ? '立即上传' : '查看批注'}
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
       </article>
 

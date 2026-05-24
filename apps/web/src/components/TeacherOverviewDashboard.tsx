@@ -1,4 +1,4 @@
-import { BarChart3, BookOpen, CheckCircle2, FileCheck2, FileText, Sparkles, UploadCloud, Users } from 'lucide-react';
+import { ArrowRight, BarChart3, BookOpen, CheckCircle2, FileCheck2, FileText, Sparkles, UploadCloud, Users } from 'lucide-react';
 import type { AssignmentSummary, CollectionOverview, GradingJobSummary, GradingResultSummary } from '../api/types';
 
 type TeacherOverviewDashboardProps = {
@@ -31,9 +31,55 @@ export function TeacherOverviewDashboard({
   const completedJobs = gradingJobs.filter((j) => j.status === 'COMPLETED').length;
   const totalJobs = gradingJobs.length;
   const activeAssignments = assignments.filter((a) => a.status === 'PUBLISHED').length;
+  const nextAction = pendingReview > 0
+    ? {
+      title: '待复核结果',
+      detail: `${pendingReview} 份`,
+      actionLabel: '人工复核',
+      section: 'review',
+    }
+    : collectionOverview.unsubmitted > 0
+      ? {
+        title: '未提交学生',
+        detail: `${collectionOverview.unsubmitted} 名`,
+        actionLabel: '报告收集',
+        section: 'collection',
+      }
+      : {
+        title: '批改任务',
+        detail: totalJobs === 0 ? '暂无进行中任务' : `${totalJobs} 个任务`,
+        actionLabel: 'AI 批改',
+        section: 'ai-pipeline',
+      };
 
   return (
     <>
+      <section className="overview-focus-band">
+        <article className="overview-focus-card">
+          <h3>{nextAction.title}</h3>
+          <p>{nextAction.detail}</p>
+          <div className="overview-focus-actions">
+            <button className="primary-button" type="button" onClick={() => onSectionChange(nextAction.section)}>
+              {nextAction.actionLabel} <ArrowRight size={16} />
+            </button>
+          </div>
+        </article>
+        <article className="overview-status-strip overview-status-row">
+          <div>
+            <span>已发布任务</span>
+            <strong>{activeAssignments}</strong>
+          </div>
+          <div>
+            <span>批改完成率</span>
+            <strong>{totalJobs === 0 ? '0%' : `${Math.round((completedJobs / totalJobs) * 100)}%`}</strong>
+          </div>
+          <div>
+            <span>当前风险点</span>
+            <strong>{pendingReview + collectionOverview.unsubmitted}</strong>
+          </div>
+        </article>
+      </section>
+
       <section className="stats-grid">
         {stats.map((item) => (
           <article className={`stat-card ${item.tone}`} key={item.label}>
@@ -45,7 +91,6 @@ export function TeacherOverviewDashboard({
       </section>
 
       <section className="overview-quick-links">
-        <h3>快捷入口</h3>
         <div className="quick-links-grid">
           {quickLinks.map((link) => (
             <button

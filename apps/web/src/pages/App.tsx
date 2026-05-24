@@ -6,7 +6,6 @@ import {
   loadWorkspaceData,
   refreshCurrentSession,
   shouldUseHttpApi,
-  shouldUseStrictHttpApi,
   type WorkspaceData,
 } from '../api/httpApi';
 import type {
@@ -89,7 +88,6 @@ export function App() {
   const [teacherSection, setTeacherSection] = useState(getSectionFromLocation);
   const [selectedCourseId, setSelectedCourseId] = useState(1);
   const [workspaceData, setWorkspaceData] = useState<WorkspaceData | null>(null);
-  const [apiModeLabel, setApiModeLabel] = useState(shouldUseHttpApi() ? 'HTTP API' : 'Mock 数据');
   const [apiError, setApiError] = useState<string | null>(null);
   const [apiSessionReady, setApiSessionReady] = useState(() => !shouldUseHttpApi());
 
@@ -162,7 +160,6 @@ export function App() {
       const role = getRoleFromLocation();
       if (shouldUseHttpApi()) {
         setApiSessionReady(false);
-        setApiModeLabel('HTTP API 登录中');
       }
       try {
         const refreshedUser = await refreshCurrentSession();
@@ -209,7 +206,6 @@ export function App() {
     if (shouldUseHttpApi()) {
       setApiSessionReady(false);
       setWorkspaceData(null);
-      setApiModeLabel('HTTP API 登录中');
     }
     try {
       setUser(await loginAsRole(role));
@@ -226,7 +222,6 @@ export function App() {
     if (shouldUseHttpApi()) {
       setApiSessionReady(false);
       setWorkspaceData(null);
-      setApiModeLabel('HTTP API 登录中');
     }
     try {
       await logoutCurrentSession();
@@ -243,13 +238,11 @@ export function App() {
   useEffect(() => {
     if (!shouldUseHttpApi()) {
       setWorkspaceData(null);
-      setApiModeLabel('Mock 数据');
       setApiError(null);
       return;
     }
 
     if (!apiSessionReady) {
-      setApiModeLabel('HTTP API 登录中');
       return;
     }
 
@@ -258,14 +251,12 @@ export function App() {
       .then((data) => {
         if (!cancelled) {
           setWorkspaceData(data);
-          setApiModeLabel(shouldUseStrictHttpApi() ? 'HTTP API' : 'HTTP API / Mock 兜底');
           setApiError(null);
         }
       })
       .catch((error) => {
         if (!cancelled) {
           setWorkspaceData(null);
-          setApiModeLabel('HTTP API 异常');
           setApiError(errorMessage(error));
         }
       });
@@ -281,11 +272,9 @@ export function App() {
     try {
       const data = await loadWorkspaceData(selectedCourseId, user.id, primaryRole);
       setWorkspaceData(data);
-      setApiModeLabel(shouldUseStrictHttpApi() ? 'HTTP API' : 'HTTP API / Mock 兜底');
       setApiError(null);
     } catch (error) {
       setWorkspaceData(null);
-      setApiModeLabel('HTTP API 异常');
       setApiError(errorMessage(error));
       throw error;
     }
@@ -301,7 +290,6 @@ export function App() {
   return (
     <AppChrome
       activeNav={activeNav}
-      apiModeLabel={apiModeLabel}
       primaryRole={primaryRole}
       user={user}
       onNavChange={handleNavChange}

@@ -408,7 +408,6 @@ export function TeacherDashboard({
   const coursePanelProps = {
     classes,
     courses,
-    selectedCourse,
     selectedCourseId,
     onSelectCourse: setSelectedCourseId,
   };

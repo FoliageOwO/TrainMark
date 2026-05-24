@@ -21,18 +21,23 @@ import { NotificationPanel } from './NotificationPanel';
 type RoleOption = {
   role: RoleCode;
   label: string;
-  hint: string;
+};
+
+type NavItem = {
+  icon: typeof LayoutDashboard;
+  label: string;
+  roles: RoleCode[];
 };
 
 const roleOptions: RoleOption[] = [
-  { role: 'TEACHER', label: '教师端', hint: '任务、批改、复核、统计' },
-  { role: 'STUDENT', label: '学生端', hint: '提交报告、查看批注' },
-  { role: 'COURSE_OWNER', label: '课程负责人', hint: '课程质量、成绩发布、达成分析' },
-  { role: 'SUPERVISOR', label: '督导端', hint: '教学质量、风险查看、统计分析' },
-  { role: 'ADMIN', label: '管理端', hint: '用户、权限、系统配置' },
+  { role: 'TEACHER', label: '教师端' },
+  { role: 'STUDENT', label: '学生端' },
+  { role: 'COURSE_OWNER', label: '课程负责人' },
+  { role: 'SUPERVISOR', label: '督导端' },
+  { role: 'ADMIN', label: '管理端' },
 ];
 
-const navItems = [
+const navItems: NavItem[] = [
   { icon: LayoutDashboard, label: '工作台', roles: ['TEACHER', 'COURSE_OWNER', 'SUPERVISOR'] },
   { icon: BookOpen, label: '课程与班级', roles: ['TEACHER', 'COURSE_OWNER', 'SUPERVISOR'] },
   { icon: FileText, label: '实训任务', roles: ['TEACHER', 'COURSE_OWNER', 'SUPERVISOR'] },
@@ -47,7 +52,6 @@ const navItems = [
 
 type AppChromeProps = {
   activeNav: string;
-  apiModeLabel: string;
   children: ReactNode;
   primaryRole: RoleCode;
   user: UserProfile;
@@ -67,6 +71,8 @@ export function AppChrome({
 }: AppChromeProps) {
   const [notifOpen, setNotifOpen] = useState(false);
   const [unreadNotifications, setUnreadNotifications] = useState(0);
+  const visibleNavItems = navItems.filter((item) => item.roles.includes(primaryRole));
+  const pageMeta = getPageMeta(activeNav, primaryRole);
 
   const refreshUnreadNotifications = useCallback(async () => {
     try {
@@ -92,30 +98,29 @@ export function AppChrome({
           <img src="/icons/icon.svg" alt="智训批" className="brand-logo" width="44" height="44" />
           <div>
             <strong>智训批</strong>
-            <span>TrainMark AI</span>
           </div>
         </div>
         <nav className="nav-list">
-          {navItems
-            .filter((item) => item.roles.includes(primaryRole))
-            .map((item) => (
-              <button
-                className={`nav-item ${activeNav === item.label ? 'active' : ''}`}
-                key={item.label}
-                type="button"
-                onClick={() => onNavChange(item.label)}
-              >
-                <item.icon size={18} />
-                {item.label}
-              </button>
-            ))}
+          {visibleNavItems.map((item) => (
+            <button
+              className={`nav-item ${activeNav === item.label ? 'active' : ''}`}
+              key={item.label}
+              type="button"
+              onClick={() => onNavChange(item.label)}
+            >
+              <item.icon size={18} />
+              <span className="nav-item-copy">
+                <strong>{item.label}</strong>
+              </span>
+            </button>
+          ))}
         </nav>
       </aside>
 
       <section className="workspace">
         <header className="topbar">
           <div className="topbar-left">
-            <p className="page-title">{getPageTitle(activeNav, primaryRole)}</p>
+            <p className="page-title">{pageMeta.title}</p>
           </div>
           <div className="topbar-actions">
             <div className="role-switcher" aria-label="角色切换">
@@ -144,6 +149,10 @@ export function AppChrome({
             <button className="icon-button" type="button" aria-label="退出登录" title="退出登录" onClick={() => onLogout()}>
               <LogOut size={18} />
             </button>
+            <div className="user-chip">
+              <span>{user.name}</span>
+              <small>{user.username}</small>
+            </div>
             <div className="avatar">{user.name.slice(0, 1)}</div>
           </div>
         </header>
@@ -161,9 +170,46 @@ export function AppChrome({
   );
 }
 
-function getPageTitle(navLabel: string, role: RoleCode): string {
+function getPageMeta(navLabel: string, role: RoleCode) {
   if (role === 'STUDENT') {
-    return navLabel;
+    if (navLabel === '提交报告') {
+      return {
+        title: '提交报告',
+      };
+    }
+    return {
+      title: '我的课程',
+    };
   }
-  return navLabel;
+
+  const metaMap: Record<string, { title: string }> = {
+    工作台: {
+      title: '工作台',
+    },
+    '课程与班级': {
+      title: '课程与班级',
+    },
+    实训任务: {
+      title: '实训任务',
+    },
+    报告收集: {
+      title: '报告收集',
+    },
+    'AI 批改中心': {
+      title: 'AI 批改中心',
+    },
+    人工复核: {
+      title: '人工复核',
+    },
+    失分分析: {
+      title: '失分分析',
+    },
+    系统管理: {
+      title: '系统管理',
+    },
+  };
+
+  return metaMap[navLabel] ?? {
+    title: navLabel,
+  };
 }

@@ -12,7 +12,6 @@ const statusText = {
 type TeacherCoursePanelProps = {
   classes: TeachingClassSummary[];
   courses: CourseSummary[];
-  selectedCourse: CourseSummary;
   selectedCourseId: number;
   onSelectCourse: (courseId: number) => void;
 };
@@ -20,7 +19,6 @@ type TeacherCoursePanelProps = {
 export function TeacherCoursePanel({
   classes,
   courses,
-  selectedCourse,
   selectedCourseId,
   onSelectCourse,
 }: TeacherCoursePanelProps) {
@@ -33,51 +31,76 @@ export function TeacherCoursePanel({
         <button className="ghost-button" type="button"><Plus size={15} /> 新建课程</button>
       </div>
 
-      <div className="course-tabs">
-        {courses.map((course) => (
-          <button
-            className={selectedCourseId === course.id ? 'selected' : ''}
-            key={course.id}
-            type="button"
-            onClick={() => onSelectCourse(course.id)}
-          >
-            <strong>{course.name}</strong>
-            <span>{course.code}</span>
-          </button>
-        ))}
-      </div>
+      <section className="management-grid">
+        <div className="table-shell">
+          <div className="table-scroll table-scroll-md">
+            <table className="data-table">
+              <thead>
+                <tr>
+                  <th>课程</th>
+                  <th>学期</th>
+                  <th>班级</th>
+                  <th>学生</th>
+                  <th>状态</th>
+                </tr>
+              </thead>
+              <tbody>
+                {courses.map((course) => (
+                  <tr
+                    className={selectedCourseId === course.id ? 'is-selected is-clickable' : 'is-clickable'}
+                    key={course.id}
+                    onClick={() => onSelectCourse(course.id)}
+                  >
+                    <td>
+                      <div className="table-primary">
+                        <strong>{course.name}</strong>
+                        <span>{course.code}</span>
+                      </div>
+                    </td>
+                    <td>{course.semester}</td>
+                    <td>{course.classCount}</td>
+                    <td>{course.studentCount}</td>
+                    <td>{statusText[course.status]}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
 
-      <div className="course-summary-card">
-        <div>
-          <p className="eyebrow">当前课程</p>
-          <h3>{selectedCourse.name}</h3>
-          <span>{selectedCourse.semester} · {statusText[selectedCourse.status]}</span>
-        </div>
-        <div className="summary-metrics">
-          <span>{selectedCourse.classCount} 个班级</span>
-          <span>{selectedCourse.studentCount} 名学生</span>
-        </div>
-      </div>
-
-      {classes.length === 0 ? (
-        <div className="empty-state">
-          <Users size={32} />
-          <p>暂无班级</p>
-          <span>导入学生名单时会自动创建班级</span>
-        </div>
-      ) : (
-        <div className="class-list">
-          {classes.map((item) => (
-            <div className="class-row" key={item.id}>
-              <div>
-                <strong>{item.name}</strong>
-                <span>{item.major} · {item.grade}级</span>
-              </div>
-              <span className="class-count">{item.studentCount} 人</span>
+        {classes.length === 0 ? (
+          <div className="empty-state">
+            <Users size={32} />
+            <p>暂无班级</p>
+            <span>导入学生名单时会自动创建班级</span>
+          </div>
+        ) : (
+          <div className="table-shell">
+            <div className="table-scroll table-scroll-md">
+              <table className="data-table">
+                <thead>
+                  <tr>
+                    <th>班级</th>
+                    <th>专业</th>
+                    <th>年级</th>
+                    <th>人数</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {classes.map((item) => (
+                    <tr key={item.id}>
+                      <td>{item.name}</td>
+                      <td>{item.major}</td>
+                      <td>{item.grade}级</td>
+                      <td>{item.studentCount}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
-          ))}
-        </div>
-      )}
+          </div>
+        )}
+      </section>
     </article>
   );
 }

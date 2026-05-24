@@ -102,7 +102,6 @@ export function TeacherRosterPanel({
       <article className="panel roster-panel">
         <div className="panel-heading">
           <div>
-            <p className="eyebrow">组织目录</p>
             <h3>组织与学生</h3>
           </div>
           <span className="status-pill">{students.length} 名学生</span>
@@ -112,16 +111,29 @@ export function TeacherRosterPanel({
             <span key={item.id}>{item.name}</span>
           ))}
         </div>
-        <div className="student-list">
-          {students.slice(0, 4).map((student) => (
-            <div className="student-row" key={student.id}>
-              <div>
-                <strong>{student.name}</strong>
-                <span>{student.studentNo} · {student.email}</span>
-              </div>
-              <span className="status-pill">{student.status === 'ACTIVE' ? '已激活' : '待激活'}</span>
-            </div>
-          ))}
+        <div className="table-shell">
+          <div className="table-scroll table-scroll-md">
+            <table className="data-table">
+              <thead>
+                <tr>
+                  <th>姓名</th>
+                  <th>学号</th>
+                  <th>邮箱</th>
+                  <th>状态</th>
+                </tr>
+              </thead>
+              <tbody>
+                {students.map((student) => (
+                  <tr key={student.id}>
+                    <td>{student.name}</td>
+                    <td>{student.studentNo}</td>
+                    <td>{student.email}</td>
+                    <td>{student.status === 'ACTIVE' ? '已激活' : '待激活'}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
       </article>
     </section>

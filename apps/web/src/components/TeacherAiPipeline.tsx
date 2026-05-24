@@ -90,11 +90,28 @@ export function TeacherAiPipeline({
 
   return (
     <>
+      <section className="pipeline-stage-row">
+        <article className="pipeline-stage-card">
+          <span>评分标准</span>
+          <strong>{rubric ? rubric.items.length : 0}</strong>
+          <small>{rubric ? '评分项' : '未配置'}</small>
+        </article>
+        <article className="pipeline-stage-card">
+          <span>识别队列</span>
+          <strong>{ocrJobs.length}</strong>
+          <small>{ocrJobs.filter((job) => job.status !== 'COMPLETED').length} 个处理中</small>
+        </article>
+        <article className="pipeline-stage-card">
+          <span>批改队列</span>
+          <strong>{gradingJobs.length}</strong>
+          <small>{gradingJobs.filter((job) => job.status !== 'COMPLETED').length} 个处理中</small>
+        </article>
+      </section>
+
       <section className="management-grid">
         <article className="panel rubric-panel">
           <div className="panel-heading">
             <div>
-              <p className="eyebrow">评分标准</p>
               <h3>评分标准</h3>
             </div>
             <button className="ghost-button" type="button" onClick={() => setShowRubricForm((value) => !value)}>
@@ -203,90 +220,113 @@ export function TeacherAiPipeline({
           )}
         </article>
 
+        <article className="panel ocr-panel">
+          <div className="panel-heading">
+            <div>
+              <h3>文档识别队列</h3>
+            </div>
+            <button className="ghost-button" type="button" onClick={onStartOcr} disabled={!canStartOcr}>
+              <FileText size={15} /> 启动识别
+            </button>
+          </div>
+          <div className="table-shell">
+            <div className="table-scroll table-scroll-md">
+              <table className="data-table">
+                <thead>
+                  <tr>
+                    <th>任务</th>
+                    <th>页数</th>
+                    <th>文本块</th>
+                    <th>表格</th>
+                    <th>置信度</th>
+                    <th>状态</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {ocrJobs.map((job) => (
+                    <tr key={job.id}>
+                      <td>识别任务 #{job.id}</td>
+                      <td>{job.pageCount}</td>
+                      <td>{job.textBlockCount}</td>
+                      <td>{job.tableCount}</td>
+                      <td>{job.confidence}%</td>
+                      <td>{ocrStatusText[job.status]}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </article>
+
         <article className="panel grading-panel">
           <div className="panel-heading">
             <div>
-              <p className="eyebrow">智能批改</p>
-              <h3>批改队列</h3>
+              <h3>智能批改队列</h3>
             </div>
             <button className="ghost-button" type="button" onClick={onStartGrading} disabled={!rubric}>
               <Sparkles size={15} /> 启动批改
             </button>
           </div>
           {actionNotice && <div className="inline-success">{actionNotice}</div>}
-          <div className="grading-job-list">
-            {gradingJobs.map((job) => {
-              const progress = job.totalSubmissions === 0 ? 0 : Math.round((job.completedSubmissions / job.totalSubmissions) * 100);
-              return (
-                <div className="grading-job-card" key={job.id}>
-                  <div className="assignment-title">
-                    <Sparkles size={18} />
-                    <strong>批改任务 #{job.id}</strong>
-                  </div>
-                  <div className="assignment-meta">
-                    <span>{job.completedSubmissions}/{job.totalSubmissions} 份完成</span>
-                    <span className="status-pill">{gradingStatusText[job.status]}</span>
-                    <span>置信度 {job.confidence}%</span>
-                  </div>
-                  <div className="upload-progress"><span style={{ width: `${progress}%` }} /></div>
-                </div>
-              );
-            })}
+          <div className="table-shell">
+            <div className="table-scroll table-scroll-md">
+              <table className="data-table">
+                <thead>
+                  <tr>
+                    <th>任务</th>
+                    <th>完成进度</th>
+                    <th>状态</th>
+                    <th>置信度</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {gradingJobs.map((job) => (
+                    <tr key={job.id}>
+                      <td>批改任务 #{job.id}</td>
+                      <td>{job.completedSubmissions}/{job.totalSubmissions}</td>
+                      <td>{gradingStatusText[job.status]}</td>
+                      <td>{job.confidence}%</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
         </article>
       </section>
 
       <section className="management-grid">
-        <article className="panel ocr-panel">
+        <article className="panel ocr-panel span-two">
           <div className="panel-heading">
             <div>
-              <p className="eyebrow">文档识别</p>
-              <h3>文档识别与结构化</h3>
-            </div>
-            <button className="ghost-button" type="button" onClick={onStartOcr} disabled={!canStartOcr}>
-              <FileText size={15} /> 启动识别
-            </button>
-          </div>
-          <div className="ocr-job-list">
-            {ocrJobs.map((job) => (
-              <div className="ocr-job-card" key={job.id}>
-                <div className="assignment-title">
-                  <FileText size={18} />
-                  <strong>识别任务 #{job.id}</strong>
-                </div>
-                <div className="assignment-meta">
-                  <span>{job.pageCount} 页</span>
-                  <span>{job.textBlockCount} 文本块</span>
-                  <span>{job.tableCount} 表格</span>
-                  <span className="status-pill">{ocrStatusText[job.status]}</span>
-                </div>
-                <div className="ocr-confidence">
-                  <span>识别置信度</span>
-                  <strong>{job.confidence}%</strong>
-                </div>
-              </div>
-            ))}
-          </div>
-        </article>
-
-        <article className="panel ocr-panel">
-          <div className="panel-heading">
-            <div>
-              <p className="eyebrow">结构化内容</p>
               <h3>结构识别结果</h3>
             </div>
-            <span className="status-pill">可用于评分</span>
+            <span className="status-pill">最新任务</span>
           </div>
-          <div className="ocr-block-list">
-            {ocrJobs[0]?.blocks.map((block) => (
-              <div className="ocr-block-row" key={`${block.type}-${block.page}-${block.title}`}>
-                <div>
-                  <strong>{toChineseText(block.title)}</strong>
-                  <span>{ocrBlockTypeText[block.type]} · 第 {block.page} 页</span>
-                </div>
-                <b>{block.confidence}%</b>
-              </div>
-            ))}
+          <div className="table-shell">
+            <div className="table-scroll table-scroll-md">
+              <table className="data-table">
+                <thead>
+                  <tr>
+                    <th>标题</th>
+                    <th>类型</th>
+                    <th>页码</th>
+                    <th>置信度</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {ocrJobs[0]?.blocks.map((block) => (
+                    <tr key={`${block.type}-${block.page}-${block.title}`}>
+                      <td>{toChineseText(block.title)}</td>
+                      <td>{ocrBlockTypeText[block.type]}</td>
+                      <td>第 {block.page} 页</td>
+                      <td>{block.confidence}%</td>
+                    </tr>
+                  )) ?? null}
+                </tbody>
+              </table>
+            </div>
           </div>
         </article>
       </section>
