@@ -53,6 +53,36 @@ pnpm start:stack
 pnpm start:stack:http
 ```
 
+### 4. 启动完整本地栈 + AI Provider
+
+完整 AI 链路需要额外开一个 PowerShell 窗口启动 Python bridge。这个 bridge 会暴露
+PaddleOCR 和语义评分 HTTP provider，后端仍然使用现有 provider JSON 契约。
+
+```bash
+# 第一次使用先安装 Python 依赖
+python -m pip install -r ai/requirements.txt
+
+# 窗口 1：启动 AI bridge
+$env:TRAINMARK_REQUIRE_REAL_AI="1"
+$env:SCORING_MODEL="BAAI/bge-small-zh-v1.5"
+python ai/bridge_server.py
+
+# 窗口 2：启动完整本地栈
+$env:OCR_PROVIDER="paddleocr-http"
+$env:OCR_ENDPOINT="http://localhost:5000/api/ai/ocr/paddleocr"
+$env:OCR_REQUIRE_REAL="true"
+$env:SCORING_PROVIDER="semantic-http"
+$env:SCORING_ENDPOINT="http://localhost:5000/api/ai/scoring/semantic"
+$env:SCORING_REQUIRE_REAL="true"
+pnpm start:stack
+```
+
+看到 `AI Provider bridge started: http://localhost:5000` 就表示 bridge 已启动。
+浏览器访问根路径出现 404 是正常的，健康检查地址是 `http://localhost:5000/health`。
+
+如果只是本地演示，不强制真实模型，可不设置 `TRAINMARK_REQUIRE_REAL_AI=1`，
+bridge 会在 PaddleOCR 或模型不可用时使用离线兜底；生产验收建议开启严格模式。
+
 ## 常用命令
 
 | 命令 | 用途 |
@@ -74,6 +104,27 @@ pnpm start:stack:http
 | `pnpm ops:restore:local` | 恢复本地备份 |
 | `pnpm ops:release:local` | 生成本地发布包 |
 | `pnpm ops:images:export` | 构建并导出生产镜像 |
+
+## 前端主要使用流程
+
+### 教师端
+
+1. 进入 `课程与班级`，先选择课程。
+2. 可以新建班级、删除班级、导入学生名单。导入时已有学生会复用账号并加入当前班级，不会因为学号已存在而阻止加入新班级。
+3. 进入 `实训任务`，选择课程班级后创建任务；发布后学生端才能看到并提交。
+4. `报告收集` 支持切换班级查看已交报告、未交名单和一键催交。
+5. `AI 批改中心` 支持按班级启动 OCR、评分和批改。
+6. `人工复核` 支持按实训任务和班级切换复核报告，并处理学生申诉。
+7. `AI 批改中心` 下的查重检测也会按当前班级过滤提交与查重结果。
+
+删除班级只会删除教学班级及其课程/任务关联，不会删除学生账号。
+
+### 学生端
+
+1. 进入 `我的课程` 切换课程。
+2. 进入 `提交报告`，选择对应课程任务上传报告。
+3. 同一任务重复提交会覆盖上一份提交，教师端会以最新提交为准。
+4. 成绩发布后，学生端可以查看批改报告并提交申诉。
 
 ## 项目结构
 
@@ -116,13 +167,15 @@ pnpm start:stack
 
 ## 真实 AI Provider
 
-默认本地开发可以不接真实 AI。需要验证 PaddleOCR / 语义评分 HTTP provider 时：
+默认本地开发可以不接真实 AI。需要验证 PaddleOCR / 语义评分 HTTP provider 时，
+按上面的“完整本地栈 + AI Provider”启动。更详细的 provider 契约见：
 
-1. 先阅读 `ai/ocr/README.md` 和 `ai/scoring/README.md`
-2. 单独启动 `ai/bridge_server.py`
-3. 再用 `pnpm start:stack` 启动整套本地环境，并通过环境变量把后端 provider 切到 HTTP 模式
+- `ai/ocr/README.md`
+- `ai/scoring/README.md`
 
-这部分属于专项验收能力，不是普通启动路径。
+AI bridge 不需要外部 API key；它使用本地 PaddleOCR / SentenceTransformer/BGE 模型。
+如果设置 `TRAINMARK_AI_API_KEY`，后端也要配置对应的 `OCR_API_KEY` 和
+`SCORING_API_KEY`。
 
 ## 兼容说明
 
