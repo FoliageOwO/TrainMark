@@ -321,6 +321,19 @@ export const mockApi = {
   listCourses(): CourseSummary[] {
     return courses;
   },
+  createCourse(input: { name: string; code: string; semester: string; description?: string }): CourseSummary {
+    const course: CourseSummary = {
+      id: Math.max(0, ...courses.map((item) => item.id)) + 1,
+      name: input.name,
+      code: input.code,
+      semester: input.semester,
+      status: 'ACTIVE',
+      classCount: 0,
+      studentCount: 0,
+    };
+    courses.unshift(course);
+    return course;
+  },
   listOrganizations(): OrganizationSummary[] {
     return organizations;
   },
@@ -436,6 +449,7 @@ export const mockApi = {
     syncStudentTaskForAssignment(assignment);
     demoNotifications.unshift({
       id: Math.max(0, ...demoNotifications.map((item) => item.id)) + 1,
+      recipientId: users.STUDENT.id,
       title: '任务发布',
       message: `${assignment.title} 已发布，请及时查看并提交报告。`,
       type: 'ASSIGNMENT_PUBLISHED',
@@ -483,17 +497,21 @@ export const mockApi = {
       .sort((a, b) => Date.parse(b.submittedAt) - Date.parse(a.submittedAt))
       .map((item) => ({ ...item }));
   },
-  remindUnsubmitted(): ReminderResult {
-    pushNotification({
-      title: '催交提醒',
-      message: '请尽快提交实训报告，逾期会影响成绩发布。',
-      type: 'REMINDER',
-      targetUrl: `/tasks/${collectionOverview.assignmentId}`,
+  remindUnsubmitted(assignmentId = collectionOverview.assignmentId, studentIds = unsubmittedStudents.map((student) => student.studentId)): ReminderResult {
+    const uniqueStudentIds = [...new Set(studentIds)];
+    uniqueStudentIds.forEach((studentId) => {
+      pushNotification({
+        recipientId: studentId,
+        title: '提交催交',
+        message: '请尽快提交实训报告，逾期会影响成绩发布。',
+        type: 'REMINDER',
+        targetUrl: `/tasks/${assignmentId}`,
+      });
     });
     return {
-      recipientCount: unsubmittedStudents.length,
-      messageCount: unsubmittedStudents.length * 3,
-      channels: ['站内信', '邮件', '企业微信'],
+      recipientCount: uniqueStudentIds.length,
+      messageCount: uniqueStudentIds.length,
+      channels: ['站内信'],
       status: '已发送',
     };
   },
@@ -577,6 +595,7 @@ export const mockApi = {
     result.publicationStatus = 'PUBLISHED';
     result.publishedAt = new Date().toISOString();
     pushNotification({
+      recipientId: result.studentId,
       title: '成绩发布',
       message: `您的实训报告成绩已发布，最终成绩 ${result.teacherScore}/${result.totalScore}。`,
       type: 'GRADE_PUBLISHED',
@@ -732,6 +751,7 @@ export const mockApi = {
     };
     appeals.push(appeal);
     pushNotification({
+      recipientId: users.TEACHER.id,
       title: '学生提交申诉',
       message: `${appeal.studentName} 对批改结果提交了申诉，请及时处理。`,
       type: 'APPEAL',
@@ -748,6 +768,7 @@ export const mockApi = {
     appeal.teacherReply = teacherReply;
     appeal.resolvedAt = new Date().toISOString();
     pushNotification({
+      recipientId: appeal.studentId,
       title: accepted ? '申诉已采纳' : '申诉已驳回',
       message: teacherReply,
       type: 'APPEAL',
@@ -769,6 +790,7 @@ export const mockApi = {
     gradingJobs.unshift(job);
     createGradingResultsForSubmissions(assignmentId, submissionIds);
     pushNotification({
+      recipientId: users.TEACHER.id,
       title: '批改完成',
       message: `AI 已完成 ${submissionIds.length} 份报告批改，请进入人工复核。`,
       type: 'GRADING_COMPLETE',
@@ -823,6 +845,7 @@ export const mockApi = {
       task.submittedAt = submittedAt;
     }
     pushNotification({
+      recipientId: users.TEACHER.id,
       title: existing ? '学生覆盖提交报告' : '学生已提交报告',
       message: existing
         ? `${student?.name ?? '学生'} 已覆盖上一份报告，教师端将以最新文件为准：${fileName}`
@@ -875,6 +898,7 @@ export const mockApi = {
   },
   listNotifications(userId: number, unreadOnly = false): NotificationItem[] {
     return demoNotifications
+      .filter((n) => n.recipientId === userId)
       .filter((n) => !unreadOnly || !n.isRead)
       .map((n) => ({ ...n }));
   },
@@ -884,9 +908,11 @@ export const mockApi = {
       notification.isRead = true;
     }
   },
-  markAllNotificationsAsRead(): void {
+  markAllNotificationsAsRead(userId?: number): void {
     demoNotifications.forEach((n) => {
-      n.isRead = true;
+      if (userId === undefined || n.recipientId === userId) {
+        n.isRead = true;
+      }
     });
   },
   createNotification(input: {
@@ -897,8 +923,9 @@ export const mockApi = {
     type: string;
     targetUrl?: string | null;
   }): NotificationItem {
-    const notification: NotificationItem = {
+    const notification: DemoNotification = {
       id: Math.max(0, ...demoNotifications.map((item) => item.id)) + 1,
+      recipientId: input.recipientId,
       title: input.title,
       message: input.message,
       type: input.type,
@@ -911,15 +938,18 @@ export const mockApi = {
   },
 };
 
-const demoNotifications: NotificationItem[] = [
-  { id: 1, title: '任务发布', message: 'Java Web 综合实训报告已发布，请及时查看要求。', type: 'ASSIGNMENT_PUBLISHED', isRead: false, targetUrl: '/tasks/1', createdAt: new Date(Date.now() - 75 * 60_000).toISOString() },
-  { id: 2, title: '催交提醒', message: '您有 31 名学生未提交实训报告，请及时催交。', type: 'REMINDER', isRead: false, targetUrl: '/collection/1', createdAt: new Date(Date.now() - 60 * 60_000).toISOString() },
-  { id: 3, title: '批改完成', message: 'AI 已完成 65 份报告的批改，请前往复核。', type: 'GRADING_COMPLETE', isRead: false, targetUrl: '/review/1', createdAt: new Date(Date.now() - 45 * 60_000).toISOString() },
-  { id: 4, title: '成绩发布', message: '您的实训报告成绩已发布，请查看详情。', type: 'GRADE_PUBLISHED', isRead: true, targetUrl: '/results/1', createdAt: new Date(Date.now() - 30 * 60_000).toISOString() },
-  { id: 5, title: '申诉处理', message: '您有一条申诉需要处理。', type: 'APPEAL', isRead: true, targetUrl: '/appeals/1', createdAt: new Date(Date.now() - 15 * 60_000).toISOString() },
+type DemoNotification = NotificationItem & { recipientId: number };
+
+const demoNotifications: DemoNotification[] = [
+  { id: 1, recipientId: users.STUDENT.id, title: '任务发布', message: 'Java Web 综合实训报告已发布，请及时查看要求。', type: 'ASSIGNMENT_PUBLISHED', isRead: false, targetUrl: '/tasks/1', createdAt: new Date(Date.now() - 75 * 60_000).toISOString() },
+  { id: 2, recipientId: users.TEACHER.id, title: '催交提醒', message: '您有 31 名学生未提交实训报告，请及时催交。', type: 'REMINDER', isRead: false, targetUrl: '/collection/1', createdAt: new Date(Date.now() - 60 * 60_000).toISOString() },
+  { id: 3, recipientId: users.TEACHER.id, title: '批改完成', message: 'AI 已完成 65 份报告的批改，请前往复核。', type: 'GRADING_COMPLETE', isRead: false, targetUrl: '/review/1', createdAt: new Date(Date.now() - 45 * 60_000).toISOString() },
+  { id: 4, recipientId: users.STUDENT.id, title: '成绩发布', message: '您的实训报告成绩已发布，请查看详情。', type: 'GRADE_PUBLISHED', isRead: true, targetUrl: '/results/1', createdAt: new Date(Date.now() - 30 * 60_000).toISOString() },
+  { id: 5, recipientId: users.TEACHER.id, title: '申诉处理', message: '您有一条申诉需要处理。', type: 'APPEAL', isRead: true, targetUrl: '/appeals/1', createdAt: new Date(Date.now() - 15 * 60_000).toISOString() },
 ];
 
 function pushNotification(input: {
+  recipientId?: number;
   title: string;
   message: string;
   type: string;
@@ -927,6 +957,7 @@ function pushNotification(input: {
 }) {
   demoNotifications.unshift({
     id: Math.max(0, ...demoNotifications.map((item) => item.id)) + 1,
+    recipientId: input.recipientId ?? users.TEACHER.id,
     title: input.title,
     message: input.message,
     type: input.type,

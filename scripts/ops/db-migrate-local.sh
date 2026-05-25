@@ -22,10 +22,19 @@ apply_sql() {
 
 ensure_incremental_migrations() {
   docker exec -i "$POSTGRES_CONTAINER" \
+    psql -v ON_ERROR_STOP=1 -U "$POSTGRES_USER" -d "$POSTGRES_DB" < "$ROOT_DIR/backend/db/migration/V10__system_settings.sql" \
+    >/dev/null
+  docker exec -i "$POSTGRES_CONTAINER" \
+    psql -v ON_ERROR_STOP=1 -U "$POSTGRES_USER" -d "$POSTGRES_DB" < "$ROOT_DIR/backend/db/migration/V11__rubric_point_titles.sql" \
+    >/dev/null
+  docker exec -i "$POSTGRES_CONTAINER" \
     psql -v ON_ERROR_STOP=1 -U "$POSTGRES_USER" -d "$POSTGRES_DB" < "$ROOT_DIR/backend/db/migration/V12__seed_extended_demo_roles.sql" \
     >/dev/null
   docker exec -i "$POSTGRES_CONTAINER" \
     psql -v ON_ERROR_STOP=1 -U "$POSTGRES_USER" -d "$POSTGRES_DB" < "$ROOT_DIR/backend/db/migration/V13__audit_log_actor_name_detail.sql" \
+    >/dev/null
+  docker exec -i "$POSTGRES_CONTAINER" \
+    psql -v ON_ERROR_STOP=1 -U "$POSTGRES_USER" -d "$POSTGRES_DB" < "$ROOT_DIR/backend/db/migration/V14__notification_center_fields.sql" \
     >/dev/null
 }
 

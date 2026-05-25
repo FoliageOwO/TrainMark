@@ -1,5 +1,5 @@
 import type { CSSProperties } from 'react';
-import { Bell, CheckCircle2, Download } from 'lucide-react';
+import { AlertCircle, Bell, CheckCircle2, Download } from 'lucide-react';
 import { fetchApiAssetBlobUrl, shouldUseHttpApi } from '../api/httpApi';
 import type { CollectionOverview, ReminderResult, SubmissionSummary, UnsubmittedStudent } from '../api/types';
 import { toChineseFileName } from '../utils/displayText';
@@ -24,6 +24,8 @@ type TeacherCollectionPanelProps = {
   selectedAssignmentId: number;
   unsubmittedStudents: UnsubmittedStudent[];
   reminderResult: ReminderResult | null;
+  reminderPending: boolean;
+  reminderError: string | null;
   onRemindUnsubmitted: () => void;
 };
 
@@ -34,6 +36,8 @@ export function TeacherCollectionPanel({
   selectedAssignmentId,
   unsubmittedStudents,
   reminderResult,
+  reminderPending,
+  reminderError,
   onRemindUnsubmitted,
 }: TeacherCollectionPanelProps) {
   const submittedRate = collectionOverview.totalStudents === 0
@@ -42,6 +46,12 @@ export function TeacherCollectionPanel({
   const submittedReports = submissions
     .filter((submission) => submission.assignmentId === selectedAssignmentId)
     .slice(0, 6);
+  const canSendReminder = unsubmittedStudents.length > 0 && !reminderPending;
+  const reminderButtonText = reminderPending
+    ? '发送中'
+    : unsubmittedStudents.length === 0
+      ? '无需催交'
+      : '一键催交';
   const openSubmissionFile = async (submission: SubmissionSummary) => {
     const url = await fetchApiAssetBlobUrl(`/api/submissions/${submission.id}/file`);
     const link = document.createElement('a');
@@ -63,8 +73,14 @@ export function TeacherCollectionPanel({
             <h3>报告收集看板</h3>
             <span className="panel-subtitle">{selectedAssignmentTitle}</span>
           </div>
-          <button className="ghost-button" type="button" onClick={onRemindUnsubmitted}>
-            <Bell size={15} /> 一键催交
+          <button
+            className="ghost-button"
+            type="button"
+            disabled={!canSendReminder}
+            aria-busy={reminderPending}
+            onClick={onRemindUnsubmitted}
+          >
+            <Bell size={15} /> {reminderButtonText}
           </button>
         </div>
         <div className="collection-summary">
@@ -82,7 +98,22 @@ export function TeacherCollectionPanel({
         {reminderResult && (
           <div className="reminder-result">
             <CheckCircle2 size={18} />
-            <span>{reminderResult.status}：{reminderResult.recipientCount} 名学生，{reminderResult.messageCount} 条消息</span>
+            <span>
+              {reminderResult.status}：已给 {reminderResult.recipientCount} 名未交学生发送
+              {reminderResult.channels.join('、')}，共 {reminderResult.messageCount} 条消息。
+            </span>
+          </div>
+        )}
+        {reminderError && (
+          <div className="reminder-result error">
+            <AlertCircle size={18} />
+            <span>{reminderError}</span>
+          </div>
+        )}
+        {!reminderResult && !reminderError && unsubmittedStudents.length === 0 && (
+          <div className="reminder-result muted">
+            <CheckCircle2 size={18} />
+            <span>当前任务所有学生都已提交，无需催交。</span>
           </div>
         )}
       </article>

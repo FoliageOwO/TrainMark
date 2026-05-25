@@ -10,6 +10,7 @@ import com.trainmark.shared.dto.SubmissionCollectionOverview;
 import com.trainmark.shared.dto.UnsubmittedStudent;
 import java.sql.Connection;
 import java.sql.DriverManager;
+import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
@@ -225,24 +226,18 @@ public class JdbcNotificationStore implements NotificationStore {
         SELECT id, title, message, event_type AS type, is_read, target_url, created_at
         FROM notification_events
         WHERE recipient_id = ?
-        """ + (unreadOnly ? " AND is_read = false" : "") + """
+          AND channel = 'IN_APP'
+          AND (? = false OR is_read = false)
         ORDER BY created_at DESC, id DESC
         """;
     try (var connection = connect();
         var statement = connection.prepareStatement(sql)) {
       statement.setLong(1, userId);
+      statement.setBoolean(2, unreadOnly);
       try (var results = statement.executeQuery()) {
         var items = new ArrayList<NotificationSummary>();
         while (results.next()) {
-          items.add(new NotificationSummary(
-              results.getLong("id"),
-              results.getString("title"),
-              results.getString("message"),
-              results.getString("type"),
-              results.getBoolean("is_read"),
-              results.getString("target_url"),
-              results.getObject("created_at", OffsetDateTime.class)
-          ));
+          items.add(mapNotification(results));
         }
         return items;
       }
@@ -253,7 +248,7 @@ public class JdbcNotificationStore implements NotificationStore {
 
   @Override
   public int markAsRead(Long notificationId, Long userId) {
-    var sql = "UPDATE notification_events SET is_read = true WHERE id = ? AND recipient_id = ?";
+    var sql = "UPDATE notification_events SET is_read = true WHERE id = ? AND recipient_id = ? AND channel = 'IN_APP'";
     try (var connection = connect();
         var statement = connection.prepareStatement(sql)) {
       statement.setLong(1, notificationId);
@@ -266,7 +261,7 @@ public class JdbcNotificationStore implements NotificationStore {
 
   @Override
   public int markAllAsRead(Long userId) {
-    var sql = "UPDATE notification_events SET is_read = true WHERE recipient_id = ? AND is_read = false";
+    var sql = "UPDATE notification_events SET is_read = true WHERE recipient_id = ? AND channel = 'IN_APP' AND is_read = false";
     try (var connection = connect();
         var statement = connection.prepareStatement(sql)) {
       statement.setLong(1, userId);
@@ -369,15 +364,7 @@ public class JdbcNotificationStore implements NotificationStore {
       statement.setLong(1, notificationId);
       try (var results = statement.executeQuery()) {
         if (results.next()) {
-          return new NotificationSummary(
-              results.getLong("id"),
-              results.getString("title"),
-              results.getString("message"),
-              results.getString("type"),
-              results.getBoolean("is_read"),
-              results.getString("target_url"),
-              results.getObject("created_at", OffsetDateTime.class)
-          );
+          return mapNotification(results);
         }
       }
     }
@@ -389,5 +376,17 @@ public class JdbcNotificationStore implements NotificationStore {
       return DriverManager.getConnection(url);
     }
     return DriverManager.getConnection(url, username, password);
+  }
+
+  private NotificationSummary mapNotification(ResultSet results) throws SQLException {
+    return new NotificationSummary(
+        results.getLong("id"),
+        results.getString("title"),
+        results.getString("message"),
+        results.getString("type"),
+        results.getBoolean("is_read"),
+        results.getString("target_url"),
+        results.getTimestamp("created_at").toInstant().atOffset(java.time.ZoneOffset.UTC)
+    );
   }
 }

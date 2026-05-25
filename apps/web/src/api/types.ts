@@ -169,7 +169,7 @@ export type ReminderResult = {
   recipientCount: number;
   messageCount: number;
   channels: Array<'站内信' | '邮件' | '企业微信'>;
-  status: '已发送';
+  status: '待发送' | '已发送' | '发送失败';
 };
 
 export type RubricPoint = {
@@ -393,6 +393,7 @@ export type SystemSettingSummary = {
 
 export type NotificationItem = {
   id: number;
+  recipientId?: number;
   title: string;
   message: string;
   type: string;

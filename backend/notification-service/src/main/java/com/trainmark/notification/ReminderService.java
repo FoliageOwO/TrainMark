@@ -1,5 +1,6 @@
 package com.trainmark.notification;
 
+import com.trainmark.shared.NotificationChannel;
 import com.trainmark.shared.dto.CreateNotificationRequest;
 import com.trainmark.shared.dto.NotificationSummary;
 import com.trainmark.shared.dto.ReminderRequest;
@@ -73,7 +74,7 @@ public class ReminderService {
     }
     var result = store.remind(request);
 
-    if (emailEnabled && request.channels().contains("EMAIL")) {
+    if (emailEnabled && request.channels().contains(NotificationChannel.EMAIL)) {
       for (var student : request.studentIds()) {
         sendReminderEmail(student, request);
       }
@@ -83,7 +84,7 @@ public class ReminderService {
   }
 
   public ReminderResult completePendingReminder(ReminderRequest request, java.time.OffsetDateTime scheduledAt) {
-    if (emailEnabled && request.channels().contains("EMAIL")) {
+    if (emailEnabled && request.channels().contains(NotificationChannel.EMAIL)) {
       for (var student : request.studentIds()) {
         sendReminderEmail(student, request);
       }

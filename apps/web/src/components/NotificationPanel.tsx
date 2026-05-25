@@ -69,7 +69,7 @@ export function NotificationPanel({ userId, isOpen, onClose, onUnreadCountChange
     if (shouldUseHttpApi()) {
       await markAllNotificationsAsRead(userId);
     } else {
-      mockApi.markAllNotificationsAsRead();
+      mockApi.markAllNotificationsAsRead(userId);
     }
     setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
     setUnreadCount(0);

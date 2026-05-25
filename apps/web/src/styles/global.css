@@ -446,6 +446,16 @@ button:focus-visible {
   border-color: var(--brand);
 }
 
+.ghost-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.ghost-button:disabled:hover {
+  border-color: var(--border);
+  background: var(--bg-surface);
+}
+
 .ghost-button.compact {
   padding: 5px 10px;
   font-size: 12px;
@@ -1458,6 +1468,16 @@ button:focus-visible {
   color: var(--success);
   border-radius: var(--radius-sm);
   background: var(--success-light);
+}
+
+.reminder-result.error {
+  color: var(--error);
+  background: var(--error-light);
+}
+
+.reminder-result.muted {
+  color: var(--text-secondary);
+  background: var(--bg-elevated);
 }
 
 /* Rubric */

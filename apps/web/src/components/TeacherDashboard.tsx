@@ -3,6 +3,7 @@ import { mockApi } from '../api/mockApi';
 import {
   createAssignment,
   approveGradingResult,
+  createCourse,
   createGradeExport,
   createGradingJob,
   importStudents,
@@ -18,6 +19,7 @@ import {
   updateReviewItem,
   withdrawGradingResult,
   type CreateAssignmentInput,
+  type CreateCourseInput,
   type ImportStudentsInput,
   type CreateRubricInput,
 } from '../api/httpApi';
@@ -108,6 +110,8 @@ export function TeacherDashboard({
   const [publicationAuditRows, setPublicationAuditRows] = useState(publicationAudits);
   const [appealRows, setAppealRows] = useState(appeals);
   const [similarityRows, setSimilarityRows] = useState(similarityJobs);
+  const [reminderPending, setReminderPending] = useState(false);
+  const [reminderError, setReminderError] = useState<string | null>(null);
   const [exportRows, setExportRows] = useState(gradeExports);
   const [ocrRows, setOcrRows] = useState(ocrJobs);
   const [assignmentRows, setAssignmentRows] = useState(assignments);
@@ -119,7 +123,9 @@ export function TeacherDashboard({
   const [rubricRows, setRubricRows] = useState<RubricSummary[]>(rubrics);
   const [studentRows, setStudentRows] = useState(students);
   const [studentImportResult, setStudentImportResult] = useState<StudentImportResult | null>(null);
+  const [courseRows, setCourseRows] = useState(courses);
   const [assignmentNotice, setAssignmentNotice] = useState('');
+  const [courseNotice, setCourseNotice] = useState('');
   const [rubricNotice, setRubricNotice] = useState('');
   const [actionNotice, setActionNotice] = useState('');
   const selectedAssignment = assignmentRows.find((assignment) => assignment.id === selectedAssignmentId)
@@ -159,6 +165,10 @@ export function TeacherDashboard({
   useEffect(() => {
     setStudentRows(students);
   }, [students]);
+
+  useEffect(() => {
+    setCourseRows(courses);
+  }, [courses]);
 
   useEffect(() => {
     setStartedJob((current) => (
@@ -313,12 +323,25 @@ export function TeacherDashboard({
   };
 
   const handleRemindUnsubmitted = async () => {
-    const result = await remindUnsubmitted(
-      activeAssignmentId,
-      unsubmittedStudents.map((student) => student.studentId),
-    );
-    setReminderResult(result);
-    await onWorkspaceRefresh();
+    const studentIds = unsubmittedStudents.map((student) => student.studentId);
+    if (studentIds.length === 0) {
+      setReminderResult(null);
+      setReminderError('当前任务没有未交学生，无需催交。');
+      return;
+    }
+    setReminderPending(true);
+    setReminderError(null);
+    try {
+      const result = await remindUnsubmitted(activeAssignmentId, studentIds);
+      setReminderResult(result);
+      window.dispatchEvent(new Event('trainmark:notifications-changed'));
+      await onWorkspaceRefresh();
+    } catch (error) {
+      setReminderResult(null);
+      setReminderError(`催交发送失败：${formatActionError(error)}`);
+    } finally {
+      setReminderPending(false);
+    }
   };
 
   const handleCreateGradeExport = async () => {
@@ -342,6 +365,14 @@ export function TeacherDashboard({
     setSelectedAssignmentId(assignment.id);
     setAssignmentNotice(`已发布任务：${assignment.title}`);
     setActionNotice('任务已发布，学生端可以提交报告。');
+    await onWorkspaceRefresh();
+  };
+
+  const handleCreateCourse = async (input: CreateCourseInput) => {
+    const course = await createCourse(input);
+    setCourseRows((current) => [course, ...current.filter((item) => item.id !== course.id)]);
+    setSelectedCourseId(course.id);
+    setCourseNotice(`已新建课程：${course.name}`);
     await onWorkspaceRefresh();
   };
 
@@ -373,6 +404,8 @@ export function TeacherDashboard({
     selectedAssignmentId: activeAssignmentId,
     unsubmittedStudents,
     reminderResult,
+    reminderPending,
+    reminderError,
     onRemindUnsubmitted: handleRemindUnsubmitted,
   };
   const aiPipelineProps = {
@@ -435,8 +468,10 @@ export function TeacherDashboard({
   };
   const coursePanelProps = {
     classes,
-    courses,
+    courses: courseRows,
     selectedCourseId,
+    courseNotice,
+    onCreateCourse: handleCreateCourse,
     onSelectCourse: setSelectedCourseId,
   };
   const assignmentPanelProps = {
@@ -555,4 +590,8 @@ function latestRubricForAssignment(rubrics: RubricSummary[], assignmentId: numbe
   return rubrics
     .filter((item) => item.assignmentId === assignmentId)
     .sort((a, b) => b.id - a.id)[0] ?? null;
+}
+
+function formatActionError(error: unknown) {
+  return error instanceof Error ? error.message : '未知错误，请检查后端服务是否正常。';
 }

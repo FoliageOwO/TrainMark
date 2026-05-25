@@ -77,6 +77,13 @@ export type CreateAssignmentInput = {
   aiGradingEnabled: boolean;
 };
 
+export type CreateCourseInput = {
+  name: string;
+  code: string;
+  semester: string;
+  description?: string;
+};
+
 export type CreateRubricInput = {
   assignmentId: number;
   name: string;
@@ -436,6 +443,15 @@ export async function createGradingJob(assignmentId: number, rubricId: number, s
   );
 }
 
+export async function createCourse(input: CreateCourseInput): Promise<CourseSummary> {
+  return mutateOr(
+    'POST',
+    '/api/courses',
+    input,
+    () => mockApi.createCourse(input),
+  );
+}
+
 export async function createOcrJob(submissionId: number, objectKey: string): Promise<OcrJobSummary> {
   return mutateOr(
     'POST',
@@ -545,10 +561,10 @@ export async function remindUnsubmitted(assignmentId: number, studentIds: number
     {
       assignmentId,
       studentIds,
-      channels: ['IN_APP', 'EMAIL', 'WECHAT_WORK'],
+      channels: ['IN_APP'],
       message: '请尽快提交实训报告，逾期会影响成绩发布。',
     },
-    () => mockApi.remindUnsubmitted(),
+    () => mockApi.remindUnsubmitted(assignmentId, studentIds),
     normalizeReminderResult,
   );
 }
@@ -802,13 +818,28 @@ async function loadOcrJobs(): Promise<OcrJobSummary[]> {
 function normalizeReminderResult(value: {
   recipientCount: number;
   messageCount: number;
+  channels?: Array<'IN_APP' | 'EMAIL' | 'WECHAT_WORK' | 'SMS'>;
+  status?: 'PENDING' | 'SENT' | 'FAILED';
 }): ReminderResult {
+  const channelLabels = (value.channels?.length ? value.channels : ['IN_APP'])
+    .map((channel) => reminderChannelLabel(channel))
+    .filter((channel): channel is ReminderResult['channels'][number] => Boolean(channel));
   return {
     recipientCount: value.recipientCount,
     messageCount: value.messageCount,
-    channels: ['站内信', '邮件', '企业微信'],
-    status: '已发送',
+    channels: channelLabels.length > 0 ? channelLabels : ['站内信'],
+    status: value.status === 'PENDING' ? '待发送' : value.status === 'FAILED' ? '发送失败' : '已发送',
   };
+}
+
+function reminderChannelLabel(channel: string) {
+  const labels: Record<string, ReminderResult['channels'][number] | null> = {
+    IN_APP: '站内信',
+    EMAIL: '邮件',
+    WECHAT_WORK: '企业微信',
+    SMS: null,
+  };
+  return labels[channel] ?? null;
 }
 
 type BackendSubmissionReceipt = {

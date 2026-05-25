@@ -210,6 +210,7 @@ export function App() {
           setUser(nextUser);
           setApiError(null);
           setApiSessionReady(true);
+          window.dispatchEvent(new Event('trainmark:notifications-changed'));
         }
       } catch (error) {
         if (!cancelled) {
@@ -254,6 +255,7 @@ export function App() {
       setUser(await loginAsRole(role));
       setApiError(null);
       setApiSessionReady(true);
+      window.dispatchEvent(new Event('trainmark:notifications-changed'));
     } catch (error) {
       setApiError(errorMessage(error));
       setApiSessionReady(false);
@@ -272,6 +274,7 @@ export function App() {
       setUser(await loginAsRole(nextRole));
       setApiError(null);
       setApiSessionReady(true);
+      window.dispatchEvent(new Event('trainmark:notifications-changed'));
     } catch (error) {
       setApiError(errorMessage(error));
       setApiSessionReady(false);

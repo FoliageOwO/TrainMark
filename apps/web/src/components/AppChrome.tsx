@@ -99,7 +99,7 @@ export function AppChrome({
       window.clearInterval(timer);
       window.removeEventListener('trainmark:notifications-changed', handleNotificationChanged);
     };
-  }, [refreshUnreadNotifications]);
+  }, [refreshUnreadNotifications, user.username]);
 
   return (
     <main className="app-shell">
