@@ -512,6 +512,8 @@ export async function createOcrJob(submissionId: number, objectKey: string): Pro
       tableCount: 0,
       confidence: 80,
       blocks: [],
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
     }),
     normalizeOcrJob,
   );

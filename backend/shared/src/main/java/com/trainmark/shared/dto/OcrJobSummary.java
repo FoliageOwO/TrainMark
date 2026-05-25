@@ -12,5 +12,6 @@ public record OcrJobSummary(
     int textBlockCount,
     int tableCount,
     int confidence,
-    OffsetDateTime createdAt
+    OffsetDateTime createdAt,
+    OffsetDateTime updatedAt
 ) {}

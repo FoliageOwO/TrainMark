@@ -37,7 +37,7 @@ public class JdbcGradingJobStore implements GradingJobStore {
   public Collection<GradingJobSummary> listJobs(Long assignmentId) {
     var sql = """
         SELECT id, assignment_id, rubric_id, total_submission_count, processed_submission_count,
-               status, created_at
+               status, created_at, started_at, finished_at, updated_at
         FROM grading_jobs
         """;
     if (assignmentId != null) {
@@ -67,8 +67,8 @@ public class JdbcGradingJobStore implements GradingJobStore {
     var sql = """
         INSERT INTO grading_jobs (
           assignment_id, rubric_id, status, total_submission_count,
-          processed_submission_count, failed_submission_count
-        ) VALUES (?, ?, ?, ?, ?, ?)
+          processed_submission_count, failed_submission_count, started_at
+        ) VALUES (?, ?, ?, ?, ?, ?, now())
         """;
     try (var connection = connect();
         var statement = connection.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
@@ -92,11 +92,20 @@ public class JdbcGradingJobStore implements GradingJobStore {
 
   @Override
   public void updateJobStatus(Long jobId, GradingJobStatus status) {
-    var sql = "UPDATE grading_jobs SET status = ? WHERE id = ?";
+    var sql = """
+        UPDATE grading_jobs
+        SET status = ?,
+            started_at = CASE WHEN started_at IS NULL AND ? <> 'PENDING' THEN now() ELSE started_at END,
+            finished_at = CASE WHEN ? IN ('COMPLETED', 'FAILED') THEN now() ELSE finished_at END,
+            updated_at = now()
+        WHERE id = ?
+        """;
     try (var connection = connect();
         var statement = connection.prepareStatement(sql)) {
       statement.setString(1, status.name());
-      statement.setLong(2, jobId);
+      statement.setString(2, status.name());
+      statement.setString(3, status.name());
+      statement.setLong(4, jobId);
       statement.executeUpdate();
     } catch (SQLException error) {
       throw new IllegalStateException("Failed to update grading job status", error);
@@ -111,7 +120,13 @@ public class JdbcGradingJobStore implements GradingJobStore {
             status = CASE
               WHEN processed_submission_count + 1 >= total_submission_count THEN 'COMPLETED'
               ELSE status
-            END
+            END,
+            started_at = COALESCE(started_at, now()),
+            finished_at = CASE
+              WHEN processed_submission_count + 1 >= total_submission_count THEN now()
+              ELSE finished_at
+            END,
+            updated_at = now()
         WHERE id = ?
         """;
     try (var connection = connect();
@@ -126,7 +141,7 @@ public class JdbcGradingJobStore implements GradingJobStore {
   private GradingJobSummary getJob(Long jobId) throws SQLException {
     var sql = """
         SELECT id, assignment_id, rubric_id, total_submission_count, processed_submission_count,
-               status, created_at
+               status, created_at, started_at, finished_at, updated_at
         FROM grading_jobs
         WHERE id = ?
         """;
@@ -153,7 +168,10 @@ public class JdbcGradingJobStore implements GradingJobStore {
         results.getInt("processed_submission_count"),
         GradingJobStatus.valueOf(results.getString("status")),
         86,
-        results.getObject("created_at", OffsetDateTime.class)
+        results.getObject("created_at", OffsetDateTime.class),
+        results.getObject("started_at", OffsetDateTime.class),
+        results.getObject("finished_at", OffsetDateTime.class),
+        results.getObject("updated_at", OffsetDateTime.class)
     );
   }
 

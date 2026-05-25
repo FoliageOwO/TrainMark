@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent } from 'react';
+import { useEffect, useMemo, useState, type FormEvent } from 'react';
 import { mockApi } from '../api/mockApi';
 import {
   createAssignment,
@@ -27,7 +27,7 @@ import {
   type ImportStudentsInput,
   type CreateRubricInput,
 } from '../api/httpApi';
-import type { CollectionOverview, CourseSummary, GradingResultSummary, RubricSummary, StudentImportResult, SubmissionSummary, TeachingClassSummary, UserSummary } from '../api/types';
+import type { CollectionOverview, CourseSummary, GradingJobSummary, GradingResultSummary, OcrJobSummary, RubricSummary, StudentImportResult, SubmissionSummary, TeachingClassSummary, UserSummary } from '../api/types';
 import { TeacherAnalyticsPanel } from './TeacherAnalyticsPanel';
 import { TeacherAiPipeline } from './TeacherAiPipeline';
 import { TeacherAppealPanel } from './TeacherAppealPanel';
@@ -161,9 +161,9 @@ export function TeacherDashboard({
     classScopedSubmissions,
   );
   const rubric = latestRubricForAssignment(rubricRows, activeAssignmentId);
-  const visibleJobs = startedJob
+  const visibleJobs = useMemo(() => (startedJob
     ? [startedJob, ...gradingJobs.filter((job) => job.id !== startedJob.id)]
-    : gradingJobs;
+    : gradingJobs), [gradingJobs, startedJob]);
   const visibleReviewResults = classScopedReviewResults;
   const selectedReview = visibleReviewResults.find((item) => item.id === selectedReviewId) ?? visibleReviewResults[0] ?? null;
   const ocrCandidate = classScopedSubmissions.find((submission) => Boolean(submission.objectKey)) ?? null;
@@ -256,6 +256,21 @@ export function TeacherDashboard({
     }
   }, [externalSection, activeSection]);
 
+  useEffect(() => {
+    if (section !== 'ai-pipeline') {
+      return undefined;
+    }
+    const hasRunningJobs = visibleJobs.some((job) => job.status !== 'COMPLETED' && job.status !== 'FAILED')
+      || ocrRows.some((job) => job.status !== 'COMPLETED' && job.status !== 'FAILED');
+    if (!hasRunningJobs) {
+      return undefined;
+    }
+    const timer = window.setInterval(() => {
+      void onWorkspaceRefresh();
+    }, 3000);
+    return () => window.clearInterval(timer);
+  }, [ocrRows, onWorkspaceRefresh, section, visibleJobs]);
+
   const syncReviewResult = (updated: GradingResultSummary) => {
     setReviewResults((current) => current.map((item) => (item.id === updated.id ? { ...updated } : item)));
     setSelectedReviewId(updated.id);
@@ -274,13 +289,26 @@ export function TeacherDashboard({
       setActionNotice('当前任务暂无学生提交，学生提交报告后才能启动批改。');
       return;
     }
-    const job = await createGradingJob(activeAssignmentId, rubric.id, submissionIds);
-    setStartedJob(job);
-    const latestReviewResults = mockApi.listGradingResults(activeAssignmentId);
-    setReviewResults(latestReviewResults);
-    setSelectedReviewId(latestReviewResults[0]?.id ?? 0);
-    setActionNotice(`已启动批改：${submissionIds.length} 份报告。`);
-    await onWorkspaceRefresh();
+    const pendingJob = buildPendingGradingJob(activeAssignmentId, rubric.id, submissionIds.length);
+    setStartedJob(pendingJob);
+    setActionNotice(`已提交批改任务：${submissionIds.length} 份报告，正在处理...`);
+    try {
+      const job = await createGradingJob(activeAssignmentId, rubric.id, submissionIds);
+      setStartedJob(job);
+      const latestReviewResults = mockApi.listGradingResults(activeAssignmentId);
+      setReviewResults(latestReviewResults);
+      setSelectedReviewId(latestReviewResults[0]?.id ?? 0);
+      setActionNotice(`批改完成：${submissionIds.length} 份报告。`);
+      await onWorkspaceRefresh();
+    } catch (error) {
+      setStartedJob({
+        ...pendingJob,
+        status: 'FAILED',
+        finishedAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      });
+      setActionNotice(`批改失败：${formatActionError(error)}`);
+    }
   };
 
   const handleReviewItemSubmit = async (event: FormEvent<HTMLFormElement>, rubricItemId: number) => {
@@ -354,9 +382,18 @@ export function TeacherDashboard({
     if (!ocrCandidate) {
       return;
     }
-    const job = await createOcrJob(ocrCandidate.id, ocrCandidate.objectKey);
-    setOcrRows((current) => [job, ...current.filter((item) => item.id !== job.id)]);
-    await onWorkspaceRefresh();
+    const pendingJob = buildPendingOcrJob(ocrCandidate.id, ocrCandidate.objectKey);
+    setOcrRows((current) => [pendingJob, ...current.filter((item) => item.id !== pendingJob.id)]);
+    try {
+      const job = await createOcrJob(ocrCandidate.id, ocrCandidate.objectKey);
+      setOcrRows((current) => [job, ...current.filter((item) => item.id !== pendingJob.id && item.id !== job.id)]);
+      await onWorkspaceRefresh();
+    } catch (error) {
+      setOcrRows((current) => current.map((item) => (
+        item.id === pendingJob.id ? { ...item, status: 'FAILED', updatedAt: new Date().toISOString() } : item
+      )));
+      setActionNotice(`识别失败：${formatActionError(error)}`);
+    }
   };
 
   const handleRemindUnsubmitted = async () => {
@@ -794,6 +831,40 @@ function decrementCourseCounts(courses: CourseSummary[], courseId: number, remov
       }
       : item
   ));
+}
+
+function buildPendingGradingJob(assignmentId: number, rubricId: number, totalSubmissions: number): GradingJobSummary {
+  const now = new Date().toISOString();
+  return {
+    id: -Date.now(),
+    assignmentId,
+    rubricId,
+    totalSubmissions,
+    completedSubmissions: 0,
+    status: 'SCORING',
+    confidence: 0,
+    createdAt: now,
+    startedAt: now,
+    updatedAt: now,
+    finishedAt: null,
+  };
+}
+
+function buildPendingOcrJob(submissionId: number, objectKey: string): OcrJobSummary {
+  const now = new Date().toISOString();
+  return {
+    id: -Date.now(),
+    submissionId,
+    objectKey,
+    status: 'RECOGNIZING',
+    pageCount: 0,
+    textBlockCount: 0,
+    tableCount: 0,
+    confidence: 0,
+    blocks: [],
+    createdAt: now,
+    updatedAt: now,
+  };
 }
 
 function formatActionError(error: unknown) {

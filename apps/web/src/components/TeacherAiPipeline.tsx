@@ -4,7 +4,7 @@ import type { CreateRubricInput } from '../api/httpApi';
 import type { AssignmentSummary, GradingJobSummary, OcrJobSummary, RubricSummary, TeachingClassSummary } from '../api/types';
 import { toChineseText } from '../utils/displayText';
 
-const gradingStatusText = {
+const gradingStatusText: Record<GradingJobSummary['status'], string> = {
   PENDING: '等待中',
   OCR_RUNNING: '识别中',
   STRUCTURING: '结构化',
@@ -15,7 +15,7 @@ const gradingStatusText = {
   RETRYING: '重试中',
 };
 
-const ocrStatusText = {
+const ocrStatusText: Record<OcrJobSummary['status'], string> = {
   PENDING: '等待中',
   PREPROCESSING: '预处理',
   RECOGNIZING: '识别中',
@@ -252,24 +252,36 @@ export function TeacherAiPipeline({
                 <thead>
                   <tr>
                     <th>任务</th>
-                    <th>页数</th>
-                    <th>文本块</th>
-                    <th>表格</th>
-                    <th>置信度</th>
+                    <th>处理进度</th>
                     <th>状态</th>
+                    <th>处理时间</th>
+                    <th>识别结果</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {ocrJobs.map((job) => (
-                    <tr key={job.id}>
-                      <td>识别任务 #{job.id}</td>
-                      <td>{job.pageCount}</td>
-                      <td>{job.textBlockCount}</td>
-                      <td>{job.tableCount}</td>
-                      <td>{job.confidence}%</td>
-                      <td>{ocrStatusText[job.status]}</td>
-                    </tr>
-                  ))}
+                  {ocrJobs.map((job) => {
+                    const progress = ocrProgress(job);
+                    return (
+                      <tr key={job.id}>
+                        <td>
+                          <div className="queue-task-cell">
+                            <strong>识别任务 #{job.id}</strong>
+                            <span>{shortObjectKey(job.objectKey)}</span>
+                          </div>
+                        </td>
+                        <td>
+                          <ProgressMeter value={progress} />
+                        </td>
+                        <td><StatusPill status={job.status}>{ocrStatusText[job.status]}</StatusPill></td>
+                        <td>{formatProcessTime(job.createdAt, job.updatedAt, job.status === 'COMPLETED' || job.status === 'FAILED')}</td>
+                        <td>
+                          <span className="queue-result-text">
+                            {job.pageCount} 页 / {job.textBlockCount} 文本 / {job.tableCount} 表格 / {job.confidence}%
+                          </span>
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
@@ -294,18 +306,30 @@ export function TeacherAiPipeline({
                     <th>任务</th>
                     <th>完成进度</th>
                     <th>状态</th>
+                    <th>处理时间</th>
                     <th>置信度</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {gradingJobs.map((job) => (
-                    <tr key={job.id}>
-                      <td>批改任务 #{job.id}</td>
-                      <td>{job.completedSubmissions}/{job.totalSubmissions}</td>
-                      <td>{gradingStatusText[job.status]}</td>
-                      <td>{job.confidence}%</td>
-                    </tr>
-                  ))}
+                  {gradingJobs.map((job) => {
+                    const progress = gradingProgress(job);
+                    return (
+                      <tr key={job.id}>
+                        <td>
+                          <div className="queue-task-cell">
+                            <strong>批改任务 #{job.id}</strong>
+                            <span>{job.completedSubmissions}/{job.totalSubmissions} 份报告</span>
+                          </div>
+                        </td>
+                        <td>
+                          <ProgressMeter value={progress} />
+                        </td>
+                        <td><StatusPill status={job.status}>{gradingStatusText[job.status]}</StatusPill></td>
+                        <td>{formatProcessTime(job.startedAt ?? job.createdAt, job.finishedAt ?? job.updatedAt, job.status === 'COMPLETED' || job.status === 'FAILED')}</td>
+                        <td>{job.confidence}%</td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
@@ -376,4 +400,85 @@ function splitKeywords(value: string) {
     .split(/[,，]/)
     .map((item) => item.trim())
     .filter(Boolean);
+}
+
+function ProgressMeter({ value }: { value: number }) {
+  const safeValue = Math.max(0, Math.min(100, Math.round(value)));
+  return (
+    <div className="queue-progress" aria-label={`处理进度 ${safeValue}%`}>
+      <div className="queue-progress-track">
+        <span style={{ width: `${safeValue}%` }} />
+      </div>
+      <b>{safeValue}%</b>
+    </div>
+  );
+}
+
+function StatusPill({ status, children }: { status: string; children: string }) {
+  return <span className={`queue-status queue-status-${status.toLowerCase().replace(/_/g, '-')}`}>{children}</span>;
+}
+
+function gradingProgress(job: GradingJobSummary) {
+  if (job.status === 'COMPLETED') {
+    return 100;
+  }
+  if (job.status === 'FAILED') {
+    return Math.max(0, Math.round((job.completedSubmissions / Math.max(job.totalSubmissions, 1)) * 100));
+  }
+  const base = Math.round((job.completedSubmissions / Math.max(job.totalSubmissions, 1)) * 100);
+  const statusFloor: Record<GradingJobSummary['status'], number> = {
+    PENDING: 5,
+    OCR_RUNNING: 20,
+    STRUCTURING: 40,
+    SCORING: 65,
+    ANNOTATING: 85,
+    RETRYING: 50,
+    COMPLETED: 100,
+    FAILED: base,
+  };
+  return Math.max(base, statusFloor[job.status]);
+}
+
+function ocrProgress(job: OcrJobSummary) {
+  const statusValue: Record<OcrJobSummary['status'], number> = {
+    PENDING: 8,
+    PREPROCESSING: 25,
+    RECOGNIZING: 60,
+    STRUCTURING: 85,
+    COMPLETED: 100,
+    FAILED: 100,
+  };
+  return statusValue[job.status];
+}
+
+function formatProcessTime(start?: string | null, end?: string | null, isFinished = false) {
+  if (!start) {
+    return '尚未开始';
+  }
+  const startText = formatDateTime(start);
+  if (!end || end === start) {
+    return isFinished ? `完成：${startText}` : `开始：${startText}`;
+  }
+  const endText = formatDateTime(end);
+  return isFinished ? `开始：${startText} / 完成：${endText}` : `开始：${startText} / 更新：${endText}`;
+}
+
+function formatDateTime(value: string) {
+  const timestamp = Date.parse(value);
+  if (Number.isNaN(timestamp)) {
+    return '时间未知';
+  }
+  return new Intl.DateTimeFormat('zh-CN', {
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: false,
+  }).format(new Date(timestamp));
+}
+
+function shortObjectKey(value: string) {
+  const fileName = value.split(/[\\/]/).filter(Boolean).at(-1) ?? value;
+  return toChineseText(fileName);
 }

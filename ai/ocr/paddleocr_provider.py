@@ -11,10 +11,17 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
+import re
 import sys
 from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Any
+
+ROOT = Path(__file__).resolve().parents[2]
+os.environ.setdefault("PADDLE_PDX_DISABLE_MODEL_SOURCE_CHECK", "True")
+os.environ.setdefault("PADDLE_PDX_ENABLE_MKLDNN_BYDEFAULT", "False")
+os.environ.setdefault("FLAGS_use_mkldnn", "false")
 
 
 @dataclass(frozen=True)
@@ -52,11 +59,32 @@ def build_plain_text_preview(blocks: list[OcrBlock], source: str) -> str:
     return f"识别到 {titles} 等结构化内容。来源：{source}。"
 
 
+def configured_upload_root() -> Path:
+    root = Path(os.environ.get("UPLOAD_OBJECT_ROOT", ".data/uploads"))
+    if root.is_absolute():
+        return root
+    return ROOT / root
+
+
+def resolve_object_path(normalized_object_key: str, object_key: str) -> Path:
+    values = [value for value in (normalized_object_key, object_key) if value]
+    upload_root = configured_upload_root()
+    for value in values:
+        candidate = Path(value)
+        candidates = [
+            candidate,
+            ROOT / candidate,
+            upload_root / candidate,
+        ]
+        for path in candidates:
+            if path.is_file():
+                return path
+    fallback = normalized_object_key or object_key
+    return upload_root / fallback if fallback else upload_root
+
+
 def resolve_input_path(args: argparse.Namespace) -> Path:
-    candidate = Path(args.normalized_object_key or args.object_key)
-    if candidate.exists():
-        return candidate
-    return Path(args.object_key)
+    return resolve_object_path(args.normalized_object_key, args.object_key)
 
 
 def result_payload(job_id: int, submission_id: int, blocks: list[OcrBlock], source: str) -> dict[str, Any]:
@@ -123,16 +151,111 @@ def recognize_with_paddle(input_path: Path, args: argparse.Namespace) -> list[Oc
         "use_doc_unwarping": False,
         "use_textline_orientation": False,
         "lang": args.language,
+        "device": os.environ.get("OCR_DEVICE", "cpu"),
+        "enable_mkldnn": env_bool("OCR_ENABLE_MKLDNN", False),
+        "cpu_threads": int(os.environ.get("OCR_CPU_THREADS", "4")),
         "engine": args.engine,
     }
-    try:
-        ocr = PaddleOCR(**options)
-    except TypeError:
-        options.pop("engine", None)
-        ocr = PaddleOCR(**options)
+    ocr = build_paddleocr(PaddleOCR, options)
 
     result = ocr.predict(str(input_path))
     return blocks_from_paddle_result(result)
+
+
+def is_text_document(input_path: Path) -> bool:
+    return input_path.suffix.lower() in {".docx", ".pdf", ".txt", ".md"}
+
+
+def extract_text_document_blocks(input_path: Path) -> list[OcrBlock]:
+    suffix = input_path.suffix.lower()
+    if suffix == ".docx":
+        return docx_blocks(input_path)
+    if suffix == ".pdf":
+        blocks = pdf_text_blocks(input_path)
+        if blocks:
+            return blocks
+    if suffix in {".txt", ".md"}:
+        return text_file_blocks(input_path)
+    return []
+
+
+def docx_blocks(input_path: Path) -> list[OcrBlock]:
+    from docx import Document  # type: ignore
+
+    document = Document(str(input_path))
+    lines: list[str] = []
+    for paragraph in document.paragraphs:
+        text = paragraph.text.strip()
+        if text:
+            lines.append(text)
+    for table in document.tables:
+        for row in table.rows:
+            cells = [cell.text.strip() for cell in row.cells if cell.text.strip()]
+            if cells:
+                lines.append(" | ".join(cells))
+    return lines_to_blocks(lines)
+
+
+def pdf_text_blocks(input_path: Path) -> list[OcrBlock]:
+    try:
+        from pypdf import PdfReader  # type: ignore
+    except Exception:
+        return []
+
+    reader = PdfReader(str(input_path))
+    blocks: list[OcrBlock] = []
+    for page_index, page in enumerate(reader.pages, start=1):
+        text = page.extract_text() or ""
+        for line in split_meaningful_lines(text):
+            blocks.append(OcrBlock("paragraph", line, page_index, 95))
+    return blocks
+
+
+def text_file_blocks(input_path: Path) -> list[OcrBlock]:
+    return lines_to_blocks(input_path.read_text(encoding="utf-8", errors="ignore").splitlines())
+
+
+def lines_to_blocks(lines: list[str]) -> list[OcrBlock]:
+    blocks: list[OcrBlock] = []
+    for line in lines:
+        for text in split_meaningful_lines(line):
+            block_type = "heading" if len(text) <= 32 and not any(mark in text for mark in "。，；,.") else "paragraph"
+            blocks.append(OcrBlock(block_type, text, 1, 95))
+    return blocks
+
+
+def split_meaningful_lines(text: str) -> list[str]:
+    return [line.strip() for line in text.splitlines() if line.strip()]
+
+
+def build_paddleocr(factory: Any, options: dict[str, Any]) -> Any:
+    remaining = dict(options)
+    for _ in range(len(options) + 1):
+        try:
+            return factory(**remaining)
+        except (TypeError, ValueError) as error:
+            unsupported = unsupported_argument(str(error), remaining)
+            if unsupported is None:
+                raise
+            remaining.pop(unsupported, None)
+    return factory(**remaining)
+
+
+def unsupported_argument(message: str, options: dict[str, Any]) -> str | None:
+    match = re.search(r"Unknown argument: ([A-Za-z0-9_]+)", message)
+    if match and match.group(1) in options:
+        return match.group(1)
+    for name in options:
+        if name in message:
+            return name
+    return None
+
+
+def env_bool(name: str, default: bool) -> bool:
+    value = os.environ.get(name)
+    if value is None:
+        return default
+    return value.lower() in {"1", "true", "yes", "on"}
 
 
 def parse_args() -> argparse.Namespace:
@@ -155,7 +278,11 @@ def main() -> None:
 
     if input_path.exists():
         try:
-            blocks = recognize_with_paddle(input_path, args)
+            if is_text_document(input_path):
+                blocks = extract_text_document_blocks(input_path)
+                source = "文档文本提取"
+            else:
+                blocks = recognize_with_paddle(input_path, args)
         except Exception as error:  # noqa: BLE001 - provider boundary logs and falls back.
             if args.require_real:
                 raise RuntimeError(f"PaddleOCR 必须可用，但当前调用失败：{error}") from error

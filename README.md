@@ -58,30 +58,35 @@ pnpm start:stack:http
 完整 AI 链路需要额外开一个 PowerShell 窗口启动 Python bridge。这个 bridge 会暴露
 PaddleOCR 和语义评分 HTTP provider，后端仍然使用现有 provider JSON 契约。
 
-```bash
-# 第一次使用先安装 Python 依赖
-python -m pip install -r ai/requirements.txt
+第一次使用先准备项目内独立 Python 环境，不要使用其他项目的嵌入式 Python：
 
-# 窗口 1：启动 AI bridge
-$env:TRAINMARK_REQUIRE_REAL_AI="1"
-$env:SCORING_MODEL="BAAI/bge-small-zh-v1.5"
-python ai/bridge_server.py
+```powershell
+uv python install 3.12
+uv venv --python 3.12 .venv-ai
+uv pip install --python .\.venv-ai\Scripts\python.exe -r ai\requirements.txt
+```
 
-# 窗口 2：启动完整本地栈
-$env:OCR_PROVIDER="paddleocr-http"
-$env:OCR_ENDPOINT="http://localhost:5000/api/ai/ocr/paddleocr"
-$env:OCR_REQUIRE_REAL="true"
-$env:SCORING_PROVIDER="semantic-http"
-$env:SCORING_ENDPOINT="http://localhost:5000/api/ai/scoring/semantic"
-$env:SCORING_REQUIRE_REAL="true"
-pnpm start:stack
+启动时开两个 PowerShell 窗口：
+
+```powershell
+# 窗口 1：启动 AI bridge，默认强制真实 OCR，不强制真实语义评分
+pnpm start:ai
+
+# 窗口 2：启动完整本地栈，并把 OCR/评分 provider 指向 AI bridge
+pnpm start:stack:ai
 ```
 
 看到 `AI Provider bridge started: http://localhost:5000` 就表示 bridge 已启动。
 浏览器访问根路径出现 404 是正常的，健康检查地址是 `http://localhost:5000/health`。
 
-如果只是本地演示，不强制真实模型，可不设置 `TRAINMARK_REQUIRE_REAL_AI=1`，
-bridge 会在 PaddleOCR 或模型不可用时使用离线兜底；生产验收建议开启严格模式。
+`pnpm start:ai` 默认设置 `TRAINMARK_REQUIRE_REAL_OCR=1`，所以 PaddleOCR 不可用或找不到文件时会直接报错，不会悄悄走离线兜底。
+如果还要强制真实语义评分，可以在启动 AI bridge 前设置：
+
+```powershell
+$env:TRAINMARK_REQUIRE_REAL_SCORING="1"
+$env:SCORING_MODEL="BAAI/bge-small-zh-v1.5"
+pnpm start:ai
+```
 
 ## 常用命令
 
@@ -90,6 +95,8 @@ bridge 会在 PaddleOCR 或模型不可用时使用离线兜底；生产验收�
 | `pnpm start:web` | 前端 mock 模式 |
 | `pnpm start:backend` | 启动全部后端服务 |
 | `pnpm start:stack` | 启动完整本地开发环境 |
+| `pnpm start:ai` | 启动项目内置 AI bridge，默认强制真实 OCR |
+| `pnpm start:stack:ai` | 启动完整本地开发环境，并把 OCR/评分接到 AI bridge |
 | `pnpm infra:up` | 单独启动本地基础设施 |
 | `pnpm infra:down` | 停止本地基础设施 |
 | `pnpm infra:restart` | 重启本地基础设施 |
@@ -155,12 +162,14 @@ TrainMark/
 - `smoke`: 表示轻量联通性检查，不是完整测试
 - `ops`: 表示运维/发布类脚本，不是日常开发入口
 
-现在建议你优先只记住这三条：
+现在建议你优先只记住这几条：
 
 ```bash
 pnpm start:web
 pnpm start:backend
 pnpm start:stack
+pnpm start:ai
+pnpm start:stack:ai
 ```
 
 其余命令都属于专项操作。
@@ -176,6 +185,13 @@ pnpm start:stack
 AI bridge 不需要外部 API key；它使用本地 PaddleOCR / SentenceTransformer/BGE 模型。
 如果设置 `TRAINMARK_AI_API_KEY`，后端也要配置对应的 `OCR_API_KEY` 和
 `SCORING_API_KEY`。
+
+当前内置 bridge 的处理规则：
+
+- 图片文件（`.png`、`.jpg`、`.jpeg`）走真实 PaddleOCR。
+- 文本型 Word/PDF 文件优先走真实文本提取，避免把 Word 文件硬交给 OCR。
+- 上传后的对象 key 会自动从 `UPLOAD_OBJECT_ROOT` 解析，默认是 `.data/uploads`。
+- `TRAINMARK_REQUIRE_REAL_OCR=1` 时不允许离线兜底，适合验收真实 OCR 是否可用。
 
 ## 兼容说明
 

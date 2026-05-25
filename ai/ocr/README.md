@@ -1,106 +1,80 @@
 # OCR Provider
 
-This folder contains the OCR-side provider contract used by TrainMark AI.
+这里维护 TrainMark AI 的 OCR provider 契约。后端可以使用本地内置 provider、命令行 provider，或通过 HTTP 调用独立 AI bridge。
 
-The current MVP keeps the backend service self-contained, but this CLI mirrors
-the same deterministic local OCR behavior so the backend can later switch from
-an in-process provider to a PaddleOCR-backed process without changing the API
-surface. OCR jobs now run after the document preprocessing contract in
-`ai/document/`, which normalizes PDF, Word and image submissions into OCR-ready
-metadata.
-
-## Local Provider
+## 本地 Provider
 
 ```bash
-python3 ai/ocr/local_provider.py \
+python ai/ocr/local_provider.py \
   --job-id 1001 \
   --submission-id 1 \
   --object-key assignments/1/students/2/database-report.pdf
 ```
 
-The command writes an `OcrResultSummary`-compatible JSON document to stdout:
+命令会输出兼容 `OcrResultSummary` 的 JSON：
 
 ```json
 {
   "jobId": 1001,
   "submissionId": 1,
-  "plainText": "识别到 ... 等结构化内容。",
+  "plainText": "识别到 ... 等结构化内容。来源：本地 OCR。",
   "blocks": [
     { "type": "heading", "title": "数据库概念结构设计", "page": 1, "confidence": 95 }
   ]
 }
 ```
 
-## PaddleOCR Migration Notes
+## 真实 PaddleOCR Provider
 
-Use `paddleocr.example.yml` as the first production configuration shape. The
-PaddleOCR implementation should keep stdout compatible with the local provider
-JSON contract and write operational logs to stderr.
+`paddleocr_provider.py` 保持同一份 JSON 契约：
 
-`paddleocr_provider.py` is the first PaddleOCR-backed adapter. It follows the
-PaddleOCR 3.x Python `PaddleOCR(...).predict(...)` shape and emits the same
-`OcrResultSummary` JSON used by the backend. In local MVP environments where
-PaddleOCR is not installed or the normalized input artifact is not present, it
-falls back to deterministic blocks and marks the plain-text source as
-`PaddleOCR 离线兜底`.
+- 图片文件（`.png`、`.jpg`、`.jpeg`）调用真实 PaddleOCR。
+- 文本型 Word/PDF 文件优先做真实文本提取。
+- 传入对象 key 时会自动从 `UPLOAD_OBJECT_ROOT` 查找上传文件，默认 `.data/uploads`。
+- 加 `--require-real` 后，PaddleOCR 不可用、文件不存在或没有识别文本都会直接失败。
 
-```bash
-python3 ai/ocr/paddleocr_provider.py \
-  --job-id 1002 \
-  --submission-id 2 \
-  --object-key assignments/1/students/3/screenshot.png \
-  --normalized-object-key converted/assignments/1/students/3/screenshot.png
+第一次使用建议创建项目内独立虚拟环境：
+
+```powershell
+uv python install 3.12
+uv venv --python 3.12 .venv-ai
+uv pip install --python .\.venv-ai\Scripts\python.exe -r ai\requirements.txt
 ```
 
-## Backend Command Provider
+严格验证真实 OCR：
 
-`ocr-service` defaults to the in-process local provider. To call an external OCR
-CLI, start the service with:
-
-```bash
-OCR_PROVIDER=command \
-OCR_COMMAND='python3 ai/ocr/local_provider.py --job-id {jobId} --submission-id {submissionId} --object-key {objectKey}' \
-pnpm dev:backend:ocr
+```powershell
+$env:OCR_ENABLE_MKLDNN="false"
+$env:PADDLE_PDX_DISABLE_MODEL_SOURCE_CHECK="True"
+.\.venv-ai\Scripts\python.exe ai\ocr\paddleocr_provider.py `
+  --job-id 1002 `
+  --submission-id 2 `
+  --object-key tmp\ocr-real-test-cn.png `
+  --normalized-object-key tmp\ocr-real-test-cn.png `
+  --require-real
 ```
-
-The placeholders `{jobId}`, `{submissionId}` and `{objectKey}` are replaced by
-the backend before the command is executed.
-
-To use the built-in PaddleOCR adapter, set `OCR_PROVIDER=paddleocr`. The backend
-will call:
-
-```bash
-python3 ai/ocr/paddleocr_provider.py \
-  --job-id {jobId} \
-  --submission-id {submissionId} \
-  --object-key {objectKey} \
-  --normalized-object-key {normalizedObjectKey}
-```
-
-Set `OCR_REQUIRE_REAL=true` when the built-in adapter must fail instead of
-falling back. The backend appends `--require-real` to the default PaddleOCR
-command in that mode. If you override `OCR_COMMAND`, include `--require-real`
-in your custom command when the same production gate is required.
-
-You can still override the full command with `OCR_COMMAND` when production
-deployment needs a different Python environment, model path or wrapper script.
 
 ## HTTP Provider
 
-生产部署可以把 PaddleOCR 做成独立 HTTP 服务，同时保留现有 provider JSON 契约。
-后端会把提交信息和文档预处理元数据发送到 `OCR_ENDPOINT`，并接受两种返回：
-原始 `OcrResultSummary` JSON，或 `{ "success": true, "data": ... }` 包装格式。
+生产部署可以把 PaddleOCR 做成独立 HTTP 服务，同时保留现有 provider JSON 契约。项目内置的开发 bridge 可以这样启动：
 
-```bash
-# 1. 启动项目内置桥接服务；生产环境也可以替换成自己的 PaddleOCR 服务。
-python3 ai/bridge_server.py
-
-# 2. 使用 HTTP provider 启动 ocr-service。
-OCR_PROVIDER=paddleocr-http \
-OCR_ENDPOINT=http://localhost:5000/api/ai/ocr/paddleocr \
-OCR_REQUIRE_REAL=true \
-pnpm dev:backend:ocr
+```powershell
+pnpm start:ai
 ```
 
-如果桥接服务配置了 `TRAINMARK_AI_API_KEY`，后端也要把同一个值配置到
-`OCR_API_KEY`，请求时会通过 `Authorization: Bearer <key>` 发送。
+后端使用 HTTP provider：
+
+```powershell
+$env:OCR_PROVIDER="paddleocr-http"
+$env:OCR_ENDPOINT="http://localhost:5000/api/ai/ocr/paddleocr"
+$env:OCR_REQUIRE_REAL="true"
+pnpm start:service:ocr
+```
+
+或者直接启动完整本地栈：
+
+```powershell
+pnpm start:stack:ai
+```
+
+如果 bridge 配置了 `TRAINMARK_AI_API_KEY`，后端也要把同一个值配置到 `OCR_API_KEY`，请求时会通过 `Authorization: Bearer <key>` 发送。

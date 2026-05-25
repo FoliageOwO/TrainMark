@@ -11,5 +11,8 @@ public record GradingJobSummary(
     int completedSubmissions,
     GradingJobStatus status,
     int confidence,
-    OffsetDateTime createdAt
+    OffsetDateTime createdAt,
+    OffsetDateTime startedAt,
+    OffsetDateTime finishedAt,
+    OffsetDateTime updatedAt
 ) {}

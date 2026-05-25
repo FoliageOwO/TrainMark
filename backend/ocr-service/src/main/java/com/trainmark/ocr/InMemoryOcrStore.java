@@ -35,7 +35,8 @@ public class InMemoryOcrStore implements OcrStore {
         142,
         6,
         93,
-        OffsetDateTime.now().minusMinutes(12)
+        OffsetDateTime.now().minusMinutes(12),
+        OffsetDateTime.now().minusMinutes(4)
     ));
     results.put(1L, new OcrResultSummary(
         1L,
@@ -74,6 +75,7 @@ public class InMemoryOcrStore implements OcrStore {
         0,
         0,
         0,
+        OffsetDateTime.now(),
         OffsetDateTime.now()
     );
     jobs.put(id, job);
@@ -98,6 +100,7 @@ public class InMemoryOcrStore implements OcrStore {
         blocks.size() * 28,
         tableCount(blocks),
         confidence(blocks),
+        pending.createdAt(),
         OffsetDateTime.now()
     );
     jobs.put(jobId, job);
@@ -120,7 +123,8 @@ public class InMemoryOcrStore implements OcrStore {
         job.textBlockCount(),
         job.tableCount(),
         job.confidence(),
-        job.createdAt()
+        job.createdAt(),
+        OffsetDateTime.now()
     ));
   }
 

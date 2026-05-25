@@ -26,7 +26,10 @@ public class InMemoryGradingJobStore implements GradingJobStore {
         47,
         GradingJobStatus.SCORING,
         86,
-        OffsetDateTime.now().minusMinutes(18)
+        OffsetDateTime.now().minusMinutes(18),
+        OffsetDateTime.now().minusMinutes(18),
+        null,
+        OffsetDateTime.now().minusMinutes(2)
     ));
   }
 
@@ -48,6 +51,9 @@ public class InMemoryGradingJobStore implements GradingJobStore {
         0,
         GradingJobStatus.PENDING,
         0,
+        OffsetDateTime.now(),
+        OffsetDateTime.now(),
+        null,
         OffsetDateTime.now()
     );
     jobs.put(id, job);
@@ -66,7 +72,10 @@ public class InMemoryGradingJobStore implements GradingJobStore {
           current.completedSubmissions(),
           status,
           current.confidence(),
-          current.createdAt()
+          current.createdAt(),
+          current.startedAt() == null && status != GradingJobStatus.PENDING ? OffsetDateTime.now() : current.startedAt(),
+          status == GradingJobStatus.COMPLETED || status == GradingJobStatus.FAILED ? OffsetDateTime.now() : current.finishedAt(),
+          OffsetDateTime.now()
       ));
     }
   }
@@ -85,7 +94,10 @@ public class InMemoryGradingJobStore implements GradingJobStore {
           completed,
           status,
           current.confidence(),
-          current.createdAt()
+          current.createdAt(),
+          current.startedAt() == null ? OffsetDateTime.now() : current.startedAt(),
+          status == GradingJobStatus.COMPLETED ? OffsetDateTime.now() : current.finishedAt(),
+          OffsetDateTime.now()
       ));
     }
   }

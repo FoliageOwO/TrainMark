@@ -1,3 +1,5 @@
-paddlepaddle
-paddleocr
-sentence-transformers
+paddlepaddle==3.0.0
+paddleocr==3.3.3
+sentence-transformers==5.1.2
+python-docx==1.2.0
+pypdf==6.12.1

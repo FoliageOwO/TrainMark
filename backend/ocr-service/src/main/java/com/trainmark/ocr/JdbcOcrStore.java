@@ -47,7 +47,7 @@ public class JdbcOcrStore implements OcrStore {
   public Collection<OcrJobSummary> listJobs(Long submissionId) {
     var sql = """
         SELECT id, submission_id, object_key, status, page_count, text_block_count,
-               table_count, confidence, created_at
+               table_count, confidence, created_at, updated_at
         FROM ocr_jobs
         """;
     if (submissionId != null) {
@@ -209,7 +209,7 @@ public class JdbcOcrStore implements OcrStore {
   private OcrJobSummary getJob(Connection connection, Long jobId) throws SQLException {
     var sql = """
         SELECT id, submission_id, object_key, status, page_count, text_block_count,
-               table_count, confidence, created_at
+               table_count, confidence, created_at, updated_at
         FROM ocr_jobs
         WHERE id = ?
         """;
@@ -258,7 +258,8 @@ public class JdbcOcrStore implements OcrStore {
         results.getInt("text_block_count"),
         results.getInt("table_count"),
         results.getInt("confidence"),
-        results.getObject("created_at", OffsetDateTime.class)
+        results.getObject("created_at", OffsetDateTime.class),
+        results.getObject("updated_at", OffsetDateTime.class)
     );
   }
 

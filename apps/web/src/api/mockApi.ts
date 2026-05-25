@@ -136,7 +136,19 @@ const rubrics: RubricSummary[] = [
 ];
 
 const gradingJobs: GradingJobSummary[] = [
-  { id: 1, assignmentId: 1, rubricId: 1, totalSubmissions: 65, completedSubmissions: 47, status: 'SCORING', confidence: 86, createdAt: '2026-05-12T10:12:00+08:00' },
+  {
+    id: 1,
+    assignmentId: 1,
+    rubricId: 1,
+    totalSubmissions: 65,
+    completedSubmissions: 47,
+    status: 'SCORING',
+    confidence: 86,
+    createdAt: '2026-05-12T10:12:00+08:00',
+    startedAt: '2026-05-12T10:12:06+08:00',
+    updatedAt: '2026-05-12T10:18:20+08:00',
+    finishedAt: null,
+  },
 ];
 
 const ocrJobs: OcrJobSummary[] = [
@@ -149,6 +161,8 @@ const ocrJobs: OcrJobSummary[] = [
     textBlockCount: 142,
     tableCount: 6,
     confidence: 93,
+    createdAt: '2026-05-12T10:10:00+08:00',
+    updatedAt: '2026-05-12T10:14:30+08:00',
     blocks: [
       { type: 'heading', title: '需求分析', page: 2, confidence: 96 },
       { type: 'table', title: '数据库表结构', page: 7, confidence: 91 },
@@ -828,6 +842,7 @@ export const mockApi = {
     return appeal;
   },
   startGradingJob(assignmentId = 1, rubricId = 1, submissionIds = [1]): GradingJobSummary {
+    const now = new Date().toISOString();
     const job: GradingJobSummary = {
       id: gradingJobs.length + 1,
       assignmentId,
@@ -836,7 +851,10 @@ export const mockApi = {
       completedSubmissions: submissionIds.length,
       status: 'COMPLETED',
       confidence: 86,
-      createdAt: new Date().toISOString(),
+      createdAt: now,
+      startedAt: now,
+      finishedAt: now,
+      updatedAt: now,
     };
     gradingJobs.unshift(job);
     createGradingResultsForSubmissions(assignmentId, submissionIds);

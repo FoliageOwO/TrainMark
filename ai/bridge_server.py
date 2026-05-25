@@ -20,9 +20,13 @@ sys.path.insert(0, str(ROOT / "ai" / "ocr"))
 sys.path.insert(0, str(ROOT / "ai" / "scoring"))
 
 from paddleocr_provider import (  # type: ignore  # noqa: E402
+    configured_upload_root,
+    extract_text_document_blocks,
     infer_blocks,
+    is_text_document,
     result_payload,
     recognize_with_paddle,
+    resolve_object_path,
 )
 from semantic_provider import (  # type: ignore  # noqa: E402
     SemanticScorer,
@@ -32,9 +36,14 @@ from semantic_provider import (  # type: ignore  # noqa: E402
 
 SCORING_MODEL = os.environ.get("SCORING_MODEL", "BAAI/bge-small-zh-v1.5")
 REQUIRE_REAL_AI = os.environ.get("TRAINMARK_REQUIRE_REAL_AI", "0") == "1"
+REQUIRE_REAL_OCR = os.environ.get("TRAINMARK_REQUIRE_REAL_OCR", str(int(REQUIRE_REAL_AI))) == "1"
+REQUIRE_REAL_SCORING = os.environ.get("TRAINMARK_REQUIRE_REAL_SCORING", str(int(REQUIRE_REAL_AI))) == "1"
 OCR_LANGUAGE = os.environ.get("OCR_LANGUAGE", "ch")
 OCR_ENGINE = os.environ.get("OCR_ENGINE", "paddle")
 API_KEY = os.environ.get("TRAINMARK_AI_API_KEY", "")
+os.environ.setdefault("PADDLE_PDX_DISABLE_MODEL_SOURCE_CHECK", "True")
+os.environ.setdefault("PADDLE_PDX_ENABLE_MKLDNN_BYDEFAULT", "False")
+os.environ.setdefault("FLAGS_use_mkldnn", "false")
 
 _semantic_scorer: SemanticScorer | None = None
 
@@ -42,7 +51,7 @@ _semantic_scorer: SemanticScorer | None = None
 def semantic_scorer() -> SemanticScorer:
     global _semantic_scorer
     if _semantic_scorer is None:
-        _semantic_scorer = SemanticScorer(SCORING_MODEL, require_real=REQUIRE_REAL_AI)
+        _semantic_scorer = SemanticScorer(SCORING_MODEL, require_real=REQUIRE_REAL_SCORING)
     return _semantic_scorer
 
 
@@ -62,7 +71,13 @@ class BridgeHandler(BaseHTTPRequestHandler):
 
     def do_GET(self) -> None:  # noqa: N802
         if self.path.split("?")[0] == "/health":
-            self._json({"status": "UP", "requireRealAi": REQUIRE_REAL_AI, "scoringModel": SCORING_MODEL})
+            self._json({
+                "status": "UP",
+                "requireRealAi": REQUIRE_REAL_AI,
+                "requireRealOcr": REQUIRE_REAL_OCR,
+                "requireRealScoring": REQUIRE_REAL_SCORING,
+                "scoringModel": SCORING_MODEL,
+            })
             return
         self._error(404, f"未实现的 AI Provider 路径：{self.path}")
 
@@ -127,22 +142,26 @@ class BridgeHandler(BaseHTTPRequestHandler):
         args = Namespace(language=OCR_LANGUAGE, engine=OCR_ENGINE)
         if input_path.exists():
             try:
-                blocks = recognize_with_paddle(input_path, args)
-                source = "PaddleOCR"
+                if is_text_document(input_path):
+                    blocks = extract_text_document_blocks(input_path)
+                    source = "文档文本提取"
+                else:
+                    blocks = recognize_with_paddle(input_path, args)
+                    source = "PaddleOCR"
             except Exception as error:  # noqa: BLE001 - provider boundary may fall back in local mode.
-                if REQUIRE_REAL_AI:
+                if REQUIRE_REAL_OCR:
                     raise RuntimeError(f"PaddleOCR 必须可用，但当前调用失败：{error}") from error
                 print(f"[ai-bridge] PaddleOCR 不可用，使用离线兜底：{error}")
                 blocks = infer_blocks(object_key)
                 source = "PaddleOCR 离线兜底"
-        elif REQUIRE_REAL_AI:
+        elif REQUIRE_REAL_OCR:
             raise FileNotFoundError(f"PaddleOCR 输入文件不存在：{input_path}")
         else:
             blocks = infer_blocks(object_key)
             source = "PaddleOCR 离线兜底"
 
         if not blocks:
-            if REQUIRE_REAL_AI:
+            if REQUIRE_REAL_OCR:
                 raise RuntimeError("PaddleOCR 没有返回可用文本块")
             blocks = infer_blocks(object_key)
             source = "PaddleOCR 离线兜底"
@@ -168,25 +187,25 @@ class BridgeHandler(BaseHTTPRequestHandler):
 
 
 def resolve_input_path(normalized_object_key: str, object_key: str) -> Path:
-    for value in (normalized_object_key, object_key):
-        candidate = Path(value)
-        if candidate.exists():
-            return candidate
-        rooted = ROOT / value
-        if rooted.exists():
-            return rooted
-    return Path(normalized_object_key or object_key)
+    return resolve_object_path(normalized_object_key, object_key)
 
 
 def main() -> None:
     port = int(os.environ.get("BRIDGE_PORT", "5000"))
     print(f"[ai-bridge] Python: {sys.executable}")
-    if REQUIRE_REAL_AI:
+    print(f"[ai-bridge] uploadRoot={configured_upload_root()}")
+    if REQUIRE_REAL_SCORING:
         print("[ai-bridge] 严格真实 AI 模式：正在加载语义评分模型")
         semantic_scorer()
     server = HTTPServer(("0.0.0.0", port), BridgeHandler)
     print(f"[ai-bridge] AI Provider bridge started: http://localhost:{port}")
-    print(f"[ai-bridge] requireRealAi={REQUIRE_REAL_AI} scoringModel={SCORING_MODEL}")
+    print(
+        "[ai-bridge] "
+        f"requireRealAi={REQUIRE_REAL_AI} "
+        f"requireRealOcr={REQUIRE_REAL_OCR} "
+        f"requireRealScoring={REQUIRE_REAL_SCORING} "
+        f"scoringModel={SCORING_MODEL}"
+    )
     try:
         server.serve_forever()
     except KeyboardInterrupt:

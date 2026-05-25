@@ -7,6 +7,8 @@
     "start:backend": "node scripts/lib/run-bash-script.mjs scripts/dev/backend-all.sh",
     "start:stack": "node scripts/lib/run-bash-script.mjs scripts/dev/fullstack-jdbc.sh",
     "start:stack:http": "node scripts/lib/run-bash-script.mjs scripts/dev/fullstack.sh",
+    "start:ai": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/dev/start-ai-bridge.ps1",
+    "start:stack:ai": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/dev/fullstack-ai.ps1",
     "start:service:gateway": "node scripts/lib/run-bash-script.mjs scripts/dev/backend-service.sh gateway-service",
     "start:service:auth": "node scripts/lib/run-bash-script.mjs scripts/dev/backend-service.sh auth-service",
     "start:service:user": "node scripts/lib/run-bash-script.mjs scripts/dev/backend-service.sh user-service",

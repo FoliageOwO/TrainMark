@@ -854,6 +854,83 @@ button:focus-visible {
   font-size: 12px;
 }
 
+.queue-task-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 140px;
+}
+
+.queue-task-cell strong {
+  color: var(--text-primary);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.queue-task-cell span,
+.queue-result-text {
+  color: var(--text-tertiary);
+  font-size: 12px;
+}
+
+.queue-progress {
+  display: grid;
+  grid-template-columns: minmax(100px, 1fr) 42px;
+  gap: 8px;
+  align-items: center;
+  min-width: 150px;
+}
+
+.queue-progress-track {
+  height: 8px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: var(--border-light);
+}
+
+.queue-progress-track span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, var(--brand), var(--success));
+  transition: width 0.2s ease;
+}
+
+.queue-progress b {
+  color: var(--text-primary);
+  font-size: 12px;
+  font-weight: 700;
+  text-align: right;
+}
+
+.queue-status {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 68px;
+  padding: 4px 8px;
+  border-radius: 999px;
+  color: var(--brand);
+  font-size: 12px;
+  font-weight: 700;
+  background: var(--brand-light);
+}
+
+.queue-status-completed {
+  color: var(--success);
+  background: var(--success-light);
+}
+
+.queue-status-failed {
+  color: var(--error);
+  background: var(--error-light);
+}
+
+.queue-status-pending {
+  color: var(--text-tertiary);
+  background: var(--bg-elevated);
+}
+
 .table-inline,
 .table-actions {
   display: inline-flex;

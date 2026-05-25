@@ -206,6 +206,9 @@ export type GradingJobSummary = {
   status: GradingJobStatus;
   confidence: number;
   createdAt: string;
+  startedAt?: string | null;
+  finishedAt?: string | null;
+  updatedAt?: string | null;
 };
 
 export type OcrJobStatus = 'PENDING' | 'PREPROCESSING' | 'RECOGNIZING' | 'STRUCTURING' | 'COMPLETED' | 'FAILED';
@@ -227,6 +230,8 @@ export type OcrJobSummary = {
   tableCount: number;
   confidence: number;
   blocks: OcrBlock[];
+  createdAt?: string;
+  updatedAt?: string | null;
 };
 
 export type ReviewStatus = 'NEEDS_REVIEW' | 'IN_REVIEW' | 'APPROVED' | 'RETURNED';
