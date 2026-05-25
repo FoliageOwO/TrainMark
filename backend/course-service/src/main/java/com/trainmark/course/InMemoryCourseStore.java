@@ -66,6 +66,16 @@ public class InMemoryCourseStore implements CourseStore {
   }
 
   @Override
+  public void deleteClass(Long courseId, Long classId) {
+    var teachingClass = classes.get(classId);
+    if (teachingClass == null || !teachingClass.courseId().equals(courseId)) {
+      throw new IllegalArgumentException("Teaching class not found: " + classId);
+    }
+    classes.remove(classId);
+    refreshCourseCounts(courseId);
+  }
+
+  @Override
   public Collection<AssignmentSummary> listAssignments(Long courseId) {
     return assignments.values().stream()
         .filter(item -> courseId == null || item.courseId().equals(courseId))

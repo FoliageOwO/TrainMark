@@ -1,7 +1,7 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import { CheckCircle2, FileText } from 'lucide-react';
 import { fetchApiAssetBlobUrl } from '../api/httpApi';
-import type { AppealSummary, AssignmentSummary, GradePublicationAuditEntry, GradingResultSummary } from '../api/types';
+import type { AppealSummary, AssignmentSummary, GradePublicationAuditEntry, GradingResultSummary, TeachingClassSummary } from '../api/types';
 import { toChineseFileName, toChineseText } from '../utils/displayText';
 import { formatDate } from '../utils/formatDate';
 
@@ -20,12 +20,15 @@ const publicationStatusText = {
 
 type TeacherReviewWorkspaceProps = {
   assignments: AssignmentSummary[];
+  classes: TeachingClassSummary[];
   appeals: AppealSummary[];
+  selectedClassId: number;
   selectedAssignmentId: number;
   reviewResults: GradingResultSummary[];
   selectedReview: GradingResultSummary;
   publicationAudits: GradePublicationAuditEntry[];
   onResolveAppeal: (appealId: number, accepted: boolean) => void;
+  onSelectClass: (classId: number) => void;
   onSelectAssignment: (assignmentId: number) => void;
   onSelectReview: (resultId: number) => void;
   onReviewItemSubmit: (event: FormEvent<HTMLFormElement>, rubricItemId: number) => void;
@@ -36,12 +39,15 @@ type TeacherReviewWorkspaceProps = {
 
 export function TeacherReviewWorkspace({
   assignments,
+  classes,
   appeals,
+  selectedClassId,
   selectedAssignmentId,
   reviewResults,
   selectedReview,
   publicationAudits,
   onResolveAppeal,
+  onSelectClass,
   onSelectAssignment,
   onSelectReview,
   onReviewItemSubmit,
@@ -109,6 +115,17 @@ export function TeacherReviewWorkspace({
             {assignments.map((assignment) => (
               <option key={assignment.id} value={assignment.id}>
                 {toChineseText(assignment.title)}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="file-name-field review-task-field">
+          当前班级
+          <select value={selectedClassId} onChange={(event) => onSelectClass(Number(event.target.value))}>
+            <option value={0}>全部班级</option>
+            {classes.map((teachingClass) => (
+              <option key={teachingClass.id} value={teachingClass.id}>
+                {teachingClass.name}
               </option>
             ))}
           </select>

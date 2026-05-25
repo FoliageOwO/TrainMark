@@ -16,6 +16,8 @@ public interface UserDirectoryStore {
 
   Collection<UserSummary> listUsers(Long organizationId, RoleCode role);
 
+  Collection<UserSummary> listClassStudents(Long classId);
+
   UserSummary createUser(CreateUserRequest request);
 
   StudentImportResult importStudents(StudentImportRequest request);

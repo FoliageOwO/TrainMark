@@ -147,6 +147,44 @@ public class JdbcUserDirectoryStore implements UserDirectoryStore {
   }
 
   @Override
+  public Collection<UserSummary> listClassStudents(Long classId) {
+    var sql = """
+        SELECT u.id, u.organization_id, u.username, u.name, u.student_no, u.teacher_no,
+               u.email, u.phone, u.status
+        FROM class_students cs
+        JOIN users u ON u.id = cs.student_id
+        WHERE cs.class_id = ?
+        ORDER BY u.id
+        """;
+
+    try (var connection = connect();
+        var statement = connection.prepareStatement(sql)) {
+      statement.setLong(1, classId);
+      try (var results = statement.executeQuery()) {
+        var users = new ArrayList<UserSummary>();
+        while (results.next()) {
+          var userId = results.getLong("id");
+          users.add(new UserSummary(
+              userId,
+              nullableLong(results, "organization_id"),
+              results.getString("username"),
+              results.getString("name"),
+              results.getString("student_no"),
+              results.getString("teacher_no"),
+              results.getString("email"),
+              results.getString("phone"),
+              UserStatus.valueOf(results.getString("status")),
+              listRoles(connection, userId)
+          ));
+        }
+        return users;
+      }
+    } catch (SQLException error) {
+      throw new IllegalStateException("Failed to list class students", error);
+    }
+  }
+
+  @Override
   public UserSummary createUser(CreateUserRequest request) {
     try (var connection = connect()) {
       connection.setAutoCommit(false);
@@ -167,7 +205,7 @@ public class JdbcUserDirectoryStore implements UserDirectoryStore {
   public StudentImportResult importStudents(StudentImportRequest request) {
     var warnings = new ArrayList<String>();
     var rows = request.rows() == null ? List.<StudentImportRequest.StudentImportRow>of() : request.rows();
-    var created = 0;
+    var imported = 0;
     var skipped = 0;
 
     try (var connection = connect()) {
@@ -179,13 +217,18 @@ public class JdbcUserDirectoryStore implements UserDirectoryStore {
             warnings.add("存在缺少学号或姓名的记录，已跳过");
             continue;
           }
-          if (studentExists(connection, row.studentNo())) {
-            skipped++;
-            warnings.add("学号 " + row.studentNo() + " 已存在，已跳过");
+          var existingStudentId = findStudentId(connection, row.studentNo());
+          if (existingStudentId != null) {
+            if (linkClassStudent(connection, request.classId(), existingStudentId)) {
+              imported++;
+            } else {
+              skipped++;
+              warnings.add("学号 " + row.studentNo() + " 已在当前班级，已跳过");
+            }
             continue;
           }
-          insertUser(connection, new CreateUserRequest(
-              request.classId(),
+          var user = insertUser(connection, new CreateUserRequest(
+              null,
               row.studentNo(),
               row.name(),
               row.studentNo(),
@@ -194,14 +237,15 @@ public class JdbcUserDirectoryStore implements UserDirectoryStore {
               row.phone(),
               List.of(RoleCode.STUDENT)
           ));
-          created++;
+          linkClassStudent(connection, request.classId(), user.id());
+          imported++;
         }
         connection.commit();
       } catch (SQLException error) {
         connection.rollback();
         throw error;
       }
-      return new StudentImportResult(rows.size(), created, skipped, warnings);
+      return new StudentImportResult(rows.size(), imported, skipped, warnings);
     } catch (SQLException error) {
       throw new IllegalStateException("Failed to import students", error);
     }
@@ -238,6 +282,18 @@ public class JdbcUserDirectoryStore implements UserDirectoryStore {
           UserStatus.ACTIVE,
           request.roles()
       );
+    }
+  }
+
+  private boolean linkClassStudent(Connection connection, Long classId, Long studentId) throws SQLException {
+    if (classId == null || studentId == null) {
+      return false;
+    }
+    try (var statement = connection.prepareStatement(
+        "INSERT INTO class_students (class_id, student_id) VALUES (?, ?) ON CONFLICT DO NOTHING")) {
+      statement.setLong(1, classId);
+      statement.setLong(2, studentId);
+      return statement.executeUpdate() > 0;
     }
   }
 
@@ -291,11 +347,14 @@ public class JdbcUserDirectoryStore implements UserDirectoryStore {
     }
   }
 
-  private boolean studentExists(Connection connection, String studentNo) throws SQLException {
-    try (var statement = connection.prepareStatement("SELECT 1 FROM users WHERE student_no = ?")) {
+  private Long findStudentId(Connection connection, String studentNo) throws SQLException {
+    try (var statement = connection.prepareStatement("SELECT id FROM users WHERE student_no = ?")) {
       statement.setString(1, studentNo);
       try (var results = statement.executeQuery()) {
-        return results.next();
+        if (results.next()) {
+          return results.getLong("id");
+        }
+        return null;
       }
     }
   }

@@ -18,6 +18,8 @@ public interface CourseStore {
 
   TeachingClassSummary createClass(Long courseId, CreateTeachingClassRequest request);
 
+  void deleteClass(Long courseId, Long classId);
+
   Collection<AssignmentSummary> listAssignments(Long courseId);
 
   AssignmentSummary createAssignment(CreateAssignmentRequest request);

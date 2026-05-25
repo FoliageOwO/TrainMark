@@ -26,6 +26,7 @@ public class InMemoryUserDirectoryStore implements UserDirectoryStore {
   private final AtomicLong userIds = new AtomicLong(4);
   private final Map<Long, OrganizationSummary> organizations = new LinkedHashMap<>();
   private final Map<Long, UserSummary> users = new LinkedHashMap<>();
+  private final Map<Long, List<Long>> classStudents = new LinkedHashMap<>();
 
   public InMemoryUserDirectoryStore() {
     organizations.put(1L, new OrganizationSummary(1L, null, "信息工程学院", OrganizationType.COLLEGE));
@@ -34,6 +35,7 @@ public class InMemoryUserDirectoryStore implements UserDirectoryStore {
     users.put(1L, new UserSummary(1L, 1L, "teacher", "王老师", null, "T2026001", "teacher@trainmark.local", null, UserStatus.ACTIVE, List.of(RoleCode.TEACHER)));
     users.put(2L, new UserSummary(2L, 3L, "2024010101", "张三", "2024010101", null, "student@trainmark.local", null, UserStatus.ACTIVE, List.of(RoleCode.STUDENT)));
     users.put(3L, new UserSummary(3L, 1L, "admin", "系统管理员", null, null, "admin@trainmark.local", null, UserStatus.ACTIVE, List.of(RoleCode.ADMIN)));
+    classStudents.put(3L, new ArrayList<>(List.of(2L)));
   }
 
   @Override
@@ -62,6 +64,16 @@ public class InMemoryUserDirectoryStore implements UserDirectoryStore {
   }
 
   @Override
+  public Collection<UserSummary> listClassStudents(Long classId) {
+    var studentIds = classStudents.getOrDefault(classId, List.of());
+    return studentIds.stream()
+        .map(users::get)
+        .filter(item -> item != null && item.roles().contains(RoleCode.STUDENT))
+        .sorted(Comparator.comparing(UserSummary::id))
+        .toList();
+  }
+
+  @Override
   public UserSummary createUser(CreateUserRequest request) {
     var id = userIds.getAndIncrement();
     var user = new UserSummary(
@@ -84,7 +96,7 @@ public class InMemoryUserDirectoryStore implements UserDirectoryStore {
   public StudentImportResult importStudents(StudentImportRequest request) {
     var warnings = new ArrayList<String>();
     var rows = request.rows() == null ? List.<StudentImportRequest.StudentImportRow>of() : request.rows();
-    var created = 0;
+    var imported = 0;
     var skipped = 0;
     for (var row : rows) {
       if (row.studentNo() == null || row.studentNo().isBlank() || row.name() == null || row.name().isBlank()) {
@@ -92,27 +104,34 @@ public class InMemoryUserDirectoryStore implements UserDirectoryStore {
         warnings.add("存在缺少学号或姓名的记录，已跳过");
         continue;
       }
-      var exists = users.values().stream().anyMatch(user -> row.studentNo().equals(user.studentNo()));
-      if (exists) {
+      var existingUser = users.values().stream()
+          .filter(user -> row.studentNo().equals(user.studentNo()))
+          .findFirst()
+          .orElse(null);
+      var studentId = existingUser == null ? userIds.getAndIncrement() : existingUser.id();
+      if (existingUser == null) {
+        users.put(studentId, new UserSummary(
+            studentId,
+            null,
+            row.studentNo(),
+            row.name(),
+            row.studentNo(),
+            null,
+            row.email(),
+            row.phone(),
+            UserStatus.ACTIVE,
+            List.of(RoleCode.STUDENT)
+        ));
+      }
+      var linkedStudents = classStudents.computeIfAbsent(request.classId(), ignored -> new ArrayList<>());
+      if (linkedStudents.contains(studentId)) {
         skipped++;
-        warnings.add("学号 " + row.studentNo() + " 已存在，已跳过");
+        warnings.add("学号 " + row.studentNo() + " 已在当前班级，已跳过");
         continue;
       }
-      var id = userIds.getAndIncrement();
-      users.put(id, new UserSummary(
-          id,
-          request.classId(),
-          row.studentNo(),
-          row.name(),
-          row.studentNo(),
-          null,
-          row.email(),
-          row.phone(),
-          UserStatus.ACTIVE,
-          List.of(RoleCode.STUDENT)
-      ));
-      created++;
+      linkedStudents.add(studentId);
+      imported++;
     }
-    return new StudentImportResult(rows.size(), created, skipped, warnings);
+    return new StudentImportResult(rows.size(), imported, skipped, warnings);
   }
 }

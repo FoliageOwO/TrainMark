@@ -4,6 +4,8 @@ import {
   createAssignment,
   approveGradingResult,
   createCourse,
+  createTeachingClass,
+  deleteTeachingClass,
   createGradeExport,
   createGradingJob,
   importStudents,
@@ -15,15 +17,17 @@ import {
   publishGradingResult,
   remindUnsubmitted,
   resolveAppeal,
+  shouldUseHttpApi,
   startSimilarityJob,
   updateReviewItem,
   withdrawGradingResult,
   type CreateAssignmentInput,
   type CreateCourseInput,
+  type CreateTeachingClassInput,
   type ImportStudentsInput,
   type CreateRubricInput,
 } from '../api/httpApi';
-import type { CourseSummary, GradingResultSummary, RubricSummary, StudentImportResult, SubmissionSummary } from '../api/types';
+import type { CollectionOverview, CourseSummary, GradingResultSummary, RubricSummary, StudentImportResult, SubmissionSummary, TeachingClassSummary, UserSummary } from '../api/types';
 import { TeacherAnalyticsPanel } from './TeacherAnalyticsPanel';
 import { TeacherAiPipeline } from './TeacherAiPipeline';
 import { TeacherAppealPanel } from './TeacherAppealPanel';
@@ -48,6 +52,7 @@ type TeacherDashboardProps = {
   organizations: ReturnType<typeof mockApi.listOrganizations>;
   collectionOverview: ReturnType<typeof mockApi.getCollectionOverview>;
   students: ReturnType<typeof mockApi.listUsers>;
+  classStudents: Record<number, UserSummary[]>;
   unsubmittedStudents: ReturnType<typeof mockApi.listUnsubmittedStudents>;
   rubrics: ReturnType<typeof mockApi.listRubrics>;
   gradingJobs: ReturnType<typeof mockApi.listGradingJobs>;
@@ -79,6 +84,7 @@ export function TeacherDashboard({
   organizations,
   collectionOverview,
   students,
+  classStudents,
   unsubmittedStudents,
   rubrics,
   gradingJobs,
@@ -124,6 +130,8 @@ export function TeacherDashboard({
   const [studentRows, setStudentRows] = useState(students);
   const [studentImportResult, setStudentImportResult] = useState<StudentImportResult | null>(null);
   const [courseRows, setCourseRows] = useState(courses);
+  const [classRows, setClassRows] = useState(classes);
+  const [selectedClassFilterId, setSelectedClassFilterId] = useState(0);
   const [assignmentNotice, setAssignmentNotice] = useState('');
   const [courseNotice, setCourseNotice] = useState('');
   const [rubricNotice, setRubricNotice] = useState('');
@@ -133,15 +141,32 @@ export function TeacherDashboard({
     ?? assignmentRows[0]
     ?? null;
   const activeAssignmentId = selectedAssignment?.id ?? collectionOverview.assignmentId;
+  const selectedFilterClass = classRows.find((item) => item.id === selectedClassFilterId) ?? null;
+  const selectedClassStudentIds = new Set((selectedFilterClass ? classStudents[selectedFilterClass.id] ?? [] : []).map((student) => student.id));
+  const classScopedSubmissions = filterBySelectedClass(
+    submissions.filter((submission) => submission.assignmentId === activeAssignmentId),
+    selectedClassStudentIds,
+    Boolean(selectedFilterClass),
+  );
+  const classScopedReviewResults = filterBySelectedClass(
+    reviewResults.filter((item) => item.assignmentId === activeAssignmentId),
+    selectedClassStudentIds,
+    Boolean(selectedFilterClass),
+  );
+  const classScopedUnsubmittedStudents = filterBySelectedClass(unsubmittedStudents, selectedClassStudentIds, Boolean(selectedFilterClass));
+  const classScopedCollectionOverview = buildClassScopedCollectionOverview(
+    collectionOverview,
+    activeAssignmentId,
+    selectedFilterClass,
+    classScopedSubmissions,
+  );
   const rubric = latestRubricForAssignment(rubricRows, activeAssignmentId);
   const visibleJobs = startedJob
     ? [startedJob, ...gradingJobs.filter((job) => job.id !== startedJob.id)]
     : gradingJobs;
-  const visibleReviewResults = reviewResults.filter((item) => item.assignmentId === activeAssignmentId);
+  const visibleReviewResults = classScopedReviewResults;
   const selectedReview = visibleReviewResults.find((item) => item.id === selectedReviewId) ?? visibleReviewResults[0] ?? null;
-  const ocrCandidate = submissions.find((submission) => (
-    submission.assignmentId === activeAssignmentId && Boolean(submission.objectKey)
-  )) ?? null;
+  const ocrCandidate = classScopedSubmissions.find((submission) => Boolean(submission.objectKey)) ?? null;
 
   useEffect(() => {
     setAssignmentRows(assignments);
@@ -171,6 +196,16 @@ export function TeacherDashboard({
   }, [courses]);
 
   useEffect(() => {
+    setClassRows(classes);
+  }, [classes]);
+
+  useEffect(() => {
+    setSelectedClassFilterId((current) => (
+      current === 0 || classes.some((item) => item.id === current) ? current : 0
+    ));
+  }, [classes]);
+
+  useEffect(() => {
     setStartedJob((current) => (
       current && gradingJobs.some((job) => job.id === current.id) ? null : current
     ));
@@ -189,11 +224,11 @@ export function TeacherDashboard({
   }, [gradingResults]);
 
   useEffect(() => {
-    const assignmentResults = reviewResults.filter((item) => item.assignmentId === activeAssignmentId);
+    const assignmentResults = visibleReviewResults;
     setSelectedReviewId((current) => (
       assignmentResults.some((item) => item.id === current) ? current : assignmentResults[0]?.id ?? 0
     ));
-  }, [activeAssignmentId, reviewResults]);
+  }, [activeAssignmentId, visibleReviewResults]);
 
   useEffect(() => {
     setAppealRows(appeals);
@@ -233,6 +268,7 @@ export function TeacherDashboard({
     }
     const submissionIds = submissions
       .filter((submission) => submission.assignmentId === activeAssignmentId)
+      .filter((submission) => !selectedFilterClass || selectedClassStudentIds.has(submission.studentId))
       .map((submission) => submission.id);
     if (submissionIds.length === 0) {
       setActionNotice('当前任务暂无学生提交，学生提交报告后才能启动批改。');
@@ -302,6 +338,7 @@ export function TeacherDashboard({
   const handleStartSimilarity = async () => {
     const submissionIds = submissions
       .filter((submission) => submission.assignmentId === activeAssignmentId)
+      .filter((submission) => !selectedFilterClass || selectedClassStudentIds.has(submission.studentId))
       .map((submission) => submission.id);
     if (submissionIds.length === 0) {
       setActionNotice('当前任务暂无学生提交，学生提交报告后才能启动查重。');
@@ -323,7 +360,7 @@ export function TeacherDashboard({
   };
 
   const handleRemindUnsubmitted = async () => {
-    const studentIds = unsubmittedStudents.map((student) => student.studentId);
+    const studentIds = classScopedUnsubmittedStudents.map((student) => student.studentId);
     if (studentIds.length === 0) {
       setReminderResult(null);
       setReminderError('当前任务没有未交学生，无需催交。');
@@ -372,7 +409,34 @@ export function TeacherDashboard({
     const course = await createCourse(input);
     setCourseRows((current) => [course, ...current.filter((item) => item.id !== course.id)]);
     setSelectedCourseId(course.id);
+    setClassRows([]);
     setCourseNotice(`已新建课程：${course.name}`);
+    await onWorkspaceRefresh();
+  };
+
+  const handleCreateClass = async (input: CreateTeachingClassInput) => {
+    const teachingClass = await createTeachingClass(input);
+    if (shouldUseHttpApi()) {
+      setClassRows((current) => [teachingClass, ...current.filter((item) => item.id !== teachingClass.id)]);
+      setCourseRows((current) => incrementCourseClassCount(current, teachingClass.courseId));
+    } else {
+      setClassRows(mockApi.listClasses(selectedCourseId));
+      setCourseRows(mockApi.listCourses());
+    }
+    setCourseNotice(`已新建班级：${teachingClass.name}`);
+    await onWorkspaceRefresh();
+    return teachingClass;
+  };
+
+  const handleDeleteClass = async (courseId: number, classId: number) => {
+    const targetClass = classRows.find((item) => item.id === classId && item.courseId === courseId);
+    await deleteTeachingClass(courseId, classId);
+    setClassRows((current) => current.filter((item) => item.id !== classId));
+    setSelectedClassFilterId((current) => (current === classId ? 0 : current));
+    if (targetClass) {
+      setCourseRows((current) => decrementCourseCounts(current, courseId, targetClass.studentCount));
+    }
+    setCourseNotice(targetClass ? `已删除班级：${targetClass.name}` : '已删除班级');
     await onWorkspaceRefresh();
   };
 
@@ -393,23 +457,43 @@ export function TeacherDashboard({
   const handleImportStudents = async (input: ImportStudentsInput) => {
     const result = await importStudents(input);
     setStudentImportResult(result);
-    setStudentRows(mockApi.listUsers('STUDENT'));
-    await onWorkspaceRefresh();
+    if (shouldUseHttpApi()) {
+      setClassRows((current) => incrementClassStudentCount(current, input.classId, result.created));
+      const importedClass = classRows.find((item) => item.id === input.classId);
+      if (importedClass) {
+        setCourseRows((current) => incrementCourseStudentCount(current, importedClass.courseId, result.created));
+      }
+    } else {
+      setStudentRows(mockApi.listUsers('STUDENT'));
+      setClassRows(mockApi.listClasses(selectedCourseId));
+      setCourseRows(mockApi.listCourses());
+    }
+    try {
+      await onWorkspaceRefresh();
+    } catch {
+      // Import succeeded; keep the local count update even if a later dashboard refresh fails.
+    }
+    return result;
   };
 
   const collectionPanelProps = {
-    collectionOverview,
-    submissions,
+    classes: classRows,
+    selectedClassId: selectedClassFilterId,
+    collectionOverview: classScopedCollectionOverview,
+    submissions: classScopedSubmissions,
     selectedAssignmentTitle: selectedAssignment?.title ?? '当前任务',
     selectedAssignmentId: activeAssignmentId,
-    unsubmittedStudents,
+    unsubmittedStudents: classScopedUnsubmittedStudents,
     reminderResult,
     reminderPending,
     reminderError,
+    onSelectClass: setSelectedClassFilterId,
     onRemindUnsubmitted: handleRemindUnsubmitted,
   };
   const aiPipelineProps = {
     assignments: assignmentRows,
+    classes: classRows,
+    selectedClassId: selectedClassFilterId,
     selectedAssignmentId: activeAssignmentId,
     rubric,
     rubricNotice,
@@ -418,22 +502,29 @@ export function TeacherDashboard({
     actionNotice,
     canStartOcr: Boolean(ocrCandidate),
     onCreateRubric: handleCreateRubric,
+    onSelectClass: setSelectedClassFilterId,
     onSelectAssignment: setSelectedAssignmentId,
     onStartGrading: handleStartGrading,
     onStartOcr: handleStartOcr,
   };
   const similarityPanelProps = {
-    similarityJobs: similarityRows,
+    classes: classRows,
+    selectedClassId: selectedClassFilterId,
+    similarityJobs: filterSimilarityJobsBySubmissions(similarityRows, classScopedSubmissions, Boolean(selectedFilterClass)),
+    onSelectClass: setSelectedClassFilterId,
     onStartSimilarity: handleStartSimilarity,
   };
   const reviewWorkspaceProps = selectedReview ? {
     assignments: assignmentRows,
+    classes: classRows,
     appeals: appealRows,
+    selectedClassId: selectedClassFilterId,
     selectedAssignmentId: activeAssignmentId,
     reviewResults: visibleReviewResults,
     selectedReview,
     publicationAudits: publicationAuditRows,
     onResolveAppeal: handleResolveAppeal,
+    onSelectClass: setSelectedClassFilterId,
     onSelectAssignment: handleReviewAssignmentSelect,
     onSelectReview: setSelectedReviewId,
     onReviewItemSubmit: handleReviewItemSubmit,
@@ -454,12 +545,15 @@ export function TeacherDashboard({
   };
   const reviewEmptyProps = {
     assignmentRows,
+    classRows,
     activeAssignmentId,
+    selectedClassFilterId,
     appealPanelProps,
+    onSelectClass: setSelectedClassFilterId,
     onSelectAssignment: handleReviewAssignmentSelect,
   };
   const rosterPanelProps = {
-    classes,
+    classes: classRows,
     importPreview,
     importResult: studentImportResult,
     organizations,
@@ -467,16 +561,20 @@ export function TeacherDashboard({
     onImportStudents: handleImportStudents,
   };
   const coursePanelProps = {
-    classes,
+    classes: classRows,
     courses: courseRows,
     selectedCourseId,
     courseNotice,
+    importResult: studentImportResult,
     onCreateCourse: handleCreateCourse,
+    onCreateClass: handleCreateClass,
+    onDeleteClass: handleDeleteClass,
+    onImportStudents: handleImportStudents,
     onSelectCourse: setSelectedCourseId,
   };
   const assignmentPanelProps = {
     assignments: assignmentRows,
-    classes,
+    classes: classRows,
     selectedAssignmentId: activeAssignmentId,
     selectedCourseId,
     selectedCourseName: selectedCourse.name,
@@ -538,6 +636,17 @@ export function TeacherDashboard({
                   ))}
                 </select>
               </label>
+              <label className="file-name-field review-task-field">
+                当前班级
+                <select value={reviewEmptyProps.selectedClassFilterId} onChange={(event) => reviewEmptyProps.onSelectClass(Number(event.target.value))}>
+                  <option value={0}>全部班级</option>
+                  {reviewEmptyProps.classRows.map((teachingClass) => (
+                    <option key={teachingClass.id} value={teachingClass.id}>
+                      {teachingClass.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
               <div className="empty-result">
                 <strong>暂无复核结果</strong>
                 <span>当前实训任务还没有可复核的批改结果。可先在 AI 批改中心启动批改，或切换到已有批改结果的任务。</span>
@@ -586,10 +695,105 @@ function mergeById<T extends { id: number }>(currentRows: T[], incomingRows: T[]
   return Array.from(merged.values());
 }
 
+function filterBySelectedClass<T extends { studentId: number }>(
+  rows: T[],
+  selectedClassStudentIds: Set<number>,
+  hasSelectedClass: boolean,
+) {
+  if (!hasSelectedClass) {
+    return rows;
+  }
+  return rows.filter((item) => selectedClassStudentIds.has(item.studentId));
+}
+
+function buildClassScopedCollectionOverview(
+  collectionOverview: CollectionOverview,
+  assignmentId: number,
+  selectedClass: TeachingClassSummary | null,
+  submissions: SubmissionSummary[],
+): CollectionOverview {
+  if (!selectedClass) {
+    return collectionOverview;
+  }
+  const submitted = submissions.length;
+  const lateSubmitted = submissions.filter((item) => item.status === 'LATE_SUBMITTED').length;
+  const processing = submissions.filter((item) => item.status === 'PROCESSING' || item.status === 'GRADED').length;
+  const reviewed = submissions.filter((item) => item.status === 'REVIEWING' || item.status === 'REVIEWED').length;
+  const published = submissions.filter((item) => item.status === 'PUBLISHED').length;
+  return {
+    assignmentId,
+    totalStudents: selectedClass.studentCount,
+    submitted,
+    unsubmitted: Math.max(0, selectedClass.studentCount - submitted),
+    lateSubmitted,
+    processing,
+    reviewed,
+    published,
+  };
+}
+
+function filterSimilarityJobsBySubmissions(
+  jobs: ReturnType<typeof mockApi.listSimilarityJobs>,
+  submissions: SubmissionSummary[],
+  hasSelectedClass: boolean,
+) {
+  if (!hasSelectedClass) {
+    return jobs;
+  }
+  const submissionIds = new Set(submissions.map((item) => item.id));
+  return jobs.map((job) => ({
+    ...job,
+    matches: job.matches.filter((match) => (
+      submissionIds.has(match.sourceSubmissionId) && submissionIds.has(match.targetSubmissionId)
+    )),
+  })).map((job) => ({
+    ...job,
+    checkedSubmissionCount: submissions.length,
+    maxSimilarity: job.matches.reduce((max, match) => Math.max(max, match.similarity), 0),
+    highRiskPairCount: job.matches.filter((match) => match.riskLevel === 'HIGH').length,
+  }));
+}
+
 function latestRubricForAssignment(rubrics: RubricSummary[], assignmentId: number) {
   return rubrics
     .filter((item) => item.assignmentId === assignmentId)
     .sort((a, b) => b.id - a.id)[0] ?? null;
+}
+
+function incrementClassStudentCount(classes: TeachingClassSummary[], classId: number, count: number) {
+  if (count <= 0) {
+    return classes;
+  }
+  return classes.map((item) => (
+    item.id === classId ? { ...item, studentCount: item.studentCount + count } : item
+  ));
+}
+
+function incrementCourseClassCount(courses: CourseSummary[], courseId: number) {
+  return courses.map((item) => (
+    item.id === courseId ? { ...item, classCount: item.classCount + 1 } : item
+  ));
+}
+
+function incrementCourseStudentCount(courses: CourseSummary[], courseId: number, count: number) {
+  if (count <= 0) {
+    return courses;
+  }
+  return courses.map((item) => (
+    item.id === courseId ? { ...item, studentCount: item.studentCount + count } : item
+  ));
+}
+
+function decrementCourseCounts(courses: CourseSummary[], courseId: number, removedStudentCount: number) {
+  return courses.map((item) => (
+    item.id === courseId
+      ? {
+        ...item,
+        classCount: Math.max(0, item.classCount - 1),
+        studentCount: Math.max(0, item.studentCount - removedStudentCount),
+      }
+      : item
+  ));
 }
 
 function formatActionError(error: unknown) {

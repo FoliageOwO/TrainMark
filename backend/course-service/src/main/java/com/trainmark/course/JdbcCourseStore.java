@@ -142,6 +142,21 @@ public class JdbcCourseStore implements CourseStore {
   }
 
   @Override
+  public void deleteClass(Long courseId, Long classId) {
+    var sql = "DELETE FROM teaching_classes WHERE id = ? AND course_id = ?";
+    try (var connection = connect();
+        var statement = connection.prepareStatement(sql)) {
+      statement.setLong(1, classId);
+      statement.setLong(2, courseId);
+      if (statement.executeUpdate() == 0) {
+        throw new IllegalArgumentException("Teaching class not found: " + classId);
+      }
+    } catch (SQLException error) {
+      throw new IllegalStateException("Failed to delete teaching class", error);
+    }
+  }
+
+  @Override
   public Collection<AssignmentSummary> listAssignments(Long courseId) {
     var sql = """
         SELECT id, course_id, title, deadline, total_score, status, similarity_check_enabled, ai_grading_enabled

@@ -73,6 +73,12 @@ const classes: TeachingClassSummary[] = [
   { id: 3, courseId: 2, name: '计应2401班', major: '计算机应用', grade: '2024', studentCount: 48 },
 ];
 
+const classStudentIds = new Map<number, Set<number>>([
+  [1, new Set([2, 3])],
+  [2, new Set([4])],
+  [3, new Set()],
+]);
+
 const assignments: AssignmentSummary[] = [
   { id: 1, courseId: 1, title: 'Java Web 综合实训报告', deadline: '2026-05-10T23:59:00+08:00', totalScore: 100, status: 'PUBLISHED', similarityCheckEnabled: true, aiGradingEnabled: true },
   { id: 2, courseId: 2, title: '数据库概念结构设计报告', deadline: '2026-05-18T23:59:00+08:00', totalScore: 100, status: 'DRAFT', similarityCheckEnabled: true, aiGradingEnabled: true },
@@ -334,6 +340,29 @@ export const mockApi = {
     courses.unshift(course);
     return course;
   },
+  createClass(input: { courseId: number; name: string; major?: string; grade?: string }): TeachingClassSummary {
+    const teachingClass: TeachingClassSummary = {
+      id: Math.max(0, ...classes.map((item) => item.id)) + 1,
+      courseId: input.courseId,
+      name: input.name,
+      major: input.major ?? '',
+      grade: input.grade ?? '',
+      studentCount: 0,
+    };
+    classes.unshift(teachingClass);
+    classStudentIds.set(teachingClass.id, new Set());
+    refreshCourseCounts(input.courseId);
+    return teachingClass;
+  },
+  deleteClass(courseId: number, classId: number): void {
+    const index = classes.findIndex((item) => item.id === classId && item.courseId === courseId);
+    if (index < 0) {
+      throw new Error(`Teaching class not found: ${classId}`);
+    }
+    classes.splice(index, 1);
+    classStudentIds.delete(classId);
+    refreshCourseCounts(courseId);
+  },
   listOrganizations(): OrganizationSummary[] {
     return organizations;
   },
@@ -349,6 +378,12 @@ export const mockApi = {
   },
   listUsers(role?: RoleCode): UserSummary[] {
     return userDirectory.filter((item) => role === undefined || item.roles.includes(role));
+  },
+  listClassStudents(classId: number): UserSummary[] {
+    const studentIds = getClassStudentIds(classId);
+    return userDirectory
+      .filter((item) => studentIds.has(item.id) && item.roles.includes('STUDENT'))
+      .map((item) => ({ ...item }));
   },
   createUser(input: {
     organizationId: number;
@@ -380,7 +415,9 @@ export const mockApi = {
   },
   importStudents(classId: number, rows: StudentImportRow[]): StudentImportResult {
     const warnings: string[] = [];
-    let created = 0;
+    const targetClass = classes.find((item) => item.id === classId);
+    const linkedStudents = getClassStudentIds(classId);
+    let imported = 0;
     let skipped = 0;
     rows.forEach((row) => {
       if (!row.studentNo || !row.name) {
@@ -388,32 +425,46 @@ export const mockApi = {
         warnings.push('存在缺少学号或姓名的记录，已跳过');
         return;
       }
-      if (userDirectory.some((user) => user.studentNo === row.studentNo)) {
+      const existingUser = userDirectory.find((user) => user.studentNo === row.studentNo);
+      const studentId = existingUser?.id ?? Math.max(...userDirectory.map((item) => item.id)) + 1;
+      if (linkedStudents.has(studentId)) {
         skipped += 1;
-        warnings.push(`学号 ${row.studentNo} 已存在，已跳过`);
+        warnings.push(`学号 ${row.studentNo} 已在当前班级，已跳过`);
         return;
       }
-      userDirectory.unshift({
-        id: Math.max(...userDirectory.map((item) => item.id)) + 1,
-        organizationId: classId,
-        username: row.studentNo,
-        name: row.name,
-        studentNo: row.studentNo,
-        ...(row.email ? { email: row.email } : {}),
-        ...(row.phone ? { phone: row.phone } : {}),
-        status: 'ACTIVE',
-        roles: ['STUDENT'],
-      });
-      created += 1;
+      if (!existingUser) {
+        userDirectory.unshift({
+          id: studentId,
+          organizationId: classId,
+          username: row.studentNo,
+          name: row.name,
+          studentNo: row.studentNo,
+          ...(row.email ? { email: row.email } : {}),
+          ...(row.phone ? { phone: row.phone } : {}),
+          status: 'ACTIVE',
+          roles: ['STUDENT'],
+        });
+      }
+      linkedStudents.add(studentId);
+      imported += 1;
     });
+    if (targetClass && imported > 0) {
+      targetClass.studentCount += imported;
+      refreshCourseCounts(targetClass.courseId);
+    } else if (targetClass) {
+      targetClass.studentCount = Math.max(targetClass.studentCount, linkedStudents.size);
+      refreshCourseCounts(targetClass.courseId);
+    }
     return {
       total: rows.length,
-      created,
+      created: imported,
       skipped,
       warnings,
     };
   },
   listClasses(courseId: number): TeachingClassSummary[] {
+    refreshClassCounts(courseId);
+    refreshCourseCounts(courseId);
     return classes.filter((item) => item.courseId === courseId);
   },
   listAssignments(courseId?: number): AssignmentSummary[] {
@@ -965,6 +1016,37 @@ function pushNotification(input: {
     targetUrl: input.targetUrl,
     createdAt: new Date().toISOString(),
   });
+}
+
+function refreshCourseCounts(courseId: number) {
+  const course = courses.find((item) => item.id === courseId);
+  if (!course) {
+    return;
+  }
+  const courseClasses = classes.filter((item) => item.courseId === courseId);
+  course.classCount = courseClasses.length;
+  course.studentCount = courseClasses.reduce((total, item) => total + item.studentCount, 0);
+}
+
+function refreshClassCounts(courseId: number) {
+  classes
+    .filter((item) => item.courseId === courseId)
+    .forEach((item) => {
+      const linkedStudents = classStudentIds.get(item.id);
+      if (linkedStudents) {
+        item.studentCount = linkedStudents.size;
+      }
+    });
+}
+
+function getClassStudentIds(classId: number) {
+  const linkedStudents = classStudentIds.get(classId);
+  if (linkedStudents) {
+    return linkedStudents;
+  }
+  const next = new Set<number>();
+  classStudentIds.set(classId, next);
+  return next;
 }
 
 function syncStudentTaskForAssignment(assignment: AssignmentSummary) {

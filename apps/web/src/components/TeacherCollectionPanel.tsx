@@ -1,7 +1,7 @@
 import type { CSSProperties } from 'react';
 import { AlertCircle, Bell, CheckCircle2, Download } from 'lucide-react';
 import { fetchApiAssetBlobUrl, shouldUseHttpApi } from '../api/httpApi';
-import type { CollectionOverview, ReminderResult, SubmissionSummary, UnsubmittedStudent } from '../api/types';
+import type { CollectionOverview, ReminderResult, SubmissionSummary, TeachingClassSummary, UnsubmittedStudent } from '../api/types';
 import { toChineseFileName } from '../utils/displayText';
 
 const submissionStatusText: Record<SubmissionSummary['status'], string> = {
@@ -18,6 +18,8 @@ const submissionStatusText: Record<SubmissionSummary['status'], string> = {
 };
 
 type TeacherCollectionPanelProps = {
+  classes: TeachingClassSummary[];
+  selectedClassId: number;
   collectionOverview: CollectionOverview;
   submissions: SubmissionSummary[];
   selectedAssignmentTitle: string;
@@ -26,10 +28,13 @@ type TeacherCollectionPanelProps = {
   reminderResult: ReminderResult | null;
   reminderPending: boolean;
   reminderError: string | null;
+  onSelectClass: (classId: number) => void;
   onRemindUnsubmitted: () => void;
 };
 
 export function TeacherCollectionPanel({
+  classes,
+  selectedClassId,
   collectionOverview,
   submissions,
   selectedAssignmentTitle,
@@ -38,6 +43,7 @@ export function TeacherCollectionPanel({
   reminderResult,
   reminderPending,
   reminderError,
+  onSelectClass,
   onRemindUnsubmitted,
 }: TeacherCollectionPanelProps) {
   const submittedRate = collectionOverview.totalStudents === 0
@@ -83,6 +89,17 @@ export function TeacherCollectionPanel({
             <Bell size={15} /> {reminderButtonText}
           </button>
         </div>
+        <label className="file-name-field section-filter-field">
+          当前班级
+          <select value={selectedClassId} onChange={(event) => onSelectClass(Number(event.target.value))}>
+            <option value={0}>全部班级</option>
+            {classes.map((teachingClass) => (
+              <option key={teachingClass.id} value={teachingClass.id}>
+                {teachingClass.name}
+              </option>
+            ))}
+          </select>
+        </label>
         <div className="collection-summary">
           <div className="collection-ring" style={{ '--rate': `${submittedRate}%` } as CSSProperties}>
             <strong>{submittedRate}%</strong>

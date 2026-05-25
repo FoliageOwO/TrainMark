@@ -46,6 +46,7 @@ export type WorkspaceData = {
   organizations: OrganizationSummary[];
   users: UserSummary[];
   students: UserSummary[];
+  classStudents: Record<number, UserSummary[]>;
   collectionOverview: CollectionOverview;
   unsubmittedStudents: UnsubmittedStudent[];
   rubrics: RubricSummary[];
@@ -82,6 +83,13 @@ export type CreateCourseInput = {
   code: string;
   semester: string;
   description?: string;
+};
+
+export type CreateTeachingClassInput = {
+  courseId: number;
+  name: string;
+  major?: string;
+  grade?: string;
 };
 
 export type CreateRubricInput = {
@@ -261,6 +269,7 @@ export async function loadWorkspaceData(selectedCourseId: number, userId: number
     organizations,
     users,
     students,
+    classStudents,
     collectionOverview,
     unsubmittedStudents,
     rubrics,
@@ -282,6 +291,7 @@ export async function loadWorkspaceData(selectedCourseId: number, userId: number
     getOr('/api/organizations', mockApi.listOrganizations()),
     getOr('/api/users', mockApi.listUsers()),
     getOr('/api/users?role=STUDENT', mockApi.listUsers('STUDENT')),
+    isStudent || isAdmin ? {} : loadClassStudents(selectedCourseId),
     isStudent ? emptyCollectionOverview : getOr(`/api/notifications/assignments/${selectedAssignmentId}/collection`, mockApi.getCollectionOverview(selectedAssignmentId)),
     isStudent ? [] : getOr(`/api/notifications/assignments/${selectedAssignmentId}/unsubmitted`, mockApi.listUnsubmittedStudents(selectedAssignmentId)),
     isStudent ? [] : getOr('/api/rubrics', mockApi.listRubrics()),
@@ -308,6 +318,7 @@ export async function loadWorkspaceData(selectedCourseId: number, userId: number
     organizations,
     users,
     students,
+    classStudents,
     collectionOverview,
     unsubmittedStudents,
     rubrics,
@@ -327,6 +338,15 @@ export async function loadWorkspaceData(selectedCourseId: number, userId: number
     auditLogs,
     systemSettings,
   };
+}
+
+async function loadClassStudents(courseId: number): Promise<Record<number, UserSummary[]>> {
+  const classes = await getOr(`/api/courses/${courseId}/classes`, mockApi.listClasses(courseId));
+  const entries = await Promise.all(classes.map(async (teachingClass) => {
+    const students = await getOr(`/api/users/classes/${teachingClass.id}/students`, mockApi.listClassStudents(teachingClass.id));
+    return [teachingClass.id, students] as const;
+  }));
+  return Object.fromEntries(entries);
 }
 
 async function loadPublicationAuditsForResults(gradingResults: GradingResultSummary[]) {
@@ -450,6 +470,31 @@ export async function createCourse(input: CreateCourseInput): Promise<CourseSumm
     input,
     () => mockApi.createCourse(input),
   );
+}
+
+export async function createTeachingClass(input: CreateTeachingClassInput): Promise<TeachingClassSummary> {
+  return mutateOr(
+    'POST',
+    `/api/courses/${input.courseId}/classes`,
+    input,
+    () => mockApi.createClass(input),
+  );
+}
+
+export async function deleteTeachingClass(courseId: number, classId: number): Promise<void> {
+  if (!shouldUseHttpApi()) {
+    mockApi.deleteClass(courseId, classId);
+    return;
+  }
+
+  try {
+    await request<void>(`/api/courses/${courseId}/classes/${classId}`, 'DELETE');
+  } catch (error) {
+    if (shouldUseStrictHttpApi()) {
+      throw error;
+    }
+    mockApi.deleteClass(courseId, classId);
+  }
 }
 
 export async function createOcrJob(submissionId: number, objectKey: string): Promise<OcrJobSummary> {

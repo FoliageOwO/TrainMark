@@ -1,13 +1,22 @@
 import { ShieldCheck } from 'lucide-react';
-import type { SimilarityJobSummary } from '../api/types';
+import type { SimilarityJobSummary, TeachingClassSummary } from '../api/types';
 import { toChineseText } from '../utils/displayText';
 
 type TeacherSimilarityPanelProps = {
+  classes: TeachingClassSummary[];
+  selectedClassId: number;
   similarityJobs: SimilarityJobSummary[];
+  onSelectClass: (classId: number) => void;
   onStartSimilarity: () => void;
 };
 
-export function TeacherSimilarityPanel({ similarityJobs, onStartSimilarity }: TeacherSimilarityPanelProps) {
+export function TeacherSimilarityPanel({
+  classes,
+  selectedClassId,
+  similarityJobs,
+  onSelectClass,
+  onStartSimilarity,
+}: TeacherSimilarityPanelProps) {
   const matchRows = similarityJobs.flatMap((job) => job.matches.map((match) => ({
     jobId: job.id,
     checkedSubmissionCount: job.checkedSubmissionCount,
@@ -27,6 +36,17 @@ export function TeacherSimilarityPanel({ similarityJobs, onStartSimilarity }: Te
             <ShieldCheck size={15} /> 启动查重
           </button>
         </div>
+        <label className="file-name-field section-filter-field">
+          当前班级
+          <select value={selectedClassId} onChange={(event) => onSelectClass(Number(event.target.value))}>
+            <option value={0}>全部班级</option>
+            {classes.map((teachingClass) => (
+              <option key={teachingClass.id} value={teachingClass.id}>
+                {teachingClass.name}
+              </option>
+            ))}
+          </select>
+        </label>
         <div className="table-shell">
           <div className="table-scroll table-scroll-lg">
             <table className="data-table">

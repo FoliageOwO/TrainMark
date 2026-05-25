@@ -173,6 +173,7 @@ export function App() {
   const organizations = workspaceData?.organizations ?? mockApi.listOrganizations();
   const directoryUsers = workspaceData?.users ?? mockApi.listUsers();
   const students = workspaceData?.students ?? mockApi.listUsers('STUDENT');
+  const classStudents = workspaceData?.classStudents ?? buildMockClassStudents(classes);
   const importPreview = mockApi.getStudentImportPreview();
   const collectionOverview = workspaceData?.collectionOverview ?? mockApi.getCollectionOverview(selectedAssignmentId);
   const unsubmittedStudents = workspaceData?.unsubmittedStudents ?? mockApi.listUnsubmittedStudents(selectedAssignmentId);
@@ -394,6 +395,7 @@ export function App() {
           organizations={organizations}
           collectionOverview={collectionOverview}
           students={students}
+          classStudents={classStudents}
           unsubmittedStudents={unsubmittedStudents}
           rubrics={rubrics}
           gradingJobs={gradingJobs}
@@ -415,6 +417,13 @@ export function App() {
       )}
     </AppChrome>
   );
+}
+
+function buildMockClassStudents(classes: Array<{ id: number }>) {
+  return Object.fromEntries(classes.map((teachingClass) => [
+    teachingClass.id,
+    mockApi.listClassStudents(teachingClass.id),
+  ]));
 }
 
 function deriveTeacherMetrics(

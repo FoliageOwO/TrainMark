@@ -66,7 +66,7 @@ export function TeacherRosterPanel({
         <div className="import-dropzone">
           <UploadCloud size={28} />
           <strong>粘贴学生名单行</strong>
-          <span>每行格式：学号, 姓名, 邮箱, 手机号。导入后会写入当前选择的班级。</span>
+          <span>每行格式：学号, 姓名, 邮箱, 手机号。已有学生会复用账号并加入当前班级。</span>
         </div>
         <form className="assignment-create-form" onSubmit={handleImport}>
           <label>
@@ -93,7 +93,7 @@ export function TeacherRosterPanel({
         )}
         <div className="import-metrics">
           <span><strong>{metrics.total}</strong>总记录</span>
-          <span><strong>{metrics.valid}</strong>已导入</span>
+          <span><strong>{metrics.valid}</strong>已加入</span>
           <span><strong>{metrics.duplicated}</strong>重复</span>
           <span><strong>{metrics.invalid}</strong>跳过</span>
         </div>

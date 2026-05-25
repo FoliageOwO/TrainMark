@@ -30,6 +30,10 @@ public class UserDirectoryService {
     return store.listUsers(organizationId, role);
   }
 
+  public Collection<UserSummary> listClassStudents(Long classId) {
+    return store.listClassStudents(classId);
+  }
+
   public UserSummary createUser(CreateUserRequest request) {
     return store.createUser(request);
   }

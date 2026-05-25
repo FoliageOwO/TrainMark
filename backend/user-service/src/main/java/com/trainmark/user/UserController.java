@@ -9,6 +9,7 @@ import com.trainmark.shared.dto.UserSummary;
 import jakarta.validation.Valid;
 import java.util.Collection;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -30,6 +31,11 @@ public class UserController {
       @RequestParam(name = "role", required = false) RoleCode role
   ) {
     return ApiResponse.ok(userDirectoryService.listUsers(organizationId, role));
+  }
+
+  @GetMapping("/classes/{classId}/students")
+  public ApiResponse<Collection<UserSummary>> listClassStudents(@PathVariable("classId") Long classId) {
+    return ApiResponse.ok(userDirectoryService.listClassStudents(classId));
   }
 
   @PostMapping

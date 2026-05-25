@@ -1,7 +1,7 @@
 import { useState, type FormEvent } from 'react';
 import { FileText, Plus, Sparkles } from 'lucide-react';
 import type { CreateRubricInput } from '../api/httpApi';
-import type { AssignmentSummary, GradingJobSummary, OcrJobSummary, RubricSummary } from '../api/types';
+import type { AssignmentSummary, GradingJobSummary, OcrJobSummary, RubricSummary, TeachingClassSummary } from '../api/types';
 import { toChineseText } from '../utils/displayText';
 
 const gradingStatusText = {
@@ -33,6 +33,8 @@ const ocrBlockTypeText: Record<OcrJobSummary['blocks'][number]['type'], string> 
 
 type TeacherAiPipelineProps = {
   assignments: AssignmentSummary[];
+  classes: TeachingClassSummary[];
+  selectedClassId: number;
   selectedAssignmentId: number;
   rubric: RubricSummary | null;
   rubricNotice: string;
@@ -41,6 +43,7 @@ type TeacherAiPipelineProps = {
   actionNotice: string;
   canStartOcr: boolean;
   onCreateRubric: (input: CreateRubricInput) => Promise<void>;
+  onSelectClass: (classId: number) => void;
   onSelectAssignment: (assignmentId: number) => void;
   onStartGrading: () => void;
   onStartOcr: () => void;
@@ -48,6 +51,8 @@ type TeacherAiPipelineProps = {
 
 export function TeacherAiPipeline({
   assignments,
+  classes,
+  selectedClassId,
   selectedAssignmentId,
   rubric,
   rubricNotice,
@@ -56,6 +61,7 @@ export function TeacherAiPipeline({
   actionNotice,
   canStartOcr,
   onCreateRubric,
+  onSelectClass,
   onSelectAssignment,
   onStartGrading,
   onStartOcr,
@@ -127,6 +133,17 @@ export function TeacherAiPipeline({
               {assignments.map((assignment) => (
                 <option key={assignment.id} value={assignment.id}>
                   {toChineseText(assignment.title)} · {assignment.status === 'PUBLISHED' ? '已发布' : '草稿'}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="file-name-field section-filter-field">
+            当前班级
+            <select value={selectedClassId} onChange={(event) => onSelectClass(Number(event.target.value))}>
+              <option value={0}>全部班级</option>
+              {classes.map((teachingClass) => (
+                <option key={teachingClass.id} value={teachingClass.id}>
+                  {teachingClass.name}
                 </option>
               ))}
             </select>

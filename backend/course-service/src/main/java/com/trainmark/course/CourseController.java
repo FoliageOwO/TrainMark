@@ -7,6 +7,7 @@ import com.trainmark.shared.dto.CreateTeachingClassRequest;
 import com.trainmark.shared.dto.TeachingClassSummary;
 import jakarta.validation.Valid;
 import java.util.Collection;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -44,5 +45,14 @@ public class CourseController {
       @Valid @RequestBody CreateTeachingClassRequest request
   ) {
     return ApiResponse.ok(courseService.createClass(courseId, request));
+  }
+
+  @DeleteMapping("/{courseId}/classes/{classId}")
+  public ApiResponse<Void> deleteClass(
+      @PathVariable("courseId") Long courseId,
+      @PathVariable("classId") Long classId
+  ) {
+    courseService.deleteClass(courseId, classId);
+    return ApiResponse.ok(null);
   }
 }

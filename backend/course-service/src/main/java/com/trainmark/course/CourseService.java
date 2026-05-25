@@ -34,6 +34,10 @@ public class CourseService {
     return store.createClass(courseId, request);
   }
 
+  public void deleteClass(Long courseId, Long classId) {
+    store.deleteClass(courseId, classId);
+  }
+
   public Collection<AssignmentSummary> listAssignments(Long courseId) {
     return store.listAssignments(courseId);
   }
