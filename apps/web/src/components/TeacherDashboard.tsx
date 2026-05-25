@@ -8,6 +8,7 @@ import {
   importStudents,
   createOcrJob,
   createRubric,
+  loadGradingResults,
   loadPublicationAudits,
   publishAssignment,
   publishGradingResult,
@@ -126,11 +127,12 @@ export function TeacherDashboard({
     ?? assignmentRows[0]
     ?? null;
   const activeAssignmentId = selectedAssignment?.id ?? collectionOverview.assignmentId;
-  const rubric = rubricRows.find((item) => item.assignmentId === activeAssignmentId) ?? null;
+  const rubric = latestRubricForAssignment(rubricRows, activeAssignmentId);
   const visibleJobs = startedJob
     ? [startedJob, ...gradingJobs.filter((job) => job.id !== startedJob.id)]
     : gradingJobs;
-  const selectedReview = reviewResults.find((item) => item.id === selectedReviewId) ?? reviewResults[0] ?? null;
+  const visibleReviewResults = reviewResults.filter((item) => item.assignmentId === activeAssignmentId);
+  const selectedReview = visibleReviewResults.find((item) => item.id === selectedReviewId) ?? visibleReviewResults[0] ?? null;
   const ocrCandidate = submissions.find((submission) => (
     submission.assignmentId === activeAssignmentId && Boolean(submission.objectKey)
   )) ?? null;
@@ -151,7 +153,7 @@ export function TeacherDashboard({
   }, [assignments, collectionOverview.assignmentId, selectedCourseId]);
 
   useEffect(() => {
-    setRubricRows(rubrics);
+    setRubricRows((current) => mergeById(current, rubrics));
   }, [rubrics]);
 
   useEffect(() => {
@@ -170,11 +172,18 @@ export function TeacherDashboard({
       setSelectedReviewId(0);
       return;
     }
-    setReviewResults(gradingResults);
+    setReviewResults((current) => mergeById(current, gradingResults));
     setSelectedReviewId((current) => (
       gradingResults.some((item) => item.id === current) ? current : gradingResults[0].id
     ));
   }, [gradingResults]);
+
+  useEffect(() => {
+    const assignmentResults = reviewResults.filter((item) => item.assignmentId === activeAssignmentId);
+    setSelectedReviewId((current) => (
+      assignmentResults.some((item) => item.id === current) ? current : assignmentResults[0]?.id ?? 0
+    ));
+  }, [activeAssignmentId, reviewResults]);
 
   useEffect(() => {
     setAppealRows(appeals);
@@ -252,7 +261,8 @@ export function TeacherDashboard({
     if (!selectedReview) {
       return;
     }
-    syncReviewResult(await publishGradingResult(selectedReview.id, operatorName));
+    const updated = await publishGradingResult(selectedReview.id, operatorName);
+    syncReviewResult(updated);
     setPublicationAuditRows(await loadPublicationAudits(selectedReview.id));
     await onWorkspaceRefresh();
   };
@@ -342,6 +352,13 @@ export function TeacherDashboard({
     await onWorkspaceRefresh();
   };
 
+  const handleReviewAssignmentSelect = async (assignmentId: number) => {
+    setSelectedAssignmentId(assignmentId);
+    const latestResults = await loadGradingResults(assignmentId);
+    setReviewResults((current) => mergeById(current, latestResults));
+    setSelectedReviewId(latestResults[0]?.id ?? 0);
+  };
+
   const handleImportStudents = async (input: ImportStudentsInput) => {
     const result = await importStudents(input);
     setStudentImportResult(result);
@@ -377,9 +394,14 @@ export function TeacherDashboard({
     onStartSimilarity: handleStartSimilarity,
   };
   const reviewWorkspaceProps = selectedReview ? {
-    reviewResults,
+    assignments: assignmentRows,
+    appeals: appealRows,
+    selectedAssignmentId: activeAssignmentId,
+    reviewResults: visibleReviewResults,
     selectedReview,
     publicationAudits: publicationAuditRows,
+    onResolveAppeal: handleResolveAppeal,
+    onSelectAssignment: handleReviewAssignmentSelect,
     onSelectReview: setSelectedReviewId,
     onReviewItemSubmit: handleReviewItemSubmit,
     onApproveResult: handleApproveResult,
@@ -396,6 +418,12 @@ export function TeacherDashboard({
   const appealPanelProps = {
     appeals: appealRows,
     onResolveAppeal: handleResolveAppeal,
+  };
+  const reviewEmptyProps = {
+    assignmentRows,
+    activeAssignmentId,
+    appealPanelProps,
+    onSelectAssignment: handleReviewAssignmentSelect,
   };
   const rosterPanelProps = {
     classes,
@@ -465,11 +493,22 @@ export function TeacherDashboard({
                 </div>
                 <span className="status-pill">暂无结果</span>
               </div>
+              <label className="file-name-field review-task-field">
+                当前实训任务
+                <select value={reviewEmptyProps.activeAssignmentId} onChange={(event) => reviewEmptyProps.onSelectAssignment(Number(event.target.value))}>
+                  {reviewEmptyProps.assignmentRows.map((assignment) => (
+                    <option key={assignment.id} value={assignment.id}>
+                      {assignment.title}
+                    </option>
+                  ))}
+                </select>
+              </label>
               <div className="empty-result">
                 <strong>暂无复核结果</strong>
-                <span>当前作业还没有可复核的批改结果。启动 AI 批改后，结果会出现在这里。</span>
+                <span>当前实训任务还没有可复核的批改结果。可先在 AI 批改中心启动批改，或切换到已有批改结果的任务。</span>
               </div>
             </article>
+            <TeacherAppealPanel {...reviewEmptyProps.appealPanelProps} />
           </section>
         )
       ) : null}
@@ -499,4 +538,21 @@ export function TeacherDashboard({
       ) : null}
     </>
   );
+}
+
+function mergeById<T extends { id: number }>(currentRows: T[], incomingRows: T[]) {
+  const merged = new Map<number, T>();
+  incomingRows.forEach((item) => merged.set(item.id, item));
+  currentRows.forEach((item) => {
+    if (!merged.has(item.id)) {
+      merged.set(item.id, item);
+    }
+  });
+  return Array.from(merged.values());
+}
+
+function latestRubricForAssignment(rubrics: RubricSummary[], assignmentId: number) {
+  return rubrics
+    .filter((item) => item.assignmentId === assignmentId)
+    .sort((a, b) => b.id - a.id)[0] ?? null;
 }

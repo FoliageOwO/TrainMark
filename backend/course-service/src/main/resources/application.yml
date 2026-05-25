@@ -4,6 +4,9 @@ spring:
   application:
     name: course-service
 trainmark:
+  notification:
+    base-url: ${TRAINMARK_NOTIFICATION_BASE_URL:http://localhost:8089}
+    event-enabled: ${TRAINMARK_NOTIFICATION_EVENT_ENABLED:true}
   course:
     store: ${TRAINMARK_COURSE_STORE:memory}
     jdbc:

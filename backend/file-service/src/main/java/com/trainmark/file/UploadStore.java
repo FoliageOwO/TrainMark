@@ -6,6 +6,7 @@ import com.trainmark.shared.dto.SubmissionReceipt;
 import com.trainmark.shared.dto.SubmissionSummary;
 import java.time.OffsetDateTime;
 import java.util.Collection;
+import java.util.List;
 
 public interface UploadStore {
   void saveUploadSession(String uploadId, InitializeUploadRequest request, String objectKey, OffsetDateTime expiresAt);
@@ -13,6 +14,8 @@ public interface UploadStore {
   Long findUploadStudentId(String uploadId);
 
   SubmissionReceipt completeUpload(CompleteUploadRequest request);
+
+  List<Long> assignmentTeacherIds(Long assignmentId);
 
   Collection<SubmissionSummary> listSubmissions(Long assignmentId, Long studentId);
 

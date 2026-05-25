@@ -41,6 +41,7 @@ public class GradingJobConsumer {
             }
 
             jobStore.updateJobStatus(message.jobId(), GradingJobStatus.COMPLETED);
+            gradingService.notifyGradingJobCompleted(message.assignmentId(), message.submissionIds().size());
             log.info("Completed grading job {}", message.jobId());
         } catch (Exception e) {
             log.error("Failed to process grading job {}", message.jobId(), e);

@@ -2,6 +2,7 @@ package com.trainmark.notification;
 
 import com.trainmark.shared.NotificationChannel;
 import com.trainmark.shared.NotificationStatus;
+import com.trainmark.shared.dto.CreateNotificationRequest;
 import com.trainmark.shared.dto.NotificationSummary;
 import com.trainmark.shared.dto.ReminderRequest;
 import com.trainmark.shared.dto.ReminderResult;
@@ -185,6 +186,40 @@ public class JdbcNotificationStore implements NotificationStore {
   }
 
   @Override
+  public NotificationSummary createNotification(CreateNotificationRequest request) {
+    var sql = """
+        INSERT INTO notification_events (
+          assignment_id, recipient_id, channel, status, title, message, event_type, is_read, target_url,
+          scheduled_at, sent_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, false, ?, now(), now())
+        """;
+    try (var connection = connect();
+        var statement = connection.prepareStatement(sql, java.sql.Statement.RETURN_GENERATED_KEYS)) {
+      if (request.assignmentId() == null) {
+        statement.setNull(1, java.sql.Types.BIGINT);
+      } else {
+        statement.setLong(1, request.assignmentId());
+      }
+      statement.setLong(2, request.recipientId());
+      statement.setString(3, NotificationChannel.IN_APP.name());
+      statement.setString(4, NotificationStatus.SENT.name());
+      statement.setString(5, request.title());
+      statement.setString(6, request.message());
+      statement.setString(7, request.type());
+      statement.setString(8, request.targetUrl());
+      statement.executeUpdate();
+      try (var keys = statement.getGeneratedKeys()) {
+        if (keys.next()) {
+          return findNotification(connection, keys.getLong(1));
+        }
+      }
+    } catch (SQLException error) {
+      throw new IllegalStateException("Failed to create notification", error);
+    }
+    throw new IllegalStateException("Insert did not return a generated notification id");
+  }
+
+  @Override
   public Collection<NotificationSummary> listNotifications(Long userId, boolean unreadOnly) {
     var sql = """
         SELECT id, title, message, event_type AS type, is_read, target_url, created_at
@@ -251,8 +286,9 @@ public class JdbcNotificationStore implements NotificationStore {
   ) throws SQLException {
     var sql = """
         INSERT INTO notification_events (
-          assignment_id, recipient_id, channel, status, message, scheduled_at, sent_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?)
+          assignment_id, recipient_id, channel, status, title, message, event_type, is_read, target_url,
+          scheduled_at, sent_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, false, ?, ?, ?)
         """;
     var messageCount = 0;
     try (var statement = connection.prepareStatement(sql)) {
@@ -265,9 +301,12 @@ public class JdbcNotificationStore implements NotificationStore {
           statement.setLong(2, studentId);
           statement.setString(3, channel.name());
           statement.setString(4, status.name());
-          statement.setString(5, request.message());
-          statement.setObject(6, scheduledAt);
-          statement.setObject(7, sentAt);
+          statement.setString(5, "提交催交");
+          statement.setString(6, request.message());
+          statement.setString(7, "REMINDER");
+          statement.setString(8, "/tasks/" + request.assignmentId());
+          statement.setObject(9, scheduledAt);
+          statement.setObject(10, sentAt);
           statement.addBatch();
           messageCount++;
         }
@@ -318,6 +357,31 @@ public class JdbcNotificationStore implements NotificationStore {
       }
     }
     return updated;
+  }
+
+  private NotificationSummary findNotification(Connection connection, Long notificationId) throws SQLException {
+    var sql = """
+        SELECT id, title, message, event_type AS type, is_read, target_url, created_at
+        FROM notification_events
+        WHERE id = ?
+        """;
+    try (var statement = connection.prepareStatement(sql)) {
+      statement.setLong(1, notificationId);
+      try (var results = statement.executeQuery()) {
+        if (results.next()) {
+          return new NotificationSummary(
+              results.getLong("id"),
+              results.getString("title"),
+              results.getString("message"),
+              results.getString("type"),
+              results.getBoolean("is_read"),
+              results.getString("target_url"),
+              results.getObject("created_at", OffsetDateTime.class)
+          );
+        }
+      }
+    }
+    throw new SQLException("Notification not found: " + notificationId);
   }
 
   private Connection connect() throws SQLException {

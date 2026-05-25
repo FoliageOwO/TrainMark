@@ -9,6 +9,7 @@ import java.time.OffsetDateTime;
 import java.util.Collection;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicLong;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -59,9 +60,10 @@ public class InMemoryUploadStore implements UploadStore {
       throw new IllegalArgumentException("Upload session not found: " + request.uploadId());
     }
     validateUpload(request, upload);
-    var id = submissionIds.getAndIncrement();
     var submittedAt = OffsetDateTime.now();
-    var version = nextVersion(upload.request().assignmentId(), upload.request().studentId());
+    var existing = latestSubmission(upload.request().assignmentId(), upload.request().studentId());
+    var id = existing == null ? submissionIds.getAndIncrement() : existing.id();
+    var version = existing == null ? 1 : existing.version() + 1;
     var summary = new SubmissionSummary(
         id,
         upload.request().assignmentId(),
@@ -74,6 +76,13 @@ public class InMemoryUploadStore implements UploadStore {
         SubmissionStatus.SUBMITTED,
         submittedAt
     );
+    if (existing != null) {
+      submissions.values().removeIf(item ->
+          upload.request().assignmentId().equals(item.assignmentId())
+              && upload.request().studentId().equals(item.studentId())
+              && !id.equals(item.id()));
+      objectKeys.keySet().removeIf(submissionId -> !submissions.containsKey(submissionId));
+    }
     submissions.put(id, summary);
     objectKeys.put(id, upload.objectKey());
     return new SubmissionReceipt(
@@ -114,6 +123,11 @@ public class InMemoryUploadStore implements UploadStore {
   }
 
   @Override
+  public List<Long> assignmentTeacherIds(Long assignmentId) {
+    return List.of(1L);
+  }
+
+  @Override
   public void deleteSubmission(Long submissionId) {
     if (!submissions.containsKey(submissionId)) {
       throw new IllegalArgumentException("Submission file not found: " + submissionId);
@@ -132,13 +146,14 @@ public class InMemoryUploadStore implements UploadStore {
     }
   }
 
-  private int nextVersion(Long assignmentId, Long studentId) {
+  private SubmissionSummary latestSubmission(Long assignmentId, Long studentId) {
     return submissions.values().stream()
         .filter(item -> assignmentId.equals(item.assignmentId()))
         .filter(item -> studentId.equals(item.studentId()))
-        .mapToInt(SubmissionSummary::version)
-        .max()
-        .orElse(0) + 1;
+        .max(Comparator.comparing(SubmissionSummary::version)
+            .thenComparing(SubmissionSummary::submittedAt)
+            .thenComparing(SubmissionSummary::id))
+        .orElse(null);
   }
 
   private boolean hasText(String value) {

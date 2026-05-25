@@ -7,6 +7,7 @@ import com.trainmark.shared.dto.CreateCourseRequest;
 import com.trainmark.shared.dto.CreateTeachingClassRequest;
 import com.trainmark.shared.dto.TeachingClassSummary;
 import java.util.Collection;
+import java.util.List;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -43,5 +44,9 @@ public class CourseService {
 
   public AssignmentSummary publishAssignment(Long assignmentId) {
     return store.publishAssignment(assignmentId);
+  }
+
+  public List<Long> assignmentStudentIds(Long assignmentId) {
+    return store.assignmentStudentIds(assignmentId);
   }
 }

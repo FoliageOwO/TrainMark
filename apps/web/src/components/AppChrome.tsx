@@ -9,6 +9,7 @@ import {
   GraduationCap,
   LayoutDashboard,
   LogOut,
+  MessageCircle,
   ShieldCheck,
   Sparkles,
   UploadCloud,
@@ -44,6 +45,7 @@ const navItems: NavItem[] = [
   { icon: UploadCloud, label: '报告收集', roles: ['TEACHER', 'COURSE_OWNER', 'SUPERVISOR'] },
   { icon: Sparkles, label: 'AI 批改中心', roles: ['TEACHER', 'COURSE_OWNER'] },
   { icon: FileCheck2, label: '人工复核', roles: ['TEACHER', 'COURSE_OWNER'] },
+  { icon: MessageCircle, label: '申诉处理', roles: ['TEACHER', 'COURSE_OWNER'] },
   { icon: BarChart3, label: '失分分析', roles: ['TEACHER', 'COURSE_OWNER', 'SUPERVISOR'] },
   { icon: ShieldCheck, label: '系统管理', roles: ['ADMIN'] },
   { icon: GraduationCap, label: '我的课程', roles: ['STUDENT'] },
@@ -88,7 +90,15 @@ export function AppChrome({
   useEffect(() => {
     refreshUnreadNotifications();
     const timer = window.setInterval(refreshUnreadNotifications, 30000);
-    return () => window.clearInterval(timer);
+    const handleNotificationChanged = () => {
+      refreshUnreadNotifications();
+      window.setTimeout(refreshUnreadNotifications, 800);
+    };
+    window.addEventListener('trainmark:notifications-changed', handleNotificationChanged);
+    return () => {
+      window.clearInterval(timer);
+      window.removeEventListener('trainmark:notifications-changed', handleNotificationChanged);
+    };
   }, [refreshUnreadNotifications]);
 
   return (
@@ -200,6 +210,9 @@ function getPageMeta(navLabel: string, role: RoleCode) {
     },
     人工复核: {
       title: '人工复核',
+    },
+    申诉处理: {
+      title: '申诉处理',
     },
     失分分析: {
       title: '失分分析',

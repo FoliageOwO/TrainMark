@@ -8,11 +8,15 @@ import com.trainmark.shared.dto.GradingResultSummary;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
+import org.apache.pdfbox.Loader;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.pdmodel.PDPage;
 import org.apache.pdfbox.pdmodel.PDPageContentStream;
@@ -31,9 +35,14 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 public class GradingAssetController {
   private final GradingService gradingService;
+  private final Path uploadObjectRoot;
 
-  public GradingAssetController(GradingService gradingService) {
+  public GradingAssetController(
+      GradingService gradingService,
+      @org.springframework.beans.factory.annotation.Value("${trainmark.upload.object-root:${UPLOAD_OBJECT_ROOT:.data/uploads}}") String uploadObjectRoot
+  ) {
     this.gradingService = gradingService;
+    this.uploadObjectRoot = Path.of(uploadObjectRoot).toAbsolutePath().normalize();
   }
 
   @GetMapping(value = "/annotations/submissions/{submissionId}/annotated.pdf", produces = MediaType.APPLICATION_PDF_VALUE)
@@ -43,14 +52,14 @@ public class GradingAssetController {
       @RequestHeader(name = AuthenticatedUser.USERNAME_HEADER, required = false) String username,
       @RequestHeader(name = AuthenticatedUser.ROLES_HEADER, required = false) String roles
   ) {
-    var fileName = "批注报告-%d.pdf".formatted(submissionId);
     var result = gradingService.findResultBySubmission(submissionId);
     var currentUser = currentUser(userId, username, roles);
     if (result.isEmpty() && currentUser.isStudent()) {
       throw new TrainMarkAccessDeniedException("Students can only access published annotations");
     }
     result.ifPresent(item -> requireAnnotationVisible(currentUser, item));
-    return binary(fileName, MediaType.APPLICATION_PDF, pdfBytes(result.orElse(null)));
+    var fileName = result.map(this::annotationFileName).orElse("批注报告-%d.pdf".formatted(submissionId));
+    return binary(fileName, MediaType.APPLICATION_PDF, annotatedPdfBytes(submissionId, result.orElse(null)));
   }
 
   @GetMapping(value = "/exports/assignments/{assignmentId}/{fileName:.+}")
@@ -63,7 +72,7 @@ public class GradingAssetController {
   ) {
     currentUser(userId, username, roles).requireStaff();
     if (fileName.toLowerCase().endsWith(".pdf")) {
-      return binary("成绩导出说明.pdf", MediaType.APPLICATION_PDF, pdfBytes(null));
+      return binary("成绩导出说明.pdf", MediaType.APPLICATION_PDF, annotatedPdfBytes(null, null));
     }
     if (fileName.toLowerCase().endsWith(".zip")) {
       return binary("成绩与批注.zip", MediaType.parseMediaType("application/zip"), zipBytes(assignmentId));
@@ -116,9 +125,10 @@ public class GradingAssetController {
         zip.write(csvBytes(assignmentId));
         zip.closeEntry();
         var results = gradingService.listResults(assignmentId, null);
+        var entryNames = new HashSet<String>();
         for (var result : results) {
-          zip.putNextEntry(new ZipEntry("批注报告/批注报告-%d.pdf".formatted(result.submissionId())));
-          zip.write(pdfBytes(result));
+          zip.putNextEntry(new ZipEntry("批注报告/" + uniqueZipEntryName(entryNames, annotationFileName(result))));
+          zip.write(annotatedPdfBytes(result.submissionId(), result));
           zip.closeEntry();
         }
         zip.putNextEntry(new ZipEntry("说明.txt"));
@@ -138,83 +148,190 @@ public class GradingAssetController {
   }
 
   /**
-   * Generates a real PDF with annotations using Apache PDFBox.
-   * Includes score summary, per-item breakdown, deduction reasons, and annotation comments.
+   * Generates a PDF annotation version. If the original uploaded PDF is available locally,
+   * the annotation page is appended to it; otherwise a readable standalone annotation PDF is generated.
    */
-  private byte[] pdfBytes(GradingResultSummary result) {
+  private byte[] annotatedPdfBytes(Long submissionId, GradingResultSummary result) {
+    var originalPdf = originalSubmissionPdf(submissionId);
+    if (originalPdf != null && result != null) {
+      try (var document = Loader.loadPDF(originalPdf)) {
+        appendAnnotationPage(document, result, true);
+        var output = new ByteArrayOutputStream();
+        document.save(output);
+        return output.toByteArray();
+      } catch (IOException | RuntimeException ignored) {
+        // Fall back to a standalone annotation PDF when the uploaded file is not a valid readable PDF.
+      }
+    }
+
     try (var document = new PDDocument()) {
-      var page = new PDPage(PDRectangle.A4);
-      document.addPage(page);
-
-      var margin = 72f;
-      var pageWidth = page.getMediaBox().getWidth();
-      var y = page.getMediaBox().getUpperRightY() - margin;
-      var contentWidth = pageWidth - 2 * margin;
-      var fonts = loadFonts(document);
-      if (fonts == null) {
-        throw new IllegalStateException("生成中文批注报告失败：未找到可用中文字体");
-      }
-
-      try (var contentStream = new PDPageContentStream(document, page)) {
-        // Title
-        contentStream.beginText();
-        contentStream.setFont(fonts.heading(), 18);
-        contentStream.newLineAtOffset(margin, y);
-        contentStream.showText(fonts.text("智能批改批注报告"));
-        contentStream.endText();
-        y -= 36;
-
-        if (result == null) {
-          // Placeholder for no result
-          contentStream.beginText();
-          contentStream.setFont(fonts.body(), 12);
-          contentStream.newLineAtOffset(margin, y);
-          contentStream.showText(fonts.text("暂无批改结果"));
-          contentStream.endText();
-        } else {
-          // Score summary
-          y = drawSection(contentStream, fonts, margin, y, contentWidth, "成绩总览", List.of(
-              "学生: " + result.studentName() + " (" + result.studentNo() + ")",
-              "总分: " + result.teacherScore() + " / " + result.totalScore(),
-              "AI 初评: " + result.aiScore() + " / " + result.totalScore(),
-              "复核状态: " + reviewStatusLabel(result.reviewStatus()),
-              "发布状态: " + publicationStatusLabel(result.publicationStatus()),
-              "置信度: " + result.confidence() + "%"
-          ));
-
-          // Overall comment
-          if (result.overallComment() != null && !result.overallComment().isBlank()) {
-            y = drawSection(contentStream, fonts, margin, y, contentWidth, "总评", List.of(
-                result.overallComment()
-            ));
-          }
-
-          // Per-item scores
-          y = drawSection(contentStream, fonts, margin, y, contentWidth, "分项得分",
-              result.items().stream()
-                  .map(item -> item.title() + ": " + item.teacherScore() + "/" + item.maxScore()
-                      + (item.deductionReason() != null && !item.deductionReason().isBlank()
-                          ? "  [扣分: " + item.deductionReason() + "]"
-                          : ""))
-                  .toList());
-
-          // Annotations
-          if (!result.annotations().isEmpty()) {
-            y = drawSection(contentStream, fonts, margin, y, contentWidth, "批注详情",
-                result.annotations().stream()
-                    .limit(10)
-                    .map(a -> "[" + severityLabel(a.severity()) + "] 第" + a.page() + "页 - " + a.comment())
-                    .toList());
-          }
-        }
-      }
-
+      appendAnnotationPage(document, result, false);
       var output = new ByteArrayOutputStream();
       document.save(output);
       return output.toByteArray();
     } catch (IOException exception) {
       throw new IllegalStateException("生成中文批注报告失败", exception);
     }
+  }
+
+  private void appendAnnotationPage(PDDocument document, GradingResultSummary result, boolean appendedToOriginal) throws IOException {
+    var page = new PDPage(PDRectangle.A4);
+    document.addPage(page);
+
+    var margin = 56f;
+    var pageWidth = page.getMediaBox().getWidth();
+    var y = page.getMediaBox().getUpperRightY() - margin;
+    var contentWidth = pageWidth - 2 * margin;
+    var fonts = loadFonts(document);
+    if (fonts == null) {
+      throw new IllegalStateException("生成中文批注报告失败：未找到可用中文字体");
+    }
+
+    try (var contentStream = new PDPageContentStream(document, page)) {
+      setFillColor(contentStream, 37, 99, 235);
+      contentStream.addRect(0, page.getMediaBox().getUpperRightY() - 92, pageWidth, 92);
+      contentStream.fill();
+
+      contentStream.beginText();
+      setFillColor(contentStream, 255, 255, 255);
+      contentStream.setFont(fonts.heading(), 18);
+      contentStream.newLineAtOffset(margin, y);
+      contentStream.showText(fonts.text(appendedToOriginal ? "学生原报告批注页" : "学生原报告批注版"));
+      contentStream.endText();
+      y -= 26;
+
+      contentStream.beginText();
+      contentStream.setFont(fonts.body(), 10);
+      contentStream.newLineAtOffset(margin, y);
+      contentStream.showText(fonts.text(appendedToOriginal ? "已保留学生提交的原始 PDF 页面，以下为教师复核与系统批注。" : "未读取到可合并的原始 PDF，以下保留原报告信息与批注内容。"));
+      contentStream.endText();
+      y -= 44;
+      setFillColor(contentStream, 17, 24, 39);
+
+      if (result == null) {
+        drawSection(contentStream, fonts, margin, y, contentWidth, "批注信息", List.of("暂无批改结果"));
+        return;
+      }
+
+      y = drawSection(contentStream, fonts, margin, y, contentWidth, "原报告信息", List.of(
+          "文件: " + result.fileName(),
+          "学生: " + result.studentName() + " (" + result.studentNo() + ")",
+          "提交编号: " + result.submissionId()
+      ));
+
+      y = drawSection(contentStream, fonts, margin, y, contentWidth, "成绩总览", List.of(
+          "教师复核: " + result.teacherScore() + " / " + result.totalScore(),
+          "AI 初评: " + result.aiScore() + " / " + result.totalScore(),
+          "复核状态: " + reviewStatusLabel(result.reviewStatus()),
+          "发布状态: " + publicationStatusLabel(result.publicationStatus()),
+          "置信度: " + result.confidence() + "%"
+      ));
+
+      if (result.overallComment() != null && !result.overallComment().isBlank()) {
+        y = drawSection(contentStream, fonts, margin, y, contentWidth, "教师总评", List.of(result.overallComment()));
+      }
+
+      y = drawSection(contentStream, fonts, margin, y, contentWidth, "分项复核",
+          result.items().stream()
+              .map(item -> item.title() + ": " + item.teacherScore() + "/" + item.maxScore()
+                  + "；教师评语: " + blankToDefault(item.teacherComment(), "暂无")
+                  + "；扣分原因: " + blankToDefault(item.deductionReason(), "暂无"))
+              .toList());
+
+      if (!result.annotations().isEmpty()) {
+        drawColoredAnnotations(contentStream, fonts, margin, y, contentWidth, result.annotations());
+      }
+    }
+  }
+
+  private byte[] originalSubmissionPdf(Long submissionId) {
+    if (submissionId == null) {
+      return null;
+    }
+    var reference = gradingService.findSubmissionFileReference(submissionId);
+    if (reference.isEmpty()) {
+      return null;
+    }
+    var fileName = reference.get().fileName();
+    var objectKey = reference.get().objectKey();
+    if (fileName == null || !fileName.toLowerCase().endsWith(".pdf") || objectKey == null || objectKey.isBlank()) {
+      return null;
+    }
+    var target = uploadObjectRoot.resolve(objectKey).normalize();
+    if (!target.startsWith(uploadObjectRoot) || !Files.isRegularFile(target)) {
+      return null;
+    }
+    try {
+      return Files.readAllBytes(target);
+    } catch (IOException error) {
+      return null;
+    }
+  }
+
+  private float drawColoredAnnotations(
+      PDPageContentStream cs,
+      PdfFonts fonts,
+      float margin,
+      float y,
+      float width,
+      List<com.trainmark.shared.dto.GradingAnnotationSummary> annotations
+  ) throws IOException {
+    if (y < margin + 90) {
+      return y;
+    }
+    cs.beginText();
+    setFillColor(cs, 17, 24, 39);
+    cs.setFont(fonts.heading(), 14);
+    cs.newLineAtOffset(margin, y);
+    cs.showText(fonts.text("报告批注"));
+    cs.endText();
+    y -= 22;
+
+    for (var annotation : annotations.stream().limit(12).toList()) {
+      if (y < margin + 50) {
+        return y;
+      }
+      setAnnotationFill(cs, annotation.severity());
+      cs.addRect(margin, y - 34, width, 42);
+      cs.fill();
+      setFillColor(cs, 17, 24, 39);
+      cs.beginText();
+      cs.setFont(fonts.body(), 10);
+      cs.newLineAtOffset(margin + 10, y - 6);
+      cs.showText(fonts.text("第 " + annotation.page() + " 页 · " + annotation.anchorText() + " · " + severityLabel(annotation.severity())));
+      cs.endText();
+      var wrapped = wrapText(fonts.body(), 9, annotation.comment(), width - 20);
+      if (!wrapped.isEmpty()) {
+        cs.beginText();
+        cs.setFont(fonts.body(), 9);
+        cs.newLineAtOffset(margin + 10, y - 21);
+        cs.showText(fonts.text(wrapped.get(0)));
+        cs.endText();
+      }
+      y -= 50;
+    }
+    setFillColor(cs, 17, 24, 39);
+    return y;
+  }
+
+  private void setAnnotationFill(PDPageContentStream cs, String severity) throws IOException {
+    if (severity == null) {
+      setFillColor(cs, 239, 246, 255);
+      return;
+    }
+    switch (severity.toLowerCase()) {
+      case "warning" -> setFillColor(cs, 255, 247, 237);
+      case "error" -> setFillColor(cs, 254, 242, 242);
+      default -> setFillColor(cs, 239, 246, 255);
+    }
+  }
+
+  private void setFillColor(PDPageContentStream cs, int red, int green, int blue) throws IOException {
+    cs.setNonStrokingColor(
+        red / 255f,
+        green / 255f,
+        blue / 255f
+    );
   }
 
   /**
@@ -382,6 +499,38 @@ public class GradingAssetController {
       case "error" -> "严重";
       default -> "提示";
     };
+  }
+
+  private String annotationFileName(GradingResultSummary result) {
+    var baseName = result.fileName() == null || result.fileName().isBlank()
+        ? result.studentName() + "-自动批改报告"
+        : result.fileName().replaceFirst("\\.[^.]+$", "");
+    return safeFileName(baseName + "-批注.pdf");
+  }
+
+  private String safeFileName(String value) {
+    return value.replaceAll("[\\\\/:*?\"<>|]", "_");
+  }
+
+  private String uniqueZipEntryName(HashSet<String> entryNames, String fileName) {
+    if (entryNames.add(fileName)) {
+      return fileName;
+    }
+    var extensionIndex = fileName.lastIndexOf('.');
+    var baseName = extensionIndex > 0 ? fileName.substring(0, extensionIndex) : fileName;
+    var extension = extensionIndex > 0 ? fileName.substring(extensionIndex) : "";
+    var index = 2;
+    while (true) {
+      var candidate = baseName + "-" + index + extension;
+      if (entryNames.add(candidate)) {
+        return candidate;
+      }
+      index += 1;
+    }
+  }
+
+  private String blankToDefault(String value, String defaultValue) {
+    return value == null || value.isBlank() ? defaultValue : value;
   }
 
   private record PdfFonts(PDFont heading, PDFont body) {

@@ -1,7 +1,7 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import { CheckCircle2, FileText } from 'lucide-react';
 import { fetchApiAssetBlobUrl } from '../api/httpApi';
-import type { GradePublicationAuditEntry, GradingResultSummary } from '../api/types';
+import type { AppealSummary, AssignmentSummary, GradePublicationAuditEntry, GradingResultSummary } from '../api/types';
 import { toChineseFileName, toChineseText } from '../utils/displayText';
 import { formatDate } from '../utils/formatDate';
 
@@ -19,9 +19,14 @@ const publicationStatusText = {
 };
 
 type TeacherReviewWorkspaceProps = {
+  assignments: AssignmentSummary[];
+  appeals: AppealSummary[];
+  selectedAssignmentId: number;
   reviewResults: GradingResultSummary[];
   selectedReview: GradingResultSummary;
   publicationAudits: GradePublicationAuditEntry[];
+  onResolveAppeal: (appealId: number, accepted: boolean) => void;
+  onSelectAssignment: (assignmentId: number) => void;
   onSelectReview: (resultId: number) => void;
   onReviewItemSubmit: (event: FormEvent<HTMLFormElement>, rubricItemId: number) => void;
   onApproveResult: () => void;
@@ -30,9 +35,14 @@ type TeacherReviewWorkspaceProps = {
 };
 
 export function TeacherReviewWorkspace({
+  assignments,
+  appeals,
+  selectedAssignmentId,
   reviewResults,
   selectedReview,
   publicationAudits,
+  onResolveAppeal,
+  onSelectAssignment,
   onSelectReview,
   onReviewItemSubmit,
   onApproveResult,
@@ -40,6 +50,11 @@ export function TeacherReviewWorkspace({
   onWithdrawResult,
 }: TeacherReviewWorkspaceProps) {
   const selectedAudits = publicationAudits.filter((item) => item.resultId === selectedReview.id);
+  const selectedAssignment = assignments.find((item) => item.id === selectedAssignmentId);
+  const currentResultIds = new Set(reviewResults.map((item) => item.id));
+  const assignmentAppeals = appeals.filter((item) => currentResultIds.has(item.resultId));
+  const selectedAppeals = appeals.filter((item) => item.resultId === selectedReview.id);
+  const pendingAppealCount = assignmentAppeals.filter((item) => item.status === 'SUBMITTED').length;
   const [annotationPreviewUrl, setAnnotationPreviewUrl] = useState<string | null>(null);
   const [annotationPreviewError, setAnnotationPreviewError] = useState<string | null>(null);
 
@@ -84,9 +99,20 @@ export function TeacherReviewWorkspace({
         <div className="panel-heading">
           <div>
             <h3>待复核报告</h3>
+            <p className="panel-subtitle">{selectedAssignment?.title ?? '当前实训任务'}</p>
           </div>
-          <span className="status-pill">{reviewResults.length} 份</span>
+          <span className="status-pill">{reviewResults.length} 份 · {pendingAppealCount} 条申诉</span>
         </div>
+        <label className="file-name-field review-task-field">
+          当前实训任务
+          <select value={selectedAssignmentId} onChange={(event) => onSelectAssignment(Number(event.target.value))}>
+            {assignments.map((assignment) => (
+              <option key={assignment.id} value={assignment.id}>
+                {toChineseText(assignment.title)}
+              </option>
+            ))}
+          </select>
+        </label>
         <div className="table-shell">
           <div className="table-scroll table-scroll-lg">
             <table className="data-table review-table">
@@ -98,7 +124,13 @@ export function TeacherReviewWorkspace({
                 </tr>
               </thead>
               <tbody>
-                {reviewResults.map((result) => (
+                {reviewResults.length === 0 ? (
+                  <tr>
+                    <td colSpan={3}>
+                      <div className="empty-table-cell">当前实训任务暂无复核结果</div>
+                    </td>
+                  </tr>
+                ) : reviewResults.map((result) => (
                   <tr
                     className={selectedReview.id === result.id ? 'is-selected is-clickable' : 'is-clickable'}
                     key={result.id}
@@ -130,11 +162,11 @@ export function TeacherReviewWorkspace({
         </div>
         <div className="pdf-preview">
           <div className="pdf-toolbar">
-            <span>批注预览</span>
+            <span>原报告批注版预览</span>
             <div className="pdf-toolbar-actions">
               {annotationPreviewUrl ? (
                 <a className="ghost-button compact-link" href={annotationPreviewUrl} rel="noreferrer" target="_blank">
-                  <FileText size={14} /> 打开批注
+                  <FileText size={14} /> 打开批注 PDF
                 </a>
               ) : null}
             </div>
@@ -155,8 +187,8 @@ export function TeacherReviewWorkspace({
             ) : (
               <div className="pdf-fallback">
                 <FileText size={48} />
-                <p>PDF 预览需要后端服务提供文件</p>
-                <span>部署后端并上传文件后，此处将直接显示批注 PDF</span>
+                <p>暂无可预览的批注 PDF</p>
+                <span>完成批改并生成批注后，这里会显示带批注的报告。</span>
               </div>
             )}
           </div>
@@ -215,6 +247,33 @@ export function TeacherReviewWorkspace({
         <div className="overall-comment">
           <span>总评</span>
           <p>{toChineseText(selectedReview.overallComment)}</p>
+        </div>
+        <div className="review-appeal-box">
+          <div className="review-appeal-heading">
+            <strong>申诉处理</strong>
+            <span>{selectedAppeals.filter((item) => item.status === 'SUBMITTED').length} 条待处理</span>
+          </div>
+          {selectedAppeals.length === 0 ? (
+            <p className="review-appeal-empty">该学生本次结果暂无申诉。</p>
+          ) : (
+            selectedAppeals.map((appeal) => (
+              <div className="review-appeal-card" key={appeal.id}>
+                <div>
+                  <b>{appeal.status === 'SUBMITTED' ? '待处理' : appeal.status === 'ACCEPTED' ? '已采纳' : '已驳回'}</b>
+                  <span>{appeal.rubricItemId ? `评分项 ${appeal.rubricItemId}` : '总评'} · {formatDate(appeal.createdAt)}</span>
+                </div>
+                <p>{toChineseText(appeal.reason)}</p>
+                <small>{toChineseText(appeal.requestedChange)}</small>
+                {appeal.teacherReply ? <small>{toChineseText(appeal.teacherReply)}</small> : null}
+                {appeal.status === 'SUBMITTED' ? (
+                  <div className="table-actions">
+                    <button className="primary-button compact" type="button" onClick={() => onResolveAppeal(appeal.id, true)}>采纳申诉</button>
+                    <button className="ghost-button compact" type="button" onClick={() => onResolveAppeal(appeal.id, false)}>驳回申诉</button>
+                  </div>
+                ) : null}
+              </div>
+            ))
+          )}
         </div>
         <div className="review-item-list panel-scroll panel-scroll-xl">
           {selectedReview.items.map((item) => (

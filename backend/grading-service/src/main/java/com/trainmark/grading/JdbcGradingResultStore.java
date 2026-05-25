@@ -215,12 +215,17 @@ public class JdbcGradingResultStore implements GradingResultStore {
     return """
         SELECT r.id, r.assignment_id, r.submission_id, r.student_id,
                u.name AS student_name, u.student_no,
-               COALESCE(sf.file_name, '自动批改报告-' || r.submission_id || '.pdf') AS file_name,
+               regexp_replace(COALESCE(NULLIF(u.name, ''), '学生' || r.student_id), '[\\/:*?"<>|]', '_', 'g')
+                 || '-' ||
+                 regexp_replace(COALESCE(NULLIF(c.name, ''), '课程'), '[\\/:*?"<>|]', '_', 'g')
+                 || '-自动批改报告.pdf' AS file_name,
                COALESCE(sf.preview_url, '/previews/submissions/' || r.submission_id || '/report.pdf') AS preview_url,
                r.annotation_pdf_url, r.total_score, r.ai_score, r.teacher_score, r.confidence,
                r.review_status, r.publication_status, r.overall_comment, r.reviewed_at, r.published_at
         FROM grading_results r
         JOIN users u ON u.id = r.student_id
+        JOIN assignments a ON a.id = r.assignment_id
+        LEFT JOIN courses c ON c.id = a.course_id
         LEFT JOIN LATERAL (
           SELECT file_name, preview_url
           FROM submission_files

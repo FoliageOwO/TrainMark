@@ -38,11 +38,13 @@ const sectionToNavLabel: Record<string, string> = {
   collection: '报告收集',
   'ai-pipeline': 'AI 批改中心',
   review: '人工复核',
+  appeals: '申诉处理',
   analytics: '失分分析',
   roster: '工作台',
-  appeals: '人工复核',
   similarity: 'AI 批改中心',
   operations: '工作台',
+  'student-courses': '我的课程',
+  'student-submit': '提交报告',
 };
 
 function getRoleFromLocation(): RoleCode {
@@ -82,9 +84,40 @@ function writeSectionToLocation(section: string) {
   window.history.replaceState(null, '', nextUrl);
 }
 
+function defaultNavForRole(role: RoleCode) {
+  if (role === 'STUDENT') {
+    return '我的课程';
+  }
+  if (role === 'ADMIN') {
+    return '系统管理';
+  }
+  return '工作台';
+}
+
+function defaultSectionForRole(role: RoleCode) {
+  if (role === 'STUDENT') {
+    return 'student-courses';
+  }
+  if (role === 'ADMIN') {
+    return 'roster';
+  }
+  return 'overview';
+}
+
+function navLabelFromLocation(role: RoleCode) {
+  const section = getSectionFromLocation();
+  if (role === 'STUDENT') {
+    return section === 'student-submit' ? '提交报告' : '我的课程';
+  }
+  if (role === 'ADMIN') {
+    return '系统管理';
+  }
+  return sectionToNavLabel[section] ?? defaultNavForRole(role);
+}
+
 export function App() {
   const [user, setUser] = useState<UserProfile>(() => mockApi.login(getRoleFromLocation()));
-  const [activeNav, setActiveNav] = useState(() => sectionToNavLabel[getSectionFromLocation()] ?? '工作台');
+  const [activeNav, setActiveNav] = useState(() => navLabelFromLocation(getRoleFromLocation()));
   const [teacherSection, setTeacherSection] = useState(getSectionFromLocation);
   const [selectedCourseId, setSelectedCourseId] = useState(1);
   const [workspaceData, setWorkspaceData] = useState<WorkspaceData | null>(null);
@@ -98,12 +131,21 @@ export function App() {
     '报告收集': 'collection',
     'AI 批改中心': 'ai-pipeline',
     '人工复核': 'review',
+    '申诉处理': 'appeals',
     '失分分析': 'analytics',
     '系统管理': 'roster',
+  };
+  const studentNavMap: Record<string, string> = {
+    '我的课程': 'student-courses',
+    '提交报告': 'student-submit',
   };
 
   const handleNavChange = (label: string) => {
     setActiveNav(label);
+    if (primaryRole === 'STUDENT') {
+      writeSectionToLocation(studentNavMap[label] ?? 'student-courses');
+      return;
+    }
     const mapped = teacherNavMap[label];
     if (mapped && primaryRole !== 'STUDENT' && primaryRole !== 'ADMIN') {
       setTeacherSection(mapped);
@@ -189,10 +231,7 @@ export function App() {
     const syncSectionFromLocation = () => {
       const section = getSectionFromLocation();
       setTeacherSection(section);
-      const label = sectionToNavLabel[section];
-      if (label) {
-        setActiveNav(label);
-      }
+      setActiveNav(navLabelFromLocation(getRoleFromLocation()));
     };
 
     window.addEventListener('popstate', syncSectionFromLocation);
@@ -203,6 +242,10 @@ export function App() {
 
   const handleRoleChange = async (role: RoleCode) => {
     writeRoleToLocation(role);
+    const nextSection = defaultSectionForRole(role);
+    writeSectionToLocation(nextSection);
+    setTeacherSection(nextSection);
+    setActiveNav(defaultNavForRole(role));
     if (shouldUseHttpApi()) {
       setApiSessionReady(false);
       setWorkspaceData(null);
@@ -266,13 +309,18 @@ export function App() {
   }, [apiSessionReady, primaryRole, selectedCourseId, user.id]);
 
   const refreshWorkspaceData = async () => {
+    const notifyChanged = () => {
+      window.dispatchEvent(new Event('trainmark:notifications-changed'));
+    };
     if (!shouldUseHttpApi() || !apiSessionReady) {
+      notifyChanged();
       return;
     }
     try {
       const data = await loadWorkspaceData(selectedCourseId, user.id, primaryRole);
       setWorkspaceData(data);
       setApiError(null);
+      notifyChanged();
     } catch (error) {
       setWorkspaceData(null);
       setApiError(errorMessage(error));
@@ -297,19 +345,24 @@ export function App() {
       onRoleChange={handleRoleChange}
     >
       {apiError ? (
-        <section className="empty-result">
+      <section className="empty-result">
           <strong>HTTP API 联调失败</strong>
           <span>{apiError}</span>
         </section>
       ) : null}
       {primaryRole === 'STUDENT' ? (
         <StudentDashboard
+          activeView={activeNav === '提交报告' ? 'submit' : 'courses'}
+          courses={courses}
+          selectedCourseId={selectedCourseId}
           tasks={studentTasks}
           publishedResults={publishedResults}
           appeals={studentAppeals}
           userId={user.id}
           userName={user.name}
           userStudentNo={user.username}
+          onCourseChange={setSelectedCourseId}
+          onOpenSubmit={() => handleNavChange('提交报告')}
           onWorkspaceRefresh={refreshWorkspaceData}
         />
       ) : primaryRole === 'ADMIN' ? (

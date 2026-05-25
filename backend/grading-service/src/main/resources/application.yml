@@ -15,6 +15,9 @@ management:
         include: health,info
 
 trainmark:
+  notification:
+    base-url: ${TRAINMARK_NOTIFICATION_BASE_URL:http://localhost:8089}
+    event-enabled: ${TRAINMARK_NOTIFICATION_EVENT_ENABLED:true}
   grading:
     async-enabled: ${GRADING_ASYNC_ENABLED:false}
     export-async-enabled: ${GRADE_EXPORT_ASYNC_ENABLED:false}

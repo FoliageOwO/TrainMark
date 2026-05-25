@@ -5,6 +5,7 @@ import com.trainmark.shared.dto.RubricItemSummary;
 import com.trainmark.shared.dto.RubricPointSummary;
 import com.trainmark.shared.dto.RubricSummary;
 import java.util.Collection;
+import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -38,6 +39,7 @@ public class InMemoryRubricStore implements RubricStore {
   public Collection<RubricSummary> listRubrics(Long assignmentId) {
     return rubrics.values().stream()
         .filter(item -> assignmentId == null || assignmentId.equals(item.assignmentId()))
+        .sorted(Comparator.comparing(RubricSummary::id).reversed())
         .toList();
   }
 

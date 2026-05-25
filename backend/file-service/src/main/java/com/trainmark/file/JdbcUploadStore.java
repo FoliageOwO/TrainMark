@@ -13,6 +13,7 @@ import java.sql.Statement;
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.List;
 import java.util.UUID;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -89,8 +90,17 @@ public class JdbcUploadStore implements UploadStore {
         }
         validateUpload(request, upload);
         var submittedAt = OffsetDateTime.now();
-        var version = nextVersion(connection, upload.assignmentId(), upload.studentId());
-        var submissionId = insertSubmission(connection, upload, version, submittedAt);
+        var existing = findLatestSubmission(connection, upload.assignmentId(), upload.studentId());
+        var version = existing == null ? 1 : existing.version() + 1;
+        Long submissionId;
+        if (existing == null) {
+          submissionId = insertSubmission(connection, upload, version, submittedAt);
+        } else {
+          deleteSiblingSubmissions(connection, upload.assignmentId(), upload.studentId(), existing.id());
+          deleteStaleGradingResult(connection, existing.id());
+          replaceSubmission(connection, existing.id(), upload, version, submittedAt);
+          submissionId = existing.id();
+        }
         markUploadCompleted(connection, request.uploadId());
         connection.commit();
         return new SubmissionReceipt(
@@ -195,6 +205,31 @@ public class JdbcUploadStore implements UploadStore {
   }
 
   @Override
+  public List<Long> assignmentTeacherIds(Long assignmentId) {
+    var sql = """
+        SELECT DISTINCT cm.user_id
+        FROM assignments a
+        JOIN course_members cm ON cm.course_id = a.course_id
+        WHERE a.id = ?
+          AND cm.member_role IN ('TEACHER', 'COURSE_OWNER')
+        ORDER BY cm.user_id
+        """;
+    try (var connection = connect();
+        var statement = connection.prepareStatement(sql)) {
+      statement.setLong(1, assignmentId);
+      try (var results = statement.executeQuery()) {
+        var teacherIds = new ArrayList<Long>();
+        while (results.next()) {
+          teacherIds.add(results.getLong("user_id"));
+        }
+        return teacherIds;
+      }
+    } catch (SQLException error) {
+      throw new IllegalStateException("Failed to list assignment teachers", error);
+    }
+  }
+
+  @Override
   public void deleteSubmission(Long submissionId) {
     var sql = "DELETE FROM submissions WHERE id = ?";
     try (var connection = connect();
@@ -245,18 +280,24 @@ public class JdbcUploadStore implements UploadStore {
     }
   }
 
-  private int nextVersion(Connection connection, Long assignmentId, Long studentId) throws SQLException {
-    try (var statement = connection.prepareStatement(
-        "SELECT COALESCE(max(version), 0) + 1 FROM submissions WHERE assignment_id = ? AND student_id = ?")) {
+  private ExistingSubmission findLatestSubmission(Connection connection, Long assignmentId, Long studentId) throws SQLException {
+    var sql = """
+        SELECT id, version
+        FROM submissions
+        WHERE assignment_id = ? AND student_id = ?
+        ORDER BY version DESC, submitted_at DESC, id DESC
+        LIMIT 1
+        """;
+    try (var statement = connection.prepareStatement(sql)) {
       statement.setLong(1, assignmentId);
       statement.setLong(2, studentId);
       try (var results = statement.executeQuery()) {
         if (results.next()) {
-          return results.getInt(1);
+          return new ExistingSubmission(results.getLong("id"), results.getInt("version"));
         }
       }
     }
-    return 1;
+    return null;
   }
 
   private Long insertSubmission(Connection connection, PendingUpload upload, int version, OffsetDateTime submittedAt) throws SQLException {
@@ -281,6 +322,54 @@ public class JdbcUploadStore implements UploadStore {
       }
     }
     throw new SQLException("Insert did not return a generated submission id");
+  }
+
+  private void replaceSubmission(
+      Connection connection,
+      Long submissionId,
+      PendingUpload upload,
+      int version,
+      OffsetDateTime submittedAt
+  ) throws SQLException {
+    var sql = """
+        UPDATE submissions
+        SET file_name = ?, object_key = ?, status = ?, submitted_at = ?, version = ?
+        WHERE id = ?
+        """;
+    try (var statement = connection.prepareStatement(sql)) {
+      statement.setString(1, upload.fileName());
+      statement.setString(2, upload.objectKey());
+      statement.setString(3, SubmissionStatus.SUBMITTED.name());
+      statement.setObject(4, submittedAt);
+      statement.setInt(5, version);
+      statement.setLong(6, submissionId);
+      statement.executeUpdate();
+    }
+  }
+
+  private void deleteStaleGradingResult(Connection connection, Long submissionId) throws SQLException {
+    try (var statement = connection.prepareStatement("DELETE FROM grading_results WHERE submission_id = ?")) {
+      statement.setLong(1, submissionId);
+      statement.executeUpdate();
+    }
+  }
+
+  private void deleteSiblingSubmissions(
+      Connection connection,
+      Long assignmentId,
+      Long studentId,
+      Long keepSubmissionId
+  ) throws SQLException {
+    var sql = """
+        DELETE FROM submissions
+        WHERE assignment_id = ? AND student_id = ? AND id <> ?
+        """;
+    try (var statement = connection.prepareStatement(sql)) {
+      statement.setLong(1, assignmentId);
+      statement.setLong(2, studentId);
+      statement.setLong(3, keepSubmissionId);
+      statement.executeUpdate();
+    }
   }
 
   private void markUploadCompleted(Connection connection, String uploadId) throws SQLException {
@@ -310,4 +399,6 @@ public class JdbcUploadStore implements UploadStore {
       String checksum,
       OffsetDateTime expiresAt
   ) {}
+
+  private record ExistingSubmission(Long id, int version) {}
 }

@@ -37,6 +37,7 @@ export function StudentUploadPanel({
   const activeVersion = receipt?.version ?? selectedTask?.version;
   const hasSubmittedReport = Boolean(activeSubmissionId);
   const canDeleteSubmission = selectedTask?.status === '已提交';
+  const isOverwrite = Boolean(selectedTask?.submissionId);
 
   const openSubmissionFile = async (submissionId: number, fileName: string) => {
     const url = await fetchApiAssetBlobUrl(`/api/submissions/${submissionId}/file`);
@@ -95,6 +96,16 @@ export function StudentUploadPanel({
             ))}
           </select>
         </label>
+        {selectedTask && (
+          <div className="upload-overwrite-note">
+            <strong>{selectedTask.courseName} · {selectedTask.title}</strong>
+            <span>
+              {isOverwrite
+                ? '当前任务已提交，再次提交会覆盖上一份报告，教师端以最新文件为准。'
+                : '当前任务尚未提交，上传后教师端即可在报告收集中查看。'}
+            </span>
+          </div>
+        )}
         <label className="file-name-field">
           文件名
           <input
@@ -115,8 +126,9 @@ export function StudentUploadPanel({
           <div className="receipt-card">
             <CheckCircle2 size={18} />
             <div>
-              <strong>{receipt ? '提交成功' : '已提交报告'}</strong>
-              <span>回执 #{activeSubmissionId} · 版本 {activeVersion ?? 1}</span>
+              <strong>{receipt && (activeVersion ?? 1) > 1 ? '覆盖提交成功' : receipt ? '提交成功' : '已提交报告'}</strong>
+              <span>回执 #{activeSubmissionId} · 第 {activeVersion ?? 1} 次提交</span>
+              <span>{(activeVersion ?? 1) > 1 ? '上一份报告已被覆盖，教师端将批改最新文件。' : '可在截止前重新提交，重新提交会覆盖当前报告。'}</span>
               {shouldUseHttpApi() && activeFileName && (
                 <button className="link-button" type="button" onClick={() => openSubmissionFile(activeSubmissionId, activeFileName)}>
                   查看原文件
@@ -133,15 +145,14 @@ export function StudentUploadPanel({
               </button>
             )}
           </div>
-        ) : (
-          <button className="primary-button full-width" type="button" onClick={onConfirmUpload} disabled={!selectedTask}>
-            确认提交
-          </button>
-        )}
+        ) : null}
+        <button className="primary-button full-width" type="button" onClick={onConfirmUpload} disabled={!selectedTask}>
+          {isOverwrite ? '覆盖上一份报告' : '确认提交'}
+        </button>
       </div>
       <ul className="feature-list">
         <li><FileText size={16} /> 支持 PDF、Word、JPG、PNG</li>
-        <li><Clock3 size={16} /> 截止前可重复提交并保留版本</li>
+        <li><Clock3 size={16} /> 截止前可重新提交，系统覆盖上一份报告</li>
         <li><CheckCircle2 size={16} /> 系统自动识别姓名、学号、班级</li>
       </ul>
     </article>

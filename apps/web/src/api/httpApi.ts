@@ -117,6 +117,15 @@ export type UpdateSystemSettingInput = {
   value: string;
 };
 
+export type CreateNotificationInput = {
+  assignmentId?: number | null;
+  recipientId: number;
+  title: string;
+  message: string;
+  type: string;
+  targetUrl?: string | null;
+};
+
 export type ImportStudentsInput = {
   classId: number;
   rows: StudentImportRow[];
@@ -268,7 +277,7 @@ export async function loadWorkspaceData(selectedCourseId: number, userId: number
     getOr('/api/users?role=STUDENT', mockApi.listUsers('STUDENT')),
     isStudent ? emptyCollectionOverview : getOr(`/api/notifications/assignments/${selectedAssignmentId}/collection`, mockApi.getCollectionOverview(selectedAssignmentId)),
     isStudent ? [] : getOr(`/api/notifications/assignments/${selectedAssignmentId}/unsubmitted`, mockApi.listUnsubmittedStudents(selectedAssignmentId)),
-    isStudent ? [] : getOr(`/api/rubrics?assignmentId=${selectedAssignmentId}`, mockApi.listRubrics(selectedAssignmentId)),
+    isStudent ? [] : getOr('/api/rubrics', mockApi.listRubrics()),
     isStudent ? [] : getOr(`/api/grading/jobs?assignmentId=${selectedAssignmentId}`, mockApi.listGradingJobs(selectedAssignmentId)),
     isStudent ? [] : loadOcrJobs(),
     getOr(gradingResultsPath, fallbackGradingResults),
@@ -343,6 +352,7 @@ function deriveStudentTasks(
     return {
       id: assignment.id,
       title: assignment.title,
+      courseId: assignment.courseId,
       courseName: courseNameById.get(assignment.courseId) ?? '未知课程',
       status: deriveTaskStatus(submission?.status, Boolean(result)),
       deadline: assignment.deadline,
@@ -458,6 +468,10 @@ export async function updateReviewItem(
     { rubricItemId, teacherScore, teacherComment },
     () => mockApi.updateReviewItem(resultId, rubricItemId, teacherScore, teacherComment),
   );
+}
+
+export async function loadGradingResults(assignmentId: number): Promise<GradingResultSummary[]> {
+  return getOr(`/api/grading/results?assignmentId=${assignmentId}`, mockApi.listGradingResults(assignmentId));
 }
 
 export async function approveGradingResult(resultId: number, reviewerName: string, overallComment: string): Promise<GradingResultSummary> {
@@ -833,6 +847,19 @@ function guessContentType(fileName: string) {
 
 export async function listNotifications(userId: number, unreadOnly = false): Promise<NotificationItem[]> {
   return getOr(`/api/notifications?userId=${userId}&unreadOnly=${unreadOnly}`, []);
+}
+
+export async function createNotification(input: CreateNotificationInput): Promise<NotificationItem | null> {
+  try {
+    return await mutateOr(
+      'POST',
+      '/api/notifications',
+      input,
+      () => mockApi.createNotification(input),
+    );
+  } catch {
+    return null;
+  }
 }
 
 export async function markNotificationAsRead(notificationId: number, userId: number): Promise<void> {

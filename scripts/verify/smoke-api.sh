@@ -824,6 +824,7 @@ if [[ "$SMOKE_INCLUDE_WRITES" == "1" ]]; then
   check_api "gateway grade appeals" "$GATEWAY_URL/api/grading/results/appeals?resultId=${grading_result_id:-<from grading result>}"
   if [[ "$SMOKE_DRY_RUN" == "1" ]]; then
     post_json "grade export" "$GATEWAY_URL/api/grading/exports" '{"assignmentId":1,"format":"CSV","operatorName":"\u8054\u8c03\u6559\u5e08"}'
+    post_json "generic notification" "$GATEWAY_URL/api/notifications" '{"assignmentId":1,"recipientId":2,"title":"\u8054\u8c03\u901a\u77e5","message":"\u901a\u77e5\u4e2d\u5fc3\u5199\u5165\u6821\u9a8c\u3002","type":"SMOKE","targetUrl":"/tasks/1"}'
     post_json "remind unsubmitted" "$GATEWAY_URL/api/notifications/remind-unsubmitted" '{"assignmentId":1,"studentIds":[2],"channels":["IN_APP"],"message":"\u8bf7\u6309\u65f6\u63d0\u4ea4\u5b9e\u8bad\u62a5\u544a\u3002"}'
     check_api "gateway notification list" "$GATEWAY_URL/api/notifications?userId=2"
     patch_json "notification mark read" "$GATEWAY_URL/api/notifications/<from notification>/read?userId=2" '{}'
@@ -840,6 +841,10 @@ if [[ "$SMOKE_INCLUDE_WRITES" == "1" ]]; then
       assert_jdbc_scalar_equals "grade export persisted" "SELECT status FROM grade_exports WHERE id = $grade_export_id" "READY"
     fi
     assert_jdbc_audit_exists "GRADE_EXPORT" "GRADE_EXPORT" "$grade_export_id"
+    generic_notification_response="$(post_json "generic notification" "$GATEWAY_URL/api/notifications" '{"assignmentId":1,"recipientId":2,"title":"\u8054\u8c03\u901a\u77e5","message":"\u901a\u77e5\u4e2d\u5fc3\u5199\u5165\u6821\u9a8c\u3002","type":"SMOKE","targetUrl":"/tasks/1"}')"
+    generic_notification_id="$(json_field id <<< "$generic_notification_response")"
+    assert_json_field_equals data.type SMOKE <<< "$generic_notification_response"
+    assert_jdbc_scalar_equals "generic notification persisted" "SELECT count(*) FROM notification_events WHERE id = $generic_notification_id AND recipient_id = 2 AND event_type = 'SMOKE' AND is_read = false" "1"
     reminder_response="$(post_json "remind unsubmitted" "$GATEWAY_URL/api/notifications/remind-unsubmitted" '{"assignmentId":1,"studentIds":[2],"channels":["IN_APP"],"message":"\u8bf7\u6309\u65f6\u63d0\u4ea4\u5b9e\u8bad\u62a5\u544a\u3002"}')"
     if [[ "${NOTIFICATION_ASYNC_ENABLED:-false}" == "true" || "${NOTIFICATION_ASYNC_ENABLED:-0}" == "1" ]]; then
       assert_json_field_equals data.status PENDING <<< "$reminder_response"

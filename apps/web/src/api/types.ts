@@ -102,6 +102,7 @@ export type DashboardMetrics = {
 export type SubmissionTask = {
   id: number;
   title: string;
+  courseId: number;
   courseName: string;
   status: '未提交' | '已提交' | '批改中' | '已发布成绩';
   deadline: string;

@@ -52,7 +52,7 @@ public class JdbcRubricStore implements RubricStore {
     if (assignmentId != null) {
       sql += "WHERE assignment_id = ?\n";
     }
-    sql += "ORDER BY id";
+    sql += "ORDER BY id DESC";
 
     try (var connection = connect();
         var statement = connection.prepareStatement(sql)) {

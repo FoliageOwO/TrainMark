@@ -7,6 +7,7 @@ import com.trainmark.shared.dto.CreateCourseRequest;
 import com.trainmark.shared.dto.CreateTeachingClassRequest;
 import com.trainmark.shared.dto.TeachingClassSummary;
 import java.util.Collection;
+import java.util.List;
 
 public interface CourseStore {
   Collection<CourseSummary> listCourses();
@@ -22,4 +23,6 @@ public interface CourseStore {
   AssignmentSummary createAssignment(CreateAssignmentRequest request);
 
   AssignmentSummary publishAssignment(Long assignmentId);
+
+  List<Long> assignmentStudentIds(Long assignmentId);
 }

@@ -79,8 +79,8 @@ const assignments: AssignmentSummary[] = [
 ];
 
 const studentTasks: SubmissionTask[] = [
-  { id: 1, title: 'Java Web 综合实训报告', courseName: 'Java Web 综合实训', status: '已发布成绩', deadline: '2026-05-10T23:59:00+08:00', score: 84 },
-  { id: 2, title: '数据库设计报告', courseName: '数据库设计实训', status: '已发布成绩', deadline: '2026-04-20T23:59:00+08:00', score: 88 },
+  { id: 1, title: 'Java Web 综合实训报告', courseId: 1, courseName: 'Java Web 综合实训', status: '已发布成绩', deadline: '2026-05-10T23:59:00+08:00', score: 84 },
+  { id: 2, title: '数据库设计报告', courseId: 2, courseName: '数据库设计实训', status: '未提交', deadline: '2026-04-20T23:59:00+08:00' },
 ];
 
 const collectionOverview: CollectionOverview = {
@@ -159,7 +159,7 @@ const gradingResults: GradingResultSummary[] = [
     studentId: 2,
     studentName: '张三',
     studentNo: '2024010101',
-    fileName: 'JavaWeb综合实训报告-张三-2024010101.pdf',
+    fileName: '张三-Java Web 综合实训-自动批改报告.pdf',
     previewUrl: null,
     annotationPdfUrl: null,
     totalScore: 100,
@@ -484,6 +484,12 @@ export const mockApi = {
       .map((item) => ({ ...item }));
   },
   remindUnsubmitted(): ReminderResult {
+    pushNotification({
+      title: '催交提醒',
+      message: '请尽快提交实训报告，逾期会影响成绩发布。',
+      type: 'REMINDER',
+      targetUrl: `/tasks/${collectionOverview.assignmentId}`,
+    });
     return {
       recipientCount: unsubmittedStudents.length,
       messageCount: unsubmittedStudents.length * 3,
@@ -570,6 +576,12 @@ export const mockApi = {
     }
     result.publicationStatus = 'PUBLISHED';
     result.publishedAt = new Date().toISOString();
+    pushNotification({
+      title: '成绩发布',
+      message: `您的实训报告成绩已发布，最终成绩 ${result.teacherScore}/${result.totalScore}。`,
+      type: 'GRADE_PUBLISHED',
+      targetUrl: `/results/${result.id}`,
+    });
     publicationAudits.push({
       id: publicationAudits.length + 1,
       resultId,
@@ -719,6 +731,12 @@ export const mockApi = {
       resolvedAt: null,
     };
     appeals.push(appeal);
+    pushNotification({
+      title: '学生提交申诉',
+      message: `${appeal.studentName} 对批改结果提交了申诉，请及时处理。`,
+      type: 'APPEAL',
+      targetUrl: `/appeals/${appeal.id}`,
+    });
     return appeal;
   },
   resolveAppeal(appealId: number, accepted: boolean, teacherReply: string): AppealSummary {
@@ -729,6 +747,12 @@ export const mockApi = {
     appeal.status = accepted ? 'ACCEPTED' : 'REJECTED';
     appeal.teacherReply = teacherReply;
     appeal.resolvedAt = new Date().toISOString();
+    pushNotification({
+      title: accepted ? '申诉已采纳' : '申诉已驳回',
+      message: teacherReply,
+      type: 'APPEAL',
+      targetUrl: `/results/${appeal.resultId}`,
+    });
     return appeal;
   },
   startGradingJob(assignmentId = 1, rubricId = 1, submissionIds = [1]): GradingJobSummary {
@@ -744,14 +768,21 @@ export const mockApi = {
     };
     gradingJobs.unshift(job);
     createGradingResultsForSubmissions(assignmentId, submissionIds);
+    pushNotification({
+      title: '批改完成',
+      message: `AI 已完成 ${submissionIds.length} 份报告批改，请进入人工复核。`,
+      type: 'GRADING_COMPLETE',
+      targetUrl: `/review/${assignmentId}`,
+    });
     return job;
   },
   createUploadReceipt(fileName: string, assignmentId = 1, studentId = 2): UploadReceipt {
     const student = userDirectory.find((item) => item.id === studentId);
     const submittedAt = new Date().toISOString();
-    const version = submissions.filter((item) => item.assignmentId === assignmentId && item.studentId === studentId).length + 1;
-    const submissionId = Math.max(0, ...submissions.map((item) => item.id)) + 1;
-    submissions.unshift({
+    const existing = submissions.find((item) => item.assignmentId === assignmentId && item.studentId === studentId);
+    const version = (existing?.version ?? 0) + 1;
+    const submissionId = existing?.id ?? Math.max(0, ...submissions.map((item) => item.id)) + 1;
+    const nextSubmission: SubmissionSummary = {
       id: submissionId,
       assignmentId,
       studentId,
@@ -762,12 +793,43 @@ export const mockApi = {
       version,
       status: 'SUBMITTED',
       submittedAt,
-    });
+    };
+    if (existing) {
+      Object.assign(existing, nextSubmission);
+      for (let index = submissions.length - 1; index >= 0; index -= 1) {
+        if (
+          submissions[index].assignmentId === assignmentId &&
+          submissions[index].studentId === studentId &&
+          submissions[index].id !== submissionId
+        ) {
+          submissions.splice(index, 1);
+        }
+      }
+      for (let index = gradingResults.length - 1; index >= 0; index -= 1) {
+        if (gradingResults[index].submissionId === submissionId) {
+          gradingResults.splice(index, 1);
+        }
+      }
+    } else {
+      submissions.unshift(nextSubmission);
+    }
     const task = studentTasks.find((item) => item.id === assignmentId);
     if (task) {
       task.status = '已提交';
       task.score = undefined;
+      task.submissionId = submissionId;
+      task.fileName = fileName;
+      task.version = version;
+      task.submittedAt = submittedAt;
     }
+    pushNotification({
+      title: existing ? '学生覆盖提交报告' : '学生已提交报告',
+      message: existing
+        ? `${student?.name ?? '学生'} 已覆盖上一份报告，教师端将以最新文件为准：${fileName}`
+        : `${student?.name ?? '学生'} 已提交报告：${fileName}`,
+      type: 'SUBMISSION_UPLOADED',
+      targetUrl: `/collection/${assignmentId}`,
+    });
     return {
       submissionId,
       fileName,
@@ -827,6 +889,26 @@ export const mockApi = {
       n.isRead = true;
     });
   },
+  createNotification(input: {
+    assignmentId?: number | null;
+    recipientId: number;
+    title: string;
+    message: string;
+    type: string;
+    targetUrl?: string | null;
+  }): NotificationItem {
+    const notification: NotificationItem = {
+      id: Math.max(0, ...demoNotifications.map((item) => item.id)) + 1,
+      title: input.title,
+      message: input.message,
+      type: input.type,
+      isRead: false,
+      targetUrl: input.targetUrl ?? '',
+      createdAt: new Date().toISOString(),
+    };
+    demoNotifications.unshift(notification);
+    return notification;
+  },
 };
 
 const demoNotifications: NotificationItem[] = [
@@ -836,6 +918,23 @@ const demoNotifications: NotificationItem[] = [
   { id: 4, title: '成绩发布', message: '您的实训报告成绩已发布，请查看详情。', type: 'GRADE_PUBLISHED', isRead: true, targetUrl: '/results/1', createdAt: new Date(Date.now() - 30 * 60_000).toISOString() },
   { id: 5, title: '申诉处理', message: '您有一条申诉需要处理。', type: 'APPEAL', isRead: true, targetUrl: '/appeals/1', createdAt: new Date(Date.now() - 15 * 60_000).toISOString() },
 ];
+
+function pushNotification(input: {
+  title: string;
+  message: string;
+  type: string;
+  targetUrl: string;
+}) {
+  demoNotifications.unshift({
+    id: Math.max(0, ...demoNotifications.map((item) => item.id)) + 1,
+    title: input.title,
+    message: input.message,
+    type: input.type,
+    isRead: false,
+    targetUrl: input.targetUrl,
+    createdAt: new Date().toISOString(),
+  });
+}
 
 function syncStudentTaskForAssignment(assignment: AssignmentSummary) {
   if (assignment.status !== 'PUBLISHED') {
@@ -854,6 +953,7 @@ function syncStudentTaskForAssignment(assignment: AssignmentSummary) {
   const nextTask: SubmissionTask = {
     id: assignment.id,
     title: assignment.title,
+    courseId: assignment.courseId,
     courseName: course?.name ?? '未知课程',
     deadline: assignment.deadline,
     status: latestSubmission ? '已提交' : '未提交',
@@ -909,7 +1009,7 @@ function createGradingResultsForSubmissions(assignmentId: number, submissionIds:
       studentId: submission.studentId,
       studentName: submission.studentName,
       studentNo: submission.studentNo,
-      fileName: submission.fileName,
+      fileName: gradingReportFileName(submission, assignment),
       previewUrl: null,
       annotationPdfUrl: null,
       totalScore: assignment?.totalScore ?? rubric?.totalScore ?? 100,
@@ -936,4 +1036,9 @@ function createGradingResultsForSubmissions(assignmentId: number, submissionIds:
   assignments
     .filter((item) => item.status === 'PUBLISHED')
     .forEach(syncStudentTaskForAssignment);
+}
+
+function gradingReportFileName(submission: SubmissionSummary, assignment: AssignmentSummary | undefined) {
+  const course = assignment ? courses.find((item) => item.id === assignment.courseId) : undefined;
+  return `${submission.studentName}-${course?.name ?? '课程'}-自动批改报告.pdf`;
 }

@@ -108,7 +108,7 @@ export function TeacherCollectionPanel({
                   <tr>
                     <th>学生</th>
                     <th>文件</th>
-                    <th>版本</th>
+                    <th>提交次数</th>
                     <th>状态</th>
                     <th className="actions-col">操作</th>
                   </tr>
@@ -123,7 +123,12 @@ export function TeacherCollectionPanel({
                         </div>
                       </td>
                       <td>{toChineseFileName(submission.fileName)}</td>
-                      <td>V{submission.version}</td>
+                      <td>
+                        <div className="table-primary">
+                          <strong>第 {submission.version} 次</strong>
+                          <span>{submission.version > 1 ? '已覆盖上一份报告' : '首次提交'}</span>
+                        </div>
+                      </td>
                       <td>{submissionStatusText[submission.status]}</td>
                       <td>
                         {shouldUseHttpApi() && (

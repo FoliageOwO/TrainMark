@@ -2,6 +2,7 @@ package com.trainmark.grading;
 
 import com.trainmark.shared.AppealStatus;
 import com.trainmark.shared.GradingJobStatus;
+import com.trainmark.shared.NotificationClient;
 import com.trainmark.shared.PublicationStatus;
 import com.trainmark.shared.ReviewStatus;
 import com.trainmark.shared.dto.AppealSummary;
@@ -25,6 +26,7 @@ import com.trainmark.shared.dto.WithdrawGradeRequest;
 import java.sql.DriverManager;
 import java.sql.SQLException;
 import java.time.OffsetDateTime;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
@@ -43,6 +45,7 @@ public class GradingService {
   private final ScoringProvider scoringProvider;
   private final AnnotationProvider annotationProvider;
   private final AuditLogClient auditLog;
+  private final NotificationClient notificationClient;
   private final String jdbcUrl;
   private final String jdbcUsername;
   private final String jdbcPassword;
@@ -63,6 +66,8 @@ public class GradingService {
       ScoringProvider scoringProvider,
       AnnotationProvider annotationProvider,
       AuditLogClient auditLog,
+      @Value("${trainmark.notification.base-url:http://localhost:8089}") String notificationBaseUrl,
+      @Value("${trainmark.notification.event-enabled:true}") boolean notificationEnabled,
       @Value("${trainmark.grading.jdbc.url:}") String jdbcUrl,
       @Value("${trainmark.grading.jdbc.username:}") String jdbcUsername,
       @Value("${trainmark.grading.jdbc.password:}") String jdbcPassword,
@@ -78,6 +83,7 @@ public class GradingService {
     this.scoringProvider = scoringProvider;
     this.annotationProvider = annotationProvider;
     this.auditLog = auditLog;
+    this.notificationClient = new NotificationClient(notificationBaseUrl, notificationEnabled);
     this.jdbcUrl = jdbcUrl;
     this.jdbcUsername = jdbcUsername;
     this.jdbcPassword = jdbcPassword;
@@ -115,10 +121,20 @@ public class GradingService {
       processJobSynchronously(job, request);
     }
 
-    return gradingJobStore.listJobs(request.assignmentId()).stream()
+    var completedJob = gradingJobStore.listJobs(request.assignmentId()).stream()
         .filter(item -> item.id().equals(job.id()))
         .findFirst()
         .orElse(job);
+    if (completedJob.status() == GradingJobStatus.COMPLETED) {
+      notifyAssignmentTeachers(
+          request.assignmentId(),
+          "批改完成",
+          "AI 已完成 " + completedJob.completedSubmissions() + " 份报告批改，请进入人工复核。",
+          "GRADING_COMPLETE",
+          "/review/" + request.assignmentId()
+      );
+    }
+    return completedJob;
   }
 
   private void processJobSynchronously(GradingJobSummary job, CreateGradingJobRequest request) {
@@ -147,6 +163,32 @@ public class GradingService {
     return gradingResultStore.listResults(null, null).stream()
         .filter(result -> submissionId.equals(result.submissionId()))
         .findFirst();
+  }
+
+  public Optional<SubmissionFileReference> findSubmissionFileReference(Long submissionId) {
+    if (jdbcUrl == null || jdbcUrl.isBlank()) {
+      return Optional.empty();
+    }
+    var sql = """
+        SELECT COALESCE(NULLIF(file_name, ''), '未命名报告') AS file_name, object_key
+        FROM submissions
+        WHERE id = ?
+        """;
+    try (var connection = connect();
+        var statement = connection.prepareStatement(sql)) {
+      statement.setLong(1, submissionId);
+      try (var results = statement.executeQuery()) {
+        if (results.next()) {
+          return Optional.of(new SubmissionFileReference(
+              results.getString("file_name"),
+              results.getString("object_key")
+          ));
+        }
+      }
+    } catch (SQLException error) {
+      throw new IllegalStateException("Failed to load submission file reference: " + submissionId, error);
+    }
+    return Optional.empty();
   }
 
   public GradingResultSummary updateReviewItem(Long resultId, UpdateReviewItemRequest request) {
@@ -204,6 +246,14 @@ public class GradingService {
     );
     auditLog.log(request.operatorName(), "GRADE_PUBLISH", "GRADING_RESULT", String.valueOf(resultId),
         request.message() == null || request.message().isBlank() ? "发布成绩与批注" : request.message(), null);
+    notificationClient.sendNotification(
+        updated.assignmentId(),
+        updated.studentId(),
+        "成绩发布",
+        "您的实训报告成绩已发布，最终成绩 " + updated.teacherScore() + "/" + updated.totalScore() + "。",
+        "GRADE_PUBLISHED",
+        "/results/" + updated.id()
+    );
     return updated;
   }
 
@@ -233,6 +283,13 @@ public class GradingService {
     var appeal = appealStore.createAppeal(request, result.studentName());
     auditLog.log(result.studentName(), "APPEAL_SUBMIT", "APPEAL", String.valueOf(appeal.id()),
         request.reason(), null);
+    notifyAssignmentTeachers(
+        result.assignmentId(),
+        "学生提交申诉",
+        result.studentName() + " 对批改结果提交了申诉，请及时处理。",
+        "APPEAL",
+        "/appeals/" + appeal.id()
+    );
     return appeal;
   }
 
@@ -243,6 +300,15 @@ public class GradingService {
     var appeal = appealStore.resolveAppeal(appealId, request);
     auditLog.log("教师", "APPEAL_RESOLVE", "APPEAL", String.valueOf(appealId),
         request.status() == AppealStatus.ACCEPTED ? "采纳申诉" : "驳回申诉", null);
+    var result = getResult(appeal.resultId());
+    notificationClient.sendNotification(
+        result.assignmentId(),
+        appeal.studentId(),
+        request.status() == AppealStatus.ACCEPTED ? "申诉已采纳" : "申诉已驳回",
+        request.teacherReply(),
+        "APPEAL",
+        "/results/" + appeal.resultId()
+    );
     return appeal;
   }
 
@@ -358,6 +424,53 @@ public class GradingService {
     gradingResultStore.saveScoredResult(annotationProvider.annotate(scored));
   }
 
+  void notifyGradingJobCompleted(Long assignmentId, int completedSubmissions) {
+    notifyAssignmentTeachers(
+        assignmentId,
+        "批改完成",
+        "AI 已完成 " + completedSubmissions + " 份报告批改，请进入人工复核。",
+        "GRADING_COMPLETE",
+        "/review/" + assignmentId
+    );
+  }
+
+  private void notifyAssignmentTeachers(
+      Long assignmentId,
+      String title,
+      String message,
+      String type,
+      String targetUrl
+  ) {
+    notificationClient.sendNotifications(assignmentId, assignmentTeacherIds(assignmentId), title, message, type, targetUrl);
+  }
+
+  private List<Long> assignmentTeacherIds(Long assignmentId) {
+    if (jdbcUrl == null || jdbcUrl.isBlank()) {
+      return List.of(1L);
+    }
+    var sql = """
+        SELECT DISTINCT cm.user_id
+        FROM assignments a
+        JOIN course_members cm ON cm.course_id = a.course_id
+        WHERE a.id = ?
+          AND cm.member_role IN ('TEACHER', 'COURSE_OWNER')
+        ORDER BY cm.user_id
+        """;
+    try (var connection = connect();
+        var statement = connection.prepareStatement(sql)) {
+      statement.setLong(1, assignmentId);
+      try (var results = statement.executeQuery()) {
+        var teacherIds = new ArrayList<Long>();
+        while (results.next()) {
+          teacherIds.add(results.getLong("user_id"));
+        }
+        return teacherIds;
+      }
+    } catch (SQLException error) {
+      throw new IllegalStateException("Failed to list assignment teachers", error);
+    }
+  }
+
   private SubmissionContext findSubmissionContext(Long assignmentId, Long submissionId) {
     if (jdbcUrl == null || jdbcUrl.isBlank()) {
       return fallbackSubmissionContext(assignmentId, submissionId);
@@ -367,9 +480,12 @@ public class GradingService {
         SELECT s.id, s.student_id,
                COALESCE(NULLIF(u.name, ''), '学生' || s.student_id) AS student_name,
                COALESCE(NULLIF(u.student_no, ''), u.username, '') AS student_no,
-               COALESCE(NULLIF(sf.file_name, ''), NULLIF(s.file_name, ''), '提交报告-' || s.id || '.pdf') AS file_name,
+               COALESCE(NULLIF(c.name, ''), '课程') AS course_name,
+               COALESCE(NULLIF(sf.file_name, ''), NULLIF(s.file_name, ''), '提交报告-' || s.id || '.pdf') AS original_file_name,
                COALESCE(NULLIF(sf.object_key, ''), NULLIF(s.object_key, ''), '') AS object_key
         FROM submissions s
+        JOIN assignments a ON a.id = s.assignment_id
+        LEFT JOIN courses c ON c.id = a.course_id
         LEFT JOIN users u ON u.id = s.student_id
         LEFT JOIN LATERAL (
           SELECT file_name, object_key
@@ -386,14 +502,18 @@ public class GradingService {
       statement.setLong(2, assignmentId);
       try (var results = statement.executeQuery()) {
         if (results.next()) {
-          var fileName = results.getString("file_name");
+          var originalFileName = results.getString("original_file_name");
           var objectKey = results.getString("object_key");
+          var reportFileName = gradingReportFileName(
+              results.getString("student_name"),
+              results.getString("course_name")
+          );
           return new SubmissionContext(
               results.getLong("student_id"),
               results.getString("student_name"),
               results.getString("student_no"),
-              fileName,
-              fileContentText(submissionId, fileName, objectKey)
+              reportFileName,
+              fileContentText(submissionId, originalFileName, objectKey)
           );
         }
       }
@@ -443,9 +563,18 @@ public class GradingService {
         2L,
         "张三",
         "2024010101",
-        "自动批改报告-" + submissionId + ".pdf",
+        gradingReportFileName("张三", "课程" + assignmentId),
         "作业 " + assignmentId + " 提交 " + submissionId
     );
+  }
+
+  private String gradingReportFileName(String studentName, String courseName) {
+    return safeFilePart(studentName, "学生") + "-" + safeFilePart(courseName, "课程") + "-自动批改报告.pdf";
+  }
+
+  private String safeFilePart(String value, String fallback) {
+    var normalized = value == null || value.isBlank() ? fallback : value.trim();
+    return normalized.replaceAll("[\\\\/:*?\"<>|]", "_");
   }
 
   private java.sql.Connection connect() throws SQLException {
@@ -462,4 +591,6 @@ public class GradingService {
       String fileName,
       String fileContentText
   ) {}
+
+  public record SubmissionFileReference(String fileName, String objectKey) {}
 }

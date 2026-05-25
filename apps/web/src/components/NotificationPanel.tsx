@@ -13,6 +13,7 @@ const typeIconMap: Record<string, string> = {
   GRADE_PUBLISHED: '📊',
   APPEAL: '💬',
   REMINDER_SENT: '📧',
+  SUBMISSION_UPLOADED: '📄',
 };
 
 type NotificationPanelProps = {
@@ -75,6 +76,25 @@ export function NotificationPanel({ userId, isOpen, onClose, onUnreadCountChange
     onUnreadCountChange?.(0);
   };
 
+  const handleOpenNotification = async (item: NotificationItem) => {
+    await handleMarkRead(item.id);
+    if (item.targetUrl) {
+      const nextUrl = new URL(window.location.href);
+      if (item.targetUrl.startsWith('/review')) {
+        nextUrl.searchParams.set('section', 'review');
+      } else if (item.targetUrl.startsWith('/appeals')) {
+        nextUrl.searchParams.set('section', 'appeals');
+      } else if (item.targetUrl.startsWith('/collection')) {
+        nextUrl.searchParams.set('section', 'collection');
+      } else if (item.targetUrl.startsWith('/tasks') || item.targetUrl.startsWith('/results')) {
+        nextUrl.searchParams.set('role', 'student');
+      }
+      window.history.replaceState(null, '', nextUrl);
+      window.dispatchEvent(new PopStateEvent('popstate'));
+      onClose();
+    }
+  };
+
   if (!isOpen) return null;
 
   return (
@@ -104,7 +124,7 @@ export function NotificationPanel({ userId, isOpen, onClose, onUnreadCountChange
               <div
                 className={`notification-item ${item.isRead ? 'read' : 'unread'}`}
                 key={item.id}
-                onClick={() => handleMarkRead(item.id)}
+                onClick={() => handleOpenNotification(item)}
               >
                 <span className="notification-icon">
                   {typeIconMap[item.type] || '📌'}

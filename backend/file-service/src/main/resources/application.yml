@@ -10,6 +10,9 @@ management:
         include: health,info
 
 trainmark:
+  notification:
+    base-url: ${TRAINMARK_NOTIFICATION_BASE_URL:http://localhost:8089}
+    event-enabled: ${TRAINMARK_NOTIFICATION_EVENT_ENABLED:true}
   file:
     store: ${TRAINMARK_FILE_STORE:memory}
     jdbc:

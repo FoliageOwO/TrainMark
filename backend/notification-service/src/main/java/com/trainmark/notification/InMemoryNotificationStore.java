@@ -2,6 +2,7 @@ package com.trainmark.notification;
 
 import com.trainmark.shared.NotificationChannel;
 import com.trainmark.shared.NotificationStatus;
+import com.trainmark.shared.dto.CreateNotificationRequest;
 import com.trainmark.shared.dto.NotificationSummary;
 import com.trainmark.shared.dto.ReminderRequest;
 import com.trainmark.shared.dto.ReminderResult;
@@ -43,6 +44,21 @@ public class InMemoryNotificationStore implements NotificationStore {
         id, title, message, type, isRead, targetUrl,
         OffsetDateTime.now().minusMinutes(id * 15)
     ));
+  }
+
+  private NotificationSummary addNotification(CreateNotificationRequest request) {
+    var id = notificationIds.getAndIncrement();
+    var notification = new NotificationSummary(
+        id,
+        request.title(),
+        request.message(),
+        request.type(),
+        false,
+        request.targetUrl(),
+        OffsetDateTime.now()
+    );
+    notifications.put(id, notification);
+    return notification;
   }
 
   @Override
@@ -93,6 +109,11 @@ public class InMemoryNotificationStore implements NotificationStore {
   @Override
   public void failReminder(ReminderRequest request, OffsetDateTime scheduledAt) {
     // In-memory reminder rows are represented only as user-facing notifications.
+  }
+
+  @Override
+  public NotificationSummary createNotification(CreateNotificationRequest request) {
+    return addNotification(request);
   }
 
   @Override

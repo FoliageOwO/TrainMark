@@ -12,6 +12,7 @@ import java.time.OffsetDateTime;
 import java.util.Collection;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicLong;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -107,6 +108,11 @@ public class InMemoryCourseStore implements CourseStore {
     );
     assignments.put(assignmentId, published);
     return published;
+  }
+
+  @Override
+  public List<Long> assignmentStudentIds(Long assignmentId) {
+    return List.of(2L);
   }
 
   private void refreshCourseCounts(Long courseId) {

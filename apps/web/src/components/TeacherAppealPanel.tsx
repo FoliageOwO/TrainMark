@@ -36,7 +36,13 @@ export function TeacherAppealPanel({ appeals, onResolveAppeal }: TeacherAppealPa
                 </tr>
               </thead>
               <tbody>
-                {appeals.map((appeal) => (
+                {appeals.length === 0 ? (
+                  <tr>
+                    <td colSpan={6}>
+                      <div className="empty-table-cell">暂无学生申诉</div>
+                    </td>
+                  </tr>
+                ) : appeals.map((appeal) => (
                   <tr key={appeal.id}>
                     <td>{appeal.studentName}</td>
                     <td>结果 #{appeal.resultId} / 评分项 {appeal.rubricItemId ?? '总评'}</td>

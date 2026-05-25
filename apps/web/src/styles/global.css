@@ -855,6 +855,13 @@ button:focus-visible {
   flex-wrap: wrap;
 }
 
+.empty-table-cell {
+  padding: 22px 10px;
+  color: var(--text-tertiary);
+  text-align: center;
+  font-size: 13px;
+}
+
 .actions-col {
   width: 160px;
 }
@@ -1683,6 +1690,10 @@ button:focus-visible {
   font-size: 12px;
 }
 
+.review-task-field {
+  margin-top: 12px;
+}
+
 /* PDF preview */
 .pdf-preview {
   margin-top: 14px;
@@ -1955,6 +1966,76 @@ button:focus-visible {
   margin: 6px 0 0;
   color: var(--text-secondary);
   line-height: 1.6;
+}
+
+.review-appeal-box {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px;
+  margin-top: 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg-elevated);
+}
+
+.review-appeal-heading {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: center;
+}
+
+.review-appeal-heading strong {
+  color: var(--text-primary);
+  font-size: 13px;
+}
+
+.review-appeal-heading span {
+  color: var(--warning);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.review-appeal-empty {
+  margin: 0;
+  color: var(--text-tertiary);
+  font-size: 12px;
+}
+
+.review-appeal-card {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg-surface);
+}
+
+.review-appeal-card div:first-child {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  align-items: center;
+}
+
+.review-appeal-card b {
+  color: var(--brand);
+  font-size: 12px;
+}
+
+.review-appeal-card span,
+.review-appeal-card small {
+  color: var(--text-tertiary);
+  font-size: 12px;
+}
+
+.review-appeal-card p {
+  margin: 0;
+  color: var(--text-secondary);
+  line-height: 1.6;
+  font-size: 13px;
 }
 
 /* Publication */
@@ -2785,11 +2866,85 @@ button:focus-visible {
   grid-column: 1 / -1;
 }
 
+.student-course-switcher {
+  grid-column: 1 / -1;
+}
+
+.student-course-controls {
+  display: grid;
+  grid-template-columns: minmax(240px, 0.34fr) minmax(0, 0.66fr);
+  gap: 14px;
+  align-items: start;
+}
+
+.student-course-cards {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.student-course-card {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 100%;
+  padding: 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--bg-surface);
+  color: inherit;
+  cursor: pointer;
+  text-align: left;
+  transition: all 0.15s ease;
+}
+
+.student-course-card:hover,
+.student-course-card.selected {
+  border-color: var(--brand);
+  background: var(--brand-light);
+}
+
+.student-course-card strong {
+  color: var(--text-primary);
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.student-course-card span,
+.student-course-card small {
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+
 .student-task-list {
   display: flex;
   flex-direction: column;
   gap: 10px;
   margin-top: 14px;
+}
+
+.upload-overwrite-note {
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg-elevated);
+}
+
+.upload-overwrite-note strong,
+.upload-overwrite-note span {
+  display: block;
+}
+
+.upload-overwrite-note strong {
+  color: var(--text-primary);
+  font-size: 13px;
+}
+
+.upload-overwrite-note span {
+  margin-top: 4px;
+  color: var(--text-secondary);
+  font-size: 12px;
+  line-height: 1.55;
 }
 
 .student-task-card {
@@ -2924,6 +3079,11 @@ button:focus-visible {
   }
 
   .assignment-create-form {
+    grid-template-columns: 1fr;
+  }
+
+  .student-course-controls,
+  .student-course-cards {
     grid-template-columns: 1fr;
   }
 

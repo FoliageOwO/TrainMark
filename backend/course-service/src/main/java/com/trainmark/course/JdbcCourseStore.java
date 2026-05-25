@@ -16,6 +16,7 @@ import java.sql.Statement;
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.List;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
@@ -208,6 +209,30 @@ public class JdbcCourseStore implements CourseStore {
       return findAssignment(connection, assignmentId);
     } catch (SQLException error) {
       throw new IllegalStateException("Failed to publish assignment", error);
+    }
+  }
+
+  @Override
+  public List<Long> assignmentStudentIds(Long assignmentId) {
+    var sql = """
+        SELECT DISTINCT cs.student_id
+        FROM assignment_classes ac
+        JOIN class_students cs ON cs.class_id = ac.class_id
+        WHERE ac.assignment_id = ?
+        ORDER BY cs.student_id
+        """;
+    try (var connection = connect();
+        var statement = connection.prepareStatement(sql)) {
+      statement.setLong(1, assignmentId);
+      try (var results = statement.executeQuery()) {
+        var studentIds = new ArrayList<Long>();
+        while (results.next()) {
+          studentIds.add(results.getLong("student_id"));
+        }
+        return studentIds;
+      }
+    } catch (SQLException error) {
+      throw new IllegalStateException("Failed to list assignment students", error);
     }
   }
 

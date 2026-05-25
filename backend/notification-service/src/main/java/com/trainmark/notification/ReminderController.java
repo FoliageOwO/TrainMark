@@ -1,6 +1,7 @@
 package com.trainmark.notification;
 
 import com.trainmark.shared.ApiResponse;
+import com.trainmark.shared.dto.CreateNotificationRequest;
 import com.trainmark.shared.dto.NotificationSummary;
 import com.trainmark.shared.dto.ReminderRequest;
 import com.trainmark.shared.dto.ReminderResult;
@@ -47,6 +48,11 @@ public class ReminderController {
       @RequestParam(name = "unreadOnly", defaultValue = "false") boolean unreadOnly
   ) {
     return ApiResponse.ok(reminderService.listNotifications(userId, unreadOnly));
+  }
+
+  @PostMapping
+  public ApiResponse<NotificationSummary> create(@Valid @RequestBody CreateNotificationRequest request) {
+    return ApiResponse.ok(reminderService.createNotification(request));
   }
 
   @PatchMapping("/{id}/read")

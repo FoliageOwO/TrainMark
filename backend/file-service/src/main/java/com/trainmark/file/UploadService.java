@@ -11,6 +11,7 @@ import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -71,6 +72,10 @@ public class UploadService {
       throw new IllegalArgumentException("Upload object content not found: " + request.objectKey());
     }
     return store.completeUpload(request);
+  }
+
+  public List<Long> assignmentTeacherIds(Long assignmentId) {
+    return store.assignmentTeacherIds(assignmentId);
   }
 
   public Long findUploadStudentId(String uploadId) {
