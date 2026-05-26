@@ -8,13 +8,26 @@ echo "=========================================="
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 cd "$ROOT_DIR"
 
+compose_cmd() {
+    if docker compose version >/dev/null 2>&1; then
+        docker compose "$@"
+        return
+    fi
+    if command -v docker-compose >/dev/null 2>&1; then
+        docker-compose "$@"
+        return
+    fi
+    echo "[错误] 未找到 docker compose 或 docker-compose" >&2
+    exit 1
+}
+
 # 检查 Docker
 if ! command -v docker &> /dev/null; then
     echo "[错误] Docker 未安装"
     exit 1
 fi
 
-if ! command -v docker compose &> /dev/null; then
+if ! docker compose version >/dev/null 2>&1 && ! command -v docker-compose >/dev/null 2>&1; then
     echo "[错误] Docker Compose 未安装"
     exit 1
 fi
@@ -38,17 +51,17 @@ if [ -f "backend.tar.gz" ]; then
 fi
 
 echo "[3/3] 启动服务..."
-docker compose -f infra/docker-compose.prod.yml up -d
+compose_cmd -f infra/docker-compose.prod.yml up -d
 
 # 等待数据库就绪
 echo "等待数据库就绪..."
 MAX_RETRIES=30
 RETRY_COUNT=0
-while ! docker compose -f infra/docker-compose.prod.yml exec -T postgres pg_isready -U trainmark &> /dev/null; do
+while ! compose_cmd -f infra/docker-compose.prod.yml exec -T postgres pg_isready -U trainmark &> /dev/null; do
     RETRY_COUNT=$((RETRY_COUNT + 1))
     if [ $RETRY_COUNT -ge $MAX_RETRIES ]; then
         echo "[错误] 数据库启动超时"
-        docker compose -f infra/docker-compose.prod.yml logs postgres
+        compose_cmd -f infra/docker-compose.prod.yml logs postgres
         exit 1
     fi
     echo "  等待中... ($RETRY_COUNT/$MAX_RETRIES)"
