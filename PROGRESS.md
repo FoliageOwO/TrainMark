@@ -2,6 +2,16 @@
 
 ## 已完成
 
+### 近期收敛（HTTP 真实数据 + 学生端流程）
+
+- 前端 HTTP 数据读取继续收敛：`apps/web/src/api/httpApi.ts` 工作区关键读取统一使用 `mustGetStrict(...)`，并删除未使用的宽松 `mustGet(...)`，减少回退空间。
+- OCR 队列与识别结果读取切换为严格模式，后端失败将显式暴露，而不是伪装成空结果。
+- 学生端成绩批注预览移除硬编码示例内容，`annotationPdfUrl` 缺失时显示明确空态说明，避免“假数据像真数据”。
+- 学生端工作流引导守卫新增并接入：
+  - `scripts/verify/check-student-workflow-guides.mjs`
+  - `package.json` 增加 `verify:student-workflow-guides`
+  - `scripts/verify/http-teacher-acceptance-auto.sh` 与 `scripts/verify/check-stack.sh` 均纳入该校验
+
 ### 1. 项目规划
 
 - 已根据原始项目说明书整理完整产品方案。
@@ -3779,3 +3789,28 @@ pnpm build:web
 - 继续拆分学生端任务列表和教师端剩余复杂交互组件。
 - 在不破坏现有无依赖开发路径的前提下补充单元测试和接口测试依赖。
 - 持续补充自动化测试覆盖，并收敛前后端组件边界。
+
+### 近期收敛（认证、HTTP 严格、教师流程引导）
+
+- 已补齐真实登录/注册入口（`AuthPage`），未登录默认进入认证页，不再直接可用业务页面。
+- 已收紧角色切换：仅允许已分配角色；URL `role/section` 均做角色与页面白名单约束。
+- 已将 HTTP 关键读写改为严格失败路径，并移除 `httpApi.ts` 中可降级 `getOr/mutateOr` 调用口子。
+- 已新增并接入以下守卫脚本，阻止回归：
+  - `verify:httpapi:strict-writes`
+  - `verify:httpapi:no-degradable-calls`
+  - `verify:http:auth-ui-guards`
+  - `verify:role-section-guards`
+  - `verify:teacher-workflow-guides`
+- 已将教师端核心流程页收敛为“当前阻塞 + 下一步动作”，并提供“前往下一步”快捷入口：
+  - 报告收集：`TeacherCollectionPanel`
+  - AI 批改：`TeacherAiPipeline`
+  - 人工复核：`TeacherReviewWorkspace`
+  - 流程总览导航：`TeacherDashboard`
+- 已完善错误恢复体验：
+  - HTTP 错误区提供“重试加载”与“返回登录页”双路径
+  - 通知中心补齐加载/错误互斥状态与关闭后的状态清理
+- 已更新自动验收基线为 4 步并通过复验：
+  - 严格写链路
+  - 认证与会话守卫
+  - 教师流程引导守卫
+  - 前端构建

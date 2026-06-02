@@ -23,6 +23,13 @@ pnpm start:web
 - 这是前端 mock 模式，不依赖后端
 - 当前页面数据默认来自 `apps/web/src/api/mockApi.ts`
 
+HTTP 模式默认严格：请求失败会直接报错，不再自动回退 mock。
+只有显式设置 `VITE_API_ALLOW_MOCK_FALLBACK=1` 才允许回退。
+
+本地联调登录账号（默认密码均为 `trainmark`）：`teacher`、`admin`、`owner`、`supervisor`、`2024010101`。
+登录/注册用户名规则：3-32 位，仅允许字母、数字、下划线与短横线；密码至少 6 位。
+mock 模式下注册仅用于演示，建议切换到 HTTP 模式进行真实注册与鉴权联调。
+
 ### 2. 只启动后端
 
 ```bash
@@ -105,8 +112,14 @@ pnpm start:ai
 | `pnpm db:migrate:local` | 对本地 PostgreSQL 执行迁移补齐 |
 | `pnpm start:service:auth` | 只启动单个后端服务 |
 | `pnpm verify:stack` | 校验前端、后端、AI、smoke 脚本主链路 |
+| `pnpm verify:httpapi:strict-writes` | 校验 HTTP 模式关键写接口不会回退到 mock |
+| `pnpm verify:http:teacher:auto` | 自动执行 HTTP 教师验收基线（严格写链路 + 严格鉴权 + 前端构建） |
+| `pnpm verify:http:teacher:sync-report` | 执行自动验收并同步更新 HTTP 教师验收报告 |
+| `pnpm verify:http:teacher:sync-report-only` | 仅同步更新 HTTP 教师验收报告（不重跑自动验收） |
 | `pnpm verify:ai` | 校验 AI provider/bridge |
 | `pnpm smoke:api` | 跑 API smoke |
+| `pnpm smoke:auth:strict` | 严格鉴权 smoke（需自行先启动 auth-service） |
+| `pnpm smoke:auth:strict:local` | 严格鉴权 smoke（脚本自动打包并拉起本地 auth-service） |
 | `pnpm ops:backup:local` | 备份本地 PostgreSQL 和 MinIO |
 | `pnpm ops:restore:local` | 恢复本地备份 |
 | `pnpm ops:release:local` | 生成本地发布包 |
@@ -116,13 +129,12 @@ pnpm start:ai
 
 ### 教师端
 
-1. 进入 `课程与班级`，先选择课程。
+1. 进入 `课程准备`，先选择课程。
 2. 可以新建班级、删除班级、导入学生名单。导入时已有学生会复用账号并加入当前班级，不会因为学号已存在而阻止加入新班级。
-3. 进入 `实训任务`，选择课程班级后创建任务；发布后学生端才能看到并提交。
+3. 进入 `任务发布`，选择课程班级后创建任务；发布后学生端才能看到并提交。
 4. `报告收集` 支持切换班级查看已交报告、未交名单和一键催交。
-5. `AI 批改中心` 支持按班级启动 OCR、评分和批改。
-6. `人工复核` 支持按实训任务和班级切换复核报告，并处理学生申诉。
-7. `AI 批改中心` 下的查重检测也会按当前班级过滤提交与查重结果。
+5. `AI 批改` 支持按班级启动 OCR、评分、查重和批改。
+6. `人工复核` 支持按实训任务和班级切换复核报告，并串联成绩发布与申诉处理。
 
 删除班级只会删除教学班级及其课程/任务关联，不会删除学生账号。
 
@@ -154,6 +166,8 @@ TrainMark/
 ```
 
 脚本清单见 `scripts/README.md`。
+HTTP 模式教师流程验收清单见 `docs/HTTP_TEACHER_ACCEPTANCE_CHECKLIST.md`。
+HTTP 模式教师流程验收记录模板见 `docs/HTTP_TEACHER_ACCEPTANCE_REPORT.md`。
 
 ## 关于那些原来看不懂的名字
 

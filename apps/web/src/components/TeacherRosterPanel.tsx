@@ -1,4 +1,5 @@
 import { useState, type FormEvent } from 'react';
+import { Alert, Button, Card, Form, Input, Select, Table, Tag } from 'antd';
 import { UploadCloud } from 'lucide-react';
 import type { ImportStudentsInput } from '../api/httpApi';
 import type {
@@ -16,7 +17,7 @@ type TeacherRosterPanelProps = {
   importResult: StudentImportResult | null;
   organizations: OrganizationSummary[];
   students: UserSummary[];
-  onImportStudents: (input: ImportStudentsInput) => Promise<void>;
+  onImportStudents: (input: ImportStudentsInput) => Promise<StudentImportResult>;
 };
 
 const sampleRows = `2024010198,陈一,chenyi@trainmark.local,13800000001
@@ -31,6 +32,7 @@ export function TeacherRosterPanel({
   onImportStudents,
 }: TeacherRosterPanelProps) {
   const [notice, setNotice] = useState('');
+  const [selectedClassId, setSelectedClassId] = useState<number | undefined>(classes[0]?.id);
   const metrics = importResult
     ? {
       total: importResult.total,
@@ -40,10 +42,21 @@ export function TeacherRosterPanel({
     }
     : importPreview;
 
+  const studentColumns = [
+    { title: '姓名', dataIndex: 'name', key: 'name' },
+    { title: '学号', dataIndex: 'studentNo', key: 'studentNo' },
+    { title: '邮箱', dataIndex: 'email', key: 'email' },
+    {
+      title: '状态',
+      key: 'status',
+      render: (_: unknown, student: UserSummary) => <Tag color={student.status === 'ACTIVE' ? 'success' : 'default'}>{student.status === 'ACTIVE' ? '已激活' : '待激活'}</Tag>,
+    },
+  ];
+
   const handleImport = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const formData = new FormData(event.currentTarget);
-    const classId = Number(formData.get('classId'));
+    const classId = selectedClassId ?? 0;
     const rows = parseImportRows(String(formData.get('rows') ?? ''));
     if (!classId || rows.length === 0) {
       return;
@@ -55,87 +68,49 @@ export function TeacherRosterPanel({
 
   return (
     <section className="management-grid">
-      <article className="panel roster-panel">
-        <div className="panel-heading">
-          <div>
-            <p className="eyebrow">名单导入</p>
-            <h3>学生名单导入</h3>
-          </div>
-          <span className="status-pill">粘贴导入</span>
-        </div>
-        <div className="import-dropzone">
+      <Card className="roster-panel" title="学生名单导入" extra={<Tag>粘贴导入</Tag>}>
+        <Card className="import-dropzone" style={{ marginBottom: 16 }}>
           <UploadCloud size={28} />
           <strong>粘贴学生名单行</strong>
           <span>每行格式：学号, 姓名, 邮箱, 手机号。已有学生会复用账号并加入当前班级。</span>
-        </div>
-        <form className="assignment-create-form" onSubmit={handleImport}>
-          <label>
-            导入班级
-            <select name="classId" required defaultValue={classes[0]?.id ?? ''}>
-              {classes.map((item) => (
-                <option key={item.id} value={item.id}>{item.name}</option>
-              ))}
-            </select>
-          </label>
-          <label className="wide-field">
-            学生名单
-            <textarea name="rows" rows={4} defaultValue={sampleRows} required />
-          </label>
-          <button className="primary-button" type="submit"><UploadCloud size={15} /> 导入名单</button>
-        </form>
-        {notice && <div className="inline-success">{notice}</div>}
+        </Card>
+        <Form className="assignment-create-form" layout="vertical" onSubmitCapture={handleImport}>
+          <Form.Item label="导入班级">
+            <Select
+              value={selectedClassId}
+              options={classes.map((item) => ({ value: item.id, label: item.name }))}
+              onChange={(value) => setSelectedClassId(value)}
+            />
+          </Form.Item>
+          <Form.Item label="学生名单" className="wide-field">
+            <Input.TextArea name="rows" rows={4} defaultValue={sampleRows} required />
+          </Form.Item>
+          <Button type="primary" htmlType="submit"><UploadCloud size={15} /> 导入名单</Button>
+        </Form>
+        {notice ? <Alert type="success" showIcon message={notice} style={{ marginTop: 12 }} /> : null}
         {importResult && importResult.warnings.length > 0 && (
-          <div className="inline-warning">
+          <div className="inline-warning" style={{ marginTop: 12 }}>
             {importResult.warnings.slice(0, 3).map((warning) => (
               <span key={warning}>{warning}</span>
             ))}
           </div>
         )}
-        <div className="import-metrics">
+        <div className="import-metrics" style={{ marginTop: 12 }}>
           <span><strong>{metrics.total}</strong>总记录</span>
           <span><strong>{metrics.valid}</strong>已加入</span>
           <span><strong>{metrics.duplicated}</strong>重复</span>
           <span><strong>{metrics.invalid}</strong>跳过</span>
         </div>
-      </article>
+      </Card>
 
-      <article className="panel roster-panel">
-        <div className="panel-heading">
-          <div>
-            <h3>组织与学生</h3>
-          </div>
-          <span className="status-pill">{students.length} 名学生</span>
-        </div>
-        <div className="org-chain">
+      <Card className="roster-panel" title="组织与学生" extra={<Tag color="processing">{students.length} 名学生</Tag>}>
+        <div className="org-chain" style={{ marginBottom: 12 }}>
           {organizations.slice(0, 3).map((item) => (
             <span key={item.id}>{item.name}</span>
           ))}
         </div>
-        <div className="table-shell">
-          <div className="table-scroll table-scroll-md">
-            <table className="data-table">
-              <thead>
-                <tr>
-                  <th>姓名</th>
-                  <th>学号</th>
-                  <th>邮箱</th>
-                  <th>状态</th>
-                </tr>
-              </thead>
-              <tbody>
-                {students.map((student) => (
-                  <tr key={student.id}>
-                    <td>{student.name}</td>
-                    <td>{student.studentNo}</td>
-                    <td>{student.email}</td>
-                    <td>{student.status === 'ACTIVE' ? '已激活' : '待激活'}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </article>
+        <Table<UserSummary> rowKey="id" columns={studentColumns} dataSource={students} pagination={false} scroll={{ x: 800 }} />
+      </Card>
     </section>
   );
 }

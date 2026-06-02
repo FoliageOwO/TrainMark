@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { Alert, Button, Card, Col, Empty, Progress, Row, Select, Space, Statistic, Table, Tag, Typography } from 'antd';
 import {
   CalendarClock,
   CheckCircle2,
@@ -61,6 +62,17 @@ export function StudentDashboard({
   const latestPublishedResult = publishedResults.find((result) => (
     visibleTasks.some((task) => task.id === result.assignmentId)
   )) ?? null;
+  const nextPendingTask = visibleTasks.find((task) => task.status === '未提交') ?? null;
+  const currentBlocker = pendingCount > 0
+    ? `当前阻塞：还有 ${pendingCount} 个任务未提交`
+    : latestPublishedResult
+      ? '当前阻塞：无'
+      : '当前阻塞：等待教师发布成绩';
+  const nextAction = pendingCount > 0
+    ? '下一步：优先提交最近截止的任务。'
+    : latestPublishedResult
+      ? '下一步：查看批注并按需提交申诉。'
+      : '下一步：已完成提交，等待教师发布成绩。';
 
   const courseStats = courses.map((course) => {
     const courseTasks = taskRows.filter((task) => task.courseId === course.id);
@@ -187,76 +199,89 @@ export function StudentDashboard({
 
   return (
     <section className="student-grid">
-      <article className="student-hero panel wide-panel">
-        <div>
-          <p className="eyebrow">{activeView === 'submit' ? '提交报告' : '我的课程'}</p>
-          <h2>{selectedCourse?.name ?? '我的课程'}</h2>
-          <p className="student-hero-copy">
-            {activeView === 'submit'
-              ? '请确认当前课程和任务后上传报告。已提交任务再次提交会覆盖上一份报告，教师端只批改最新文件。'
-              : '在这里切换课程，查看每门课程的实训任务和提交状态。'}
-          </p>
-        </div>
-        <div className="student-hero-metrics">
-          <div>
-            <span>待提交</span>
-            <strong>{pendingCount}</strong>
-          </div>
-          <div>
-            <span>已提交</span>
-            <strong>{submittedCount}</strong>
-          </div>
-          <div>
-            <span>最近成绩</span>
-            <strong>{latestPublishedResult?.teacherScore ?? '--'}</strong>
-          </div>
-        </div>
-      </article>
+      <Card
+        className="wide-panel"
+        styles={{
+          body: {
+            background: 'linear-gradient(135deg, rgba(22,119,255,0.10), rgba(255,255,255,0.98))',
+            borderRadius: 20,
+          },
+        }}
+      >
+        <Row gutter={[24, 24]} align="middle">
+          <Col xs={24} lg={14}>
+            <Typography.Text type="secondary">{activeView === 'submit' ? '提交报告' : '我的课程'}</Typography.Text>
+            <Typography.Title level={2} style={{ marginTop: 8, marginBottom: 8 }}>
+              {selectedCourse?.name ?? '我的课程'}
+            </Typography.Title>
+            <Typography.Paragraph style={{ maxWidth: 720, marginBottom: 0 }}>
+              {activeView === 'submit'
+                ? '确认课程与任务后上传报告。已提交任务再次提交会覆盖上一份文件，教师端只批改最新版本。'
+                : '在这里切换课程，查看每门课程的实训任务、提交状态和已发布成绩。'}
+            </Typography.Paragraph>
+          </Col>
+          <Col xs={24} lg={10}>
+            <Row gutter={[16, 16]}>
+              <Col span={8}><Card><Statistic title="待提交" value={pendingCount} /></Card></Col>
+              <Col span={8}><Card><Statistic title="已提交" value={submittedCount} /></Card></Col>
+              <Col span={8}><Card><Statistic title="最近成绩" value={latestPublishedResult?.teacherScore ?? '--'} suffix={latestPublishedResult ? '分' : ''} /></Card></Col>
+            </Row>
+          </Col>
+        </Row>
+      </Card>
 
-      <article className="panel wide-panel student-course-switcher">
-        <div className="panel-heading">
-          <div>
-            <h3>课程切换</h3>
-            <span className="panel-subtitle">当前提交和任务列表都会跟随课程切换</span>
-          </div>
-          <GraduationCap size={22} />
-        </div>
-        <div className="student-course-controls">
-          <label className="file-name-field">
-            当前课程
-            <select
-              value={currentCourseId}
-              onChange={(event) => {
-                onCourseChange(Number(event.target.value));
-                setReceipt(null);
-              }}
-            >
-              {courses.map((course) => (
-                <option key={course.id} value={course.id}>
-                  {course.name}
-                </option>
-              ))}
-            </select>
-          </label>
-          <div className="student-course-cards">
+      <Card
+        className="wide-panel student-course-switcher"
+        title="课程切换"
+        extra={<Space><GraduationCap size={18} /><Typography.Text type="secondary">提交和任务列表会随课程同步</Typography.Text></Space>}
+      >
+        <Space direction="vertical" size={16} style={{ width: '100%' }}>
+          <Select
+            value={currentCourseId}
+            style={{ width: '100%' }}
+            options={courses.map((course) => ({ value: course.id, label: course.name }))}
+            onChange={(value) => {
+              onCourseChange(value);
+              setReceipt(null);
+            }}
+          />
+          <Row gutter={[16, 16]}>
             {courseStats.map(({ course, total, submitted, published }) => (
-              <button
-                className={`student-course-card ${course.id === currentCourseId ? 'selected' : ''}`}
-                key={course.id}
-                type="button"
-                onClick={() => {
-                  onCourseChange(course.id);
-                  setReceipt(null);
-                }}
-              >
-                <strong>{course.name}</strong>
-                <span>{course.semester} · {course.code}</span>
-                <small>{submitted}/{total} 已提交 · {published} 个成绩已发布</small>
-              </button>
+              <Col xs={24} md={12} xl={8} key={course.id}>
+                <Card
+                  hoverable
+                  style={course.id === currentCourseId ? { borderColor: '#1677ff', boxShadow: '0 12px 30px rgba(22,119,255,0.12)' } : undefined}
+                  onClick={() => {
+                    onCourseChange(course.id);
+                    setReceipt(null);
+                  }}
+                >
+                  <Space direction="vertical" size={4}>
+                    <Typography.Text strong>{course.name}</Typography.Text>
+                    <Typography.Text type="secondary">{course.semester} · {course.code}</Typography.Text>
+                    <Typography.Text type="secondary">{submitted}/{total} 已提交 · {published} 个成绩已发布</Typography.Text>
+                    <Progress percent={total === 0 ? 0 : Math.round((submitted / total) * 100)} size="small" showInfo={false} />
+                  </Space>
+                </Card>
+              </Col>
             ))}
-          </div>
-        </div>
-      </article>
+          </Row>
+        </Space>
+      </Card>
+
+      <Alert
+        type={pendingCount > 0 ? 'warning' : 'success'}
+        showIcon
+        message={currentBlocker}
+        description={nextAction}
+        action={pendingCount > 0 && nextPendingTask ? (
+          <Button type="primary" onClick={() => chooseTaskForUpload(nextPendingTask.id)}>
+            先提交待办任务
+          </Button>
+        ) : (
+          <Button onClick={scrollToResults}>查看已发布成绩</Button>
+        )}
+      />
 
       {activeView === 'courses' ? (
         <StudentCourseTaskTable
@@ -307,69 +332,72 @@ function StudentCourseTaskTable({
   onChooseTask: (taskId: number) => void;
   onScrollToResults: () => void;
 }) {
+  const columns = [
+    {
+      title: '任务',
+      dataIndex: 'title',
+      key: 'title',
+    },
+    {
+      title: '截止时间',
+      key: 'deadline',
+      render: (_: unknown, task: SubmissionTask) => <span className="table-inline"><CalendarClock size={14} /> {formatDate(task.deadline)}</span>,
+    },
+    {
+      title: '状态',
+      key: 'status',
+      render: (_: unknown, task: SubmissionTask) => (
+        <Tag color={task.status === '未提交' ? 'default' : task.status === '已发布成绩' ? 'success' : 'processing'}>
+          {task.status}
+        </Tag>
+      ),
+    },
+    {
+      title: '成绩',
+      key: 'score',
+      render: (_: unknown, task: SubmissionTask) => (task.score !== undefined ? `${task.score} 分` : '-'),
+    },
+    {
+      title: '提交说明',
+      key: 'submission',
+      render: (_: unknown, task: SubmissionTask) => (
+        task.submissionId
+          ? <span className="table-inline"><CheckCircle2 size={14} /> 已提交，重新提交会覆盖上一份</span>
+          : '尚未提交'
+      ),
+    },
+    {
+      title: '操作',
+      key: 'actions',
+      render: (_: unknown, task: SubmissionTask) => (
+        <Button
+          type={task.status === '未提交' ? 'primary' : 'default'}
+          onClick={() => {
+            if (task.status === '已发布成绩') {
+              onScrollToResults();
+            } else {
+              onChooseTask(task.id);
+            }
+          }}
+        >
+          {task.status === '未提交' ? '立即提交' : task.status === '已发布成绩' ? '查看批注' : '重新提交'}
+        </Button>
+      ),
+    },
+  ];
+
   return (
-    <article className="panel wide-panel student-task-panel">
-      <div className="panel-heading">
-        <div>
-          <h3>实训任务</h3>
-          <span className="panel-subtitle">已提交任务可重新上传，系统会覆盖上一份报告</span>
-        </div>
-        <FileText size={22} />
-      </div>
+    <Card
+      className="wide-panel student-task-panel"
+      title="实训任务"
+      extra={<Space><FileText size={18} /><Typography.Text type="secondary">已提交任务可重新上传，系统只保留最新版本</Typography.Text></Space>}
+    >
       {tasks.length === 0 ? (
-        <div className="empty-result compact">
-          <strong>当前课程暂无任务</strong>
-          <span>教师发布任务后会在这里显示。</span>
-        </div>
+        <Empty description="当前课程暂无任务，教师发布后会在这里显示。" />
       ) : (
-        <div className="table-shell">
-          <div className="table-scroll table-scroll-md">
-            <table className="data-table">
-              <thead>
-                <tr>
-                  <th>任务</th>
-                  <th>截止时间</th>
-                  <th>状态</th>
-                  <th>成绩</th>
-                  <th>提交说明</th>
-                  <th className="actions-col">操作</th>
-                </tr>
-              </thead>
-              <tbody>
-                {tasks.map((task) => (
-                  <tr key={task.id}>
-                    <td>{task.title}</td>
-                    <td><span className="table-inline"><CalendarClock size={14} /> {formatDate(task.deadline)}</span></td>
-                    <td>{task.status}</td>
-                    <td>{task.score !== undefined ? `${task.score} 分` : '-'}</td>
-                    <td>
-                      {task.submissionId ? (
-                        <span className="table-inline"><CheckCircle2 size={14} /> 已提交，重新提交会覆盖上一份</span>
-                      ) : '尚未提交'}
-                    </td>
-                    <td>
-                      <button
-                        className={task.status === '未提交' ? 'primary-button compact' : 'ghost-button compact'}
-                        type="button"
-                        onClick={() => {
-                          if (task.status === '已发布成绩') {
-                            onScrollToResults();
-                          } else {
-                            onChooseTask(task.id);
-                          }
-                        }}
-                      >
-                        {task.status === '未提交' ? '立即提交' : task.status === '已发布成绩' ? '查看批注' : '重新提交'}
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
+        <Table<SubmissionTask> rowKey="id" columns={columns} dataSource={tasks} pagination={false} scroll={{ x: 960 }} />
       )}
-    </article>
+    </Card>
   );
 }
 

@@ -1,4 +1,5 @@
-import { ArrowRight, BarChart3, BookOpen, CheckCircle2, FileCheck2, FileText, Sparkles, UploadCloud, Users } from 'lucide-react';
+import { ArrowRight } from 'lucide-react';
+import { Button, Card, Col, Progress, Row, Space, Steps, Tag, Typography } from 'antd';
 import type { AssignmentSummary, CollectionOverview, GradingJobSummary, GradingResultSummary } from '../api/types';
 
 type TeacherOverviewDashboardProps = {
@@ -10,13 +11,13 @@ type TeacherOverviewDashboardProps = {
   onSectionChange: (section: string) => void;
 };
 
-const quickLinks = [
-  { icon: BookOpen, label: '课程与班级', section: 'courses', color: 'var(--brand)' },
-  { icon: FileText, label: '实训任务', section: 'assignments', color: 'var(--brand)' },
-  { icon: UploadCloud, label: '报告收集', section: 'collection', color: 'var(--success)' },
-  { icon: Sparkles, label: 'AI 批改', section: 'ai-pipeline', color: '#7c3aed' },
-  { icon: FileCheck2, label: '人工复核', section: 'review', color: 'var(--brand)' },
-  { icon: BarChart3, label: '失分分析', section: 'analytics', color: 'var(--success)' },
+const pipelineSteps = [
+  { key: 'courses', label: '课程准备', hint: '班级与学生名单' },
+  { key: 'assignments', label: '任务发布', hint: '评分规则与发布' },
+  { key: 'collection', label: '报告收集', hint: '提交进度与催交' },
+  { key: 'ai-pipeline', label: 'AI 批改', hint: '识别、评分、查重' },
+  { key: 'review', label: '复核与发布', hint: '复核、发布、申诉' },
+  { key: 'analytics', label: '结果分析', hint: '失分与达成度' },
 ];
 
 export function TeacherOverviewDashboard({
@@ -31,7 +32,26 @@ export function TeacherOverviewDashboard({
   const completedJobs = gradingJobs.filter((j) => j.status === 'COMPLETED').length;
   const totalJobs = gradingJobs.length;
   const activeAssignments = assignments.filter((a) => a.status === 'PUBLISHED').length;
-  const nextAction = pendingReview > 0
+  const checklist = [
+    { label: '已发布任务', done: activeAssignments > 0, value: `${activeAssignments}`, section: 'assignments' },
+    { label: '已启动批改', done: totalJobs > 0, value: `${totalJobs}`, section: 'ai-pipeline' },
+    { label: '待复核已清空', done: pendingReview === 0, value: `${pendingReview}`, section: 'review' },
+  ];
+  const nextAction = activeAssignments === 0
+    ? {
+      title: '尚未发布任务',
+      detail: '请先创建并发布一个实训任务',
+      actionLabel: '任务发布',
+      section: 'assignments',
+    }
+    : totalJobs === 0
+      ? {
+        title: '尚未启动批改',
+        detail: '请选择已发布任务并启动 AI 批改',
+        actionLabel: 'AI 批改',
+        section: 'ai-pipeline',
+      }
+    : pendingReview > 0
     ? {
       title: '待复核结果',
       detail: `${pendingReview} 份`,
@@ -54,157 +74,80 @@ export function TeacherOverviewDashboard({
 
   return (
     <>
-      <section className="overview-focus-band">
-        <article className="overview-focus-card">
-          <h3>{nextAction.title}</h3>
-          <p>{nextAction.detail}</p>
-          <div className="overview-focus-actions">
-            <button className="primary-button" type="button" onClick={() => onSectionChange(nextAction.section)}>
+      <div className="teacher-overview-hero-grid">
+        <Card className="teacher-overview-card teacher-overview-priority-card" bodyStyle={{ height: '100%' }}>
+          <div className="teacher-overview-card-body teacher-overview-priority-body">
+            <div className="teacher-overview-copy">
+              <Typography.Text type="secondary">当前优先事项</Typography.Text>
+              <Typography.Title level={3} style={{ margin: 0 }}>{nextAction.title}</Typography.Title>
+              <Typography.Paragraph style={{ marginBottom: 0 }}>{nextAction.detail}</Typography.Paragraph>
+            </div>
+            <Button type="primary" onClick={() => onSectionChange(nextAction.section)}>
               {nextAction.actionLabel} <ArrowRight size={16} />
-            </button>
+            </Button>
           </div>
-        </article>
-        <article className="overview-status-strip overview-status-row">
-          <div>
-            <span>已发布任务</span>
-            <strong>{activeAssignments}</strong>
-          </div>
-          <div>
-            <span>批改完成率</span>
-            <strong>{totalJobs === 0 ? '0%' : `${Math.round((completedJobs / totalJobs) * 100)}%`}</strong>
-          </div>
-          <div>
-            <span>当前风险点</span>
-            <strong>{pendingReview + collectionOverview.unsubmitted}</strong>
-          </div>
-        </article>
-      </section>
+        </Card>
 
-      <section className="stats-grid">
-        {stats.map((item) => (
-          <article className={`stat-card ${item.tone}`} key={item.label}>
-            <span>{item.label}</span>
-            <strong>{item.value}</strong>
-            <small>{item.trend}</small>
-          </article>
-        ))}
-      </section>
-
-      <section className="overview-quick-links">
-        <div className="quick-links-grid">
-          {quickLinks.map((link) => (
-            <button
-              className="quick-link-card"
-              key={link.section}
-              type="button"
-              onClick={() => onSectionChange(link.section)}
-            >
-              <link.icon size={22} style={{ color: link.color }} />
-              <span>{link.label}</span>
-            </button>
-          ))}
+        <div className="teacher-overview-metrics-grid">
+          <Card className="teacher-overview-card teacher-overview-metric-card" bodyStyle={{ height: '100%' }}>
+            <div className="teacher-overview-card-body teacher-overview-metric-body">
+              <Typography.Text type="secondary">已发布任务</Typography.Text>
+              <Typography.Title level={2} style={{ margin: 0 }}>{activeAssignments}</Typography.Title>
+              <Typography.Text type="secondary">当前课程的可收集任务数</Typography.Text>
+            </div>
+          </Card>
+          <Card className="teacher-overview-card teacher-overview-metric-card" bodyStyle={{ height: '100%' }}>
+            <div className="teacher-overview-card-body teacher-overview-metric-body">
+              <Typography.Text type="secondary">批改完成率</Typography.Text>
+              <Typography.Title level={2} style={{ margin: 0 }}>
+                {totalJobs === 0 ? '0%' : `${Math.round((completedJobs / totalJobs) * 100)}%`}
+              </Typography.Title>
+              <Progress percent={totalJobs === 0 ? 0 : Math.round((completedJobs / totalJobs) * 100)} showInfo={false} size="small" />
+              <Typography.Text type="secondary">已完成 {completedJobs} / {totalJobs} 个批改任务</Typography.Text>
+            </div>
+          </Card>
+          <Card className="teacher-overview-card teacher-overview-metric-card" bodyStyle={{ height: '100%' }}>
+            <div className="teacher-overview-card-body teacher-overview-metric-body">
+              <Typography.Text type="secondary">当前风险点</Typography.Text>
+              <Typography.Title level={2} style={{ margin: 0 }}>{pendingReview + collectionOverview.unsubmitted}</Typography.Title>
+              <Typography.Text type="secondary">待复核 {pendingReview}，未提交 {collectionOverview.unsubmitted}</Typography.Text>
+            </div>
+          </Card>
         </div>
-      </section>
-
-      <section className="overview-highlights">
-        <article className="highlight-card">
-          <div className="highlight-header">
-            <h4><CheckCircle2 size={16} /> 批改进度</h4>
-            <button className="ghost-button compact" type="button" onClick={() => onSectionChange('ai-pipeline')}>
-              查看详情
-            </button>
-          </div>
-          {totalJobs === 0 ? (
-            <p className="highlight-empty">暂无批改任务</p>
-          ) : (
-            <div className="highlight-metrics">
-              <div className="highlight-metric">
-                <strong>{completedJobs}</strong>
-                <span>已完成</span>
-              </div>
-              <div className="highlight-metric">
-                <strong>{totalJobs - completedJobs}</strong>
-                <span>进行中</span>
-              </div>
-              <div className="highlight-metric">
-                <strong>{totalJobs}</strong>
-                <span>总计</span>
-              </div>
-            </div>
-          )}
-        </article>
-
-        <article className="highlight-card">
-          <div className="highlight-header">
-            <h4><FileCheck2 size={16} /> 待复核</h4>
-            <button className="ghost-button compact" type="button" onClick={() => onSectionChange('review')}>
-              去复核
-            </button>
-          </div>
-          {pendingReview === 0 ? (
-            <p className="highlight-empty">暂无待复核报告</p>
-          ) : (
-            <div className="highlight-metrics">
-              <div className="highlight-metric">
-                <strong>{pendingReview}</strong>
-                <span>待复核</span>
-              </div>
-              <div className="highlight-metric">
-                <strong>{gradingResults.length - pendingReview}</strong>
-                <span>已复核</span>
-              </div>
-              <div className="highlight-metric">
-                <strong>{gradingResults.length}</strong>
-                <span>总计</span>
-              </div>
-            </div>
-          )}
-        </article>
-
-        <article className="highlight-card">
-          <div className="highlight-header">
-            <h4><Users size={16} /> 提交概况</h4>
-            <button className="ghost-button compact" type="button" onClick={() => onSectionChange('collection')}>
-              查看详情
-            </button>
-          </div>
-          <div className="highlight-metrics">
-            <div className="highlight-metric">
-              <strong>{collectionOverview.submitted}</strong>
-              <span>已交</span>
-            </div>
-            <div className="highlight-metric">
-              <strong>{collectionOverview.unsubmitted}</strong>
-              <span>未交</span>
-            </div>
-            <div className="highlight-metric">
-              <strong>{collectionOverview.lateSubmitted}</strong>
-              <span>迟交</span>
-            </div>
-          </div>
-        </article>
-
-        <article className="highlight-card">
-          <div className="highlight-header">
-            <h4><FileText size={16} /> 当前任务</h4>
-            <button className="ghost-button compact" type="button" onClick={() => onSectionChange('assignments')}>
-              管理任务
-            </button>
-          </div>
-          {activeAssignments === 0 ? (
-            <p className="highlight-empty">暂无进行中的任务</p>
-          ) : (
-            <div className="highlight-assignments">
-              {assignments.filter((a) => a.status === 'PUBLISHED').slice(0, 3).map((a) => (
-                <div className="highlight-assignment" key={a.id}>
-                  <strong>{a.title}</strong>
-                  <span>{a.totalScore} 分</span>
-                </div>
+      </div>
+      <Row gutter={[16, 16]}>
+        <Col span={24}>
+          <Card title="流程步骤">
+            <Steps
+              className="teacher-progress-steps"
+              responsive
+              progressDot
+              items={pipelineSteps.map((step) => ({
+                title: step.label,
+                description: step.hint,
+              }))}
+            />
+          </Card>
+        </Col>
+        <Col span={24}>
+          <Card title="开课检查清单">
+            <Row gutter={[16, 16]}>
+              {checklist.map((item) => (
+                <Col xs={24} md={8} key={item.label}>
+                  <Card hoverable onClick={() => onSectionChange(item.section)}>
+                    <Space direction="vertical" size={8} style={{ width: '100%' }}>
+                      <Typography.Text strong>{item.label}</Typography.Text>
+                      <Tag color={item.done ? 'success' : 'warning'}>
+                        {item.done ? `已满足（${item.value}）` : `未完成（${item.value}）`}
+                      </Tag>
+                    </Space>
+                  </Card>
+                </Col>
               ))}
-            </div>
-          )}
-        </article>
-      </section>
+            </Row>
+          </Card>
+        </Col>
+      </Row>
     </>
   );
 }

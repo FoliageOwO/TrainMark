@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react';
+import { Alert, Button, Card, Col, Row, Select, Space, Steps, Tag, Typography } from 'antd';
 import { mockApi } from '../api/mockApi';
 import {
   createAssignment,
@@ -33,11 +34,9 @@ import { TeacherAiPipeline } from './TeacherAiPipeline';
 import { TeacherAppealPanel } from './TeacherAppealPanel';
 import { TeacherCollectionPanel } from './TeacherCollectionPanel';
 import { TeacherCoursePanel } from './TeacherCoursePanel';
-import { TeacherOperationsPanel } from './TeacherOperationsPanel';
 import { TeacherOverviewDashboard } from './TeacherOverviewDashboard';
 import { TeacherRosterPanel } from './TeacherRosterPanel';
 import { TeacherReviewWorkspace } from './TeacherReviewWorkspace';
-import { TeacherSimilarityPanel } from './TeacherSimilarityPanel';
 import { TeacherAssignmentPanel } from './TeacherAssignmentPanel';
 
 type TeacherDashboardProps = {
@@ -275,6 +274,14 @@ export function TeacherDashboard({
     setReviewResults((current) => current.map((item) => (item.id === updated.id ? { ...updated } : item)));
     setSelectedReviewId(updated.id);
   };
+  const runAction = async <T,>(action: () => Promise<T>, onError: (message: string) => void = (message) => setActionNotice(message)) => {
+    try {
+      return await action();
+    } catch (error) {
+      onError(`操作失败：${formatActionError(error)}`);
+      throw error;
+    }
+  };
 
   const handleStartGrading = async () => {
     if (!rubric) {
@@ -295,7 +302,7 @@ export function TeacherDashboard({
     try {
       const job = await createGradingJob(activeAssignmentId, rubric.id, submissionIds);
       setStartedJob(job);
-      const latestReviewResults = mockApi.listGradingResults(activeAssignmentId);
+      const latestReviewResults = await loadGradingResults(activeAssignmentId);
       setReviewResults(latestReviewResults);
       setSelectedReviewId(latestReviewResults[0]?.id ?? 0);
       setActionNotice(`批改完成：${submissionIds.length} 份报告。`);
@@ -327,40 +334,48 @@ export function TeacherDashboard({
     if (!selectedReview) {
       return;
     }
-    syncReviewResult(await approveGradingResult(selectedReview.id, operatorName, selectedReview.overallComment));
-    await onWorkspaceRefresh();
+    await runAction(async () => {
+      syncReviewResult(await approveGradingResult(selectedReview.id, operatorName, selectedReview.overallComment));
+      await onWorkspaceRefresh();
+    });
   };
 
   const handlePublishResult = async () => {
     if (!selectedReview) {
       return;
     }
-    const updated = await publishGradingResult(selectedReview.id, operatorName);
-    syncReviewResult(updated);
-    setPublicationAuditRows(await loadPublicationAudits(selectedReview.id));
-    await onWorkspaceRefresh();
+    await runAction(async () => {
+      const updated = await publishGradingResult(selectedReview.id, operatorName);
+      syncReviewResult(updated);
+      setPublicationAuditRows(await loadPublicationAudits(selectedReview.id));
+      await onWorkspaceRefresh();
+    });
   };
 
   const handleWithdrawResult = async () => {
     if (!selectedReview) {
       return;
     }
-    syncReviewResult(await withdrawGradingResult(selectedReview.id, operatorName));
-    setPublicationAuditRows(await loadPublicationAudits(selectedReview.id));
-    await onWorkspaceRefresh();
+    await runAction(async () => {
+      syncReviewResult(await withdrawGradingResult(selectedReview.id, operatorName));
+      setPublicationAuditRows(await loadPublicationAudits(selectedReview.id));
+      await onWorkspaceRefresh();
+    });
   };
 
   const handleResolveAppeal = async (appealId: number, accepted: boolean) => {
     const reply = accepted
       ? '已采纳申诉，教师将复核对应评分项并重新发布结果。'
       : '已复核原始报告和评分依据，维持当前评分。';
-    await resolveAppeal(appealId, accepted, reply);
-    setAppealRows((current) => current.map((item) => (
-      item.id === appealId
-        ? { ...item, status: accepted ? 'ACCEPTED' : 'REJECTED', teacherReply: reply, resolvedAt: new Date().toISOString() }
-        : item
-    )));
-    await onWorkspaceRefresh();
+    await runAction(async () => {
+      await resolveAppeal(appealId, accepted, reply);
+      setAppealRows((current) => current.map((item) => (
+        item.id === appealId
+          ? { ...item, status: accepted ? 'ACCEPTED' : 'REJECTED', teacherReply: reply, resolvedAt: new Date().toISOString() }
+          : item
+      )));
+      await onWorkspaceRefresh();
+    });
   };
 
   const handleStartSimilarity = async () => {
@@ -372,10 +387,12 @@ export function TeacherDashboard({
       setActionNotice('当前任务暂无学生提交，学生提交报告后才能启动查重。');
       return;
     }
-    const job = await startSimilarityJob(activeAssignmentId, submissionIds);
-    setSimilarityRows((current) => [job, ...current.filter((item) => item.id !== job.id)]);
-    setActionNotice(`已启动查重：${submissionIds.length} 份报告。`);
-    await onWorkspaceRefresh();
+    await runAction(async () => {
+      const job = await startSimilarityJob(activeAssignmentId, submissionIds);
+      setSimilarityRows((current) => [job, ...current.filter((item) => item.id !== job.id)]);
+      setActionNotice(`已启动查重：${submissionIds.length} 份报告。`);
+      await onWorkspaceRefresh();
+    });
   };
 
   const handleStartOcr = async () => {
@@ -419,69 +436,83 @@ export function TeacherDashboard({
   };
 
   const handleCreateGradeExport = async () => {
-    const exportJob = await createGradeExport(activeAssignmentId, operatorName, 'CSV');
-    setExportRows((current) => [exportJob, ...current.filter((item) => item.id !== exportJob.id)]);
-    await onWorkspaceRefresh();
+    await runAction(async () => {
+      const exportJob = await createGradeExport(activeAssignmentId, operatorName, 'CSV');
+      setExportRows((current) => [exportJob, ...current.filter((item) => item.id !== exportJob.id)]);
+      await onWorkspaceRefresh();
+    });
   };
 
   const handleCreateAssignment = async (input: CreateAssignmentInput) => {
-    const assignment = await createAssignment(input);
-    setAssignmentRows((current) => [assignment, ...current.filter((item) => item.id !== assignment.id)]);
-    setSelectedAssignmentId(assignment.id);
-    setAssignmentNotice(`已创建任务：${assignment.title}`);
-    setActionNotice('任务已保存为草稿，发布后学生端才会看到。');
-    await onWorkspaceRefresh();
+    await runAction(async () => {
+      const assignment = await createAssignment(input);
+      setAssignmentRows((current) => [assignment, ...current.filter((item) => item.id !== assignment.id)]);
+      setSelectedAssignmentId(assignment.id);
+      setAssignmentNotice(`已创建任务：${assignment.title}`);
+      setActionNotice('任务已保存为草稿，发布后学生端才会看到。');
+      await onWorkspaceRefresh();
+    }, (message) => setAssignmentNotice(message));
   };
 
   const handlePublishAssignment = async (assignmentId: number) => {
-    const assignment = await publishAssignment(assignmentId);
-    setAssignmentRows((current) => current.map((item) => (item.id === assignment.id ? assignment : item)));
-    setSelectedAssignmentId(assignment.id);
-    setAssignmentNotice(`已发布任务：${assignment.title}`);
-    setActionNotice('任务已发布，学生端可以提交报告。');
-    await onWorkspaceRefresh();
+    await runAction(async () => {
+      const assignment = await publishAssignment(assignmentId);
+      setAssignmentRows((current) => current.map((item) => (item.id === assignment.id ? assignment : item)));
+      setSelectedAssignmentId(assignment.id);
+      setAssignmentNotice(`已发布任务：${assignment.title}`);
+      setActionNotice('任务已发布，学生端可以提交报告。');
+      await onWorkspaceRefresh();
+    }, (message) => setAssignmentNotice(message));
   };
 
   const handleCreateCourse = async (input: CreateCourseInput) => {
-    const course = await createCourse(input);
-    setCourseRows((current) => [course, ...current.filter((item) => item.id !== course.id)]);
-    setSelectedCourseId(course.id);
-    setClassRows([]);
-    setCourseNotice(`已新建课程：${course.name}`);
-    await onWorkspaceRefresh();
+    await runAction(async () => {
+      const course = await createCourse(input);
+      setCourseRows((current) => [course, ...current.filter((item) => item.id !== course.id)]);
+      setSelectedCourseId(course.id);
+      setClassRows([]);
+      setCourseNotice(`已新建课程：${course.name}`);
+      await onWorkspaceRefresh();
+    }, (message) => setCourseNotice(message));
   };
 
   const handleCreateClass = async (input: CreateTeachingClassInput) => {
-    const teachingClass = await createTeachingClass(input);
-    if (shouldUseHttpApi()) {
-      setClassRows((current) => [teachingClass, ...current.filter((item) => item.id !== teachingClass.id)]);
-      setCourseRows((current) => incrementCourseClassCount(current, teachingClass.courseId));
-    } else {
-      setClassRows(mockApi.listClasses(selectedCourseId));
-      setCourseRows(mockApi.listCourses());
-    }
-    setCourseNotice(`已新建班级：${teachingClass.name}`);
-    await onWorkspaceRefresh();
-    return teachingClass;
+    return runAction(async () => {
+      const teachingClass = await createTeachingClass(input);
+      if (shouldUseHttpApi()) {
+        setClassRows((current) => [teachingClass, ...current.filter((item) => item.id !== teachingClass.id)]);
+        setCourseRows((current) => incrementCourseClassCount(current, teachingClass.courseId));
+      } else {
+        setClassRows(mockApi.listClasses(selectedCourseId));
+        setCourseRows(mockApi.listCourses());
+      }
+      setCourseNotice(`已新建班级：${teachingClass.name}`);
+      await onWorkspaceRefresh();
+      return teachingClass;
+    }, (message) => setCourseNotice(message));
   };
 
   const handleDeleteClass = async (courseId: number, classId: number) => {
-    const targetClass = classRows.find((item) => item.id === classId && item.courseId === courseId);
-    await deleteTeachingClass(courseId, classId);
-    setClassRows((current) => current.filter((item) => item.id !== classId));
-    setSelectedClassFilterId((current) => (current === classId ? 0 : current));
-    if (targetClass) {
-      setCourseRows((current) => decrementCourseCounts(current, courseId, targetClass.studentCount));
-    }
-    setCourseNotice(targetClass ? `已删除班级：${targetClass.name}` : '已删除班级');
-    await onWorkspaceRefresh();
+    await runAction(async () => {
+      const targetClass = classRows.find((item) => item.id === classId && item.courseId === courseId);
+      await deleteTeachingClass(courseId, classId);
+      setClassRows((current) => current.filter((item) => item.id !== classId));
+      setSelectedClassFilterId((current) => (current === classId ? 0 : current));
+      if (targetClass) {
+        setCourseRows((current) => decrementCourseCounts(current, courseId, targetClass.studentCount));
+      }
+      setCourseNotice(targetClass ? `已删除班级：${targetClass.name}` : '已删除班级');
+      await onWorkspaceRefresh();
+    }, (message) => setCourseNotice(message));
   };
 
   const handleCreateRubric = async (input: CreateRubricInput) => {
-    const nextRubric = await createRubric(input);
-    setRubricRows((current) => [nextRubric, ...current.filter((item) => item.id !== nextRubric.id)]);
-    setRubricNotice(`已保存评分标准：${nextRubric.name}`);
-    await onWorkspaceRefresh();
+    await runAction(async () => {
+      const nextRubric = await createRubric(input);
+      setRubricRows((current) => [nextRubric, ...current.filter((item) => item.id !== nextRubric.id)]);
+      setRubricNotice(`已保存评分标准：${nextRubric.name}`);
+      await onWorkspaceRefresh();
+    }, (message) => setRubricNotice(message));
   };
 
   const handleReviewAssignmentSelect = async (assignmentId: number) => {
@@ -492,25 +523,27 @@ export function TeacherDashboard({
   };
 
   const handleImportStudents = async (input: ImportStudentsInput) => {
-    const result = await importStudents(input);
-    setStudentImportResult(result);
-    if (shouldUseHttpApi()) {
-      setClassRows((current) => incrementClassStudentCount(current, input.classId, result.created));
-      const importedClass = classRows.find((item) => item.id === input.classId);
-      if (importedClass) {
-        setCourseRows((current) => incrementCourseStudentCount(current, importedClass.courseId, result.created));
+    return runAction(async () => {
+      const result = await importStudents(input);
+      setStudentImportResult(result);
+      if (shouldUseHttpApi()) {
+        setClassRows((current) => incrementClassStudentCount(current, input.classId, result.created));
+        const importedClass = classRows.find((item) => item.id === input.classId);
+        if (importedClass) {
+          setCourseRows((current) => incrementCourseStudentCount(current, importedClass.courseId, result.created));
+        }
+      } else {
+        setStudentRows(mockApi.listUsers('STUDENT'));
+        setClassRows(mockApi.listClasses(selectedCourseId));
+        setCourseRows(mockApi.listCourses());
       }
-    } else {
-      setStudentRows(mockApi.listUsers('STUDENT'));
-      setClassRows(mockApi.listClasses(selectedCourseId));
-      setCourseRows(mockApi.listCourses());
-    }
-    try {
-      await onWorkspaceRefresh();
-    } catch {
-      // Import succeeded; keep the local count update even if a later dashboard refresh fails.
-    }
-    return result;
+      try {
+        await onWorkspaceRefresh();
+      } catch {
+        // Import succeeded; keep the local count update even if a later dashboard refresh fails.
+      }
+      return result;
+    }, (message) => setCourseNotice(message));
   };
 
   const collectionPanelProps = {
@@ -622,18 +655,52 @@ export function TeacherDashboard({
   };
 
   const isOverview = section === 'overview';
-
+  const workflowSteps = [
+    { key: 'courses', label: '课程准备' },
+    { key: 'assignments', label: '任务发布' },
+    { key: 'collection', label: '报告收集' },
+    { key: 'ai-pipeline', label: 'AI 批改' },
+    { key: 'review', label: '人工复核' },
+    { key: 'analytics', label: '结果分析' },
+  ] as const;
   return (
     <>
+      {!isOverview ? (
+        <Card className="workflow-rail" style={{ marginBottom: 16 }}>
+          <Space direction="vertical" size={12} style={{ width: '100%' }}>
+            <Typography.Text type="secondary">教师流程导航</Typography.Text>
+            <Steps
+              className="teacher-progress-steps workflow-progress-steps"
+              current={Math.max(workflowSteps.findIndex((item) => item.key === section), 0)}
+              responsive
+              progressDot
+              items={workflowSteps.map((step) => ({ title: step.label }))}
+            />
+          </Space>
+        </Card>
+      ) : null}
+
       {isOverview ? (
-        <TeacherOverviewDashboard
-          stats={stats}
-          collectionOverview={collectionOverview}
-          assignments={assignmentRows}
-          gradingJobs={visibleJobs}
-          gradingResults={reviewResults}
-          onSectionChange={setSection}
-        />
+        <Row gutter={[16, 16]}>
+          <Col span={24}>
+            <Card className="teacher-workspace-hero">
+              <Typography.Text type="secondary">教师工作台</Typography.Text>
+              <Typography.Title level={2} style={{ marginTop: 6, marginBottom: 0 }}>
+                {selectedCourse.name}
+              </Typography.Title>
+            </Card>
+          </Col>
+          <Col span={24}>
+            <TeacherOverviewDashboard
+              stats={stats}
+              collectionOverview={collectionOverview}
+              assignments={assignmentRows}
+              gradingJobs={visibleJobs}
+              gradingResults={reviewResults}
+              onSectionChange={setSection}
+            />
+          </Col>
+        </Row>
       ) : null}
 
       {section === 'collection' ? (
@@ -641,11 +708,10 @@ export function TeacherDashboard({
       ) : null}
 
       {section === 'ai-pipeline' ? (
-        <TeacherAiPipeline {...aiPipelineProps} />
-      ) : null}
-
-      {section === 'similarity' ? (
-        <TeacherSimilarityPanel {...similarityPanelProps} />
+        <>
+          <TeacherAiPipeline {...aiPipelineProps} />
+          <TeacherAppealPanel {...appealPanelProps} />
+        </>
       ) : null}
 
       {section === 'review' ? (
@@ -655,40 +721,29 @@ export function TeacherDashboard({
           />
         ) : (
           <section className="review-layout">
-            <article className="panel wide-panel">
-              <div className="panel-heading">
-                <div>
-                  <p className="eyebrow">人工复核</p>
-                  <h3>人工复核工作区</h3>
-                </div>
-                <span className="status-pill">暂无结果</span>
-              </div>
-              <label className="file-name-field review-task-field">
-                当前实训任务
-                <select value={reviewEmptyProps.activeAssignmentId} onChange={(event) => reviewEmptyProps.onSelectAssignment(Number(event.target.value))}>
-                  {reviewEmptyProps.assignmentRows.map((assignment) => (
-                    <option key={assignment.id} value={assignment.id}>
-                      {assignment.title}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label className="file-name-field review-task-field">
-                当前班级
-                <select value={reviewEmptyProps.selectedClassFilterId} onChange={(event) => reviewEmptyProps.onSelectClass(Number(event.target.value))}>
-                  <option value={0}>全部班级</option>
-                  {reviewEmptyProps.classRows.map((teachingClass) => (
-                    <option key={teachingClass.id} value={teachingClass.id}>
-                      {teachingClass.name}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <div className="empty-result">
-                <strong>暂无复核结果</strong>
-                <span>当前实训任务还没有可复核的批改结果。可先在 AI 批改中心启动批改，或切换到已有批改结果的任务。</span>
-              </div>
-            </article>
+            <Card className="wide-panel" title="人工复核工作区" extra={<Tag>暂无结果</Tag>}>
+              <Space direction="vertical" size={16} style={{ width: '100%' }}>
+                <Select
+                  value={reviewEmptyProps.activeAssignmentId}
+                  options={reviewEmptyProps.assignmentRows.map((assignment) => ({ value: assignment.id, label: assignment.title }))}
+                  onChange={(value: number) => reviewEmptyProps.onSelectAssignment(value)}
+                />
+                <Select
+                  value={reviewEmptyProps.selectedClassFilterId}
+                  options={[
+                    { value: 0, label: '全部班级' },
+                    ...reviewEmptyProps.classRows.map((teachingClass) => ({ value: teachingClass.id, label: teachingClass.name })),
+                  ]}
+                  onChange={(value: number) => reviewEmptyProps.onSelectClass(value)}
+                />
+                <Alert
+                  type="info"
+                  showIcon
+                  message="暂无复核结果"
+                  description="当前实训任务还没有可复核的批改结果。可先在 AI 批改中心启动批改，或切换到已有批改结果的任务。"
+                />
+              </Space>
+            </Card>
             <TeacherAppealPanel {...reviewEmptyProps.appealPanelProps} />
           </section>
         )
@@ -698,16 +753,8 @@ export function TeacherDashboard({
         <TeacherAnalyticsPanel {...analyticsPanelProps} />
       ) : null}
 
-      {section === 'appeals' ? (
-        <TeacherAppealPanel {...appealPanelProps} />
-      ) : null}
-
       {section === 'roster' ? (
         <TeacherRosterPanel {...rosterPanelProps} />
-      ) : null}
-
-      {section === 'operations' ? (
-        <TeacherOperationsPanel />
       ) : null}
 
       {section === 'courses' ? (
@@ -868,5 +915,6 @@ function buildPendingOcrJob(submissionId: number, objectKey: string): OcrJobSumm
 }
 
 function formatActionError(error: unknown) {
-  return error instanceof Error ? error.message : '未知错误，请检查后端服务是否正常。';
+  const reason = error instanceof Error ? error.message : '未知错误';
+  return `${reason}。请检查登录状态、后端服务与网络连接后重试。`;
 }

@@ -21,6 +21,7 @@ trap stop_backend EXIT INT TERM
 cd "$ROOT_DIR"
 
 echo "[start:stack:http] Starting backend services"
+MANAGEMENT_HEALTH_RABBIT_ENABLED="${MANAGEMENT_HEALTH_RABBIT_ENABLED:-false}" \
 bash scripts/dev/backend-all.sh > "$BACKEND_LOG" 2>&1 &
 backend_pid="$!"
 

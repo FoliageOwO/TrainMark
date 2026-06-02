@@ -1,4 +1,5 @@
 import { BarChart3, FileText } from 'lucide-react';
+import { Alert, Button, Card, Col, Progress, Row, Space, Table, Tag, Typography } from 'antd';
 import { fetchApiAssetBlobUrl } from '../api/httpApi';
 import type { CourseOutcomeAchievement, GradeExportSummary, GradeStatisticsSummary, LossPointSummary } from '../api/types';
 import { toChineseFileName, toChineseText } from '../utils/displayText';
@@ -25,6 +26,16 @@ export function TeacherAnalyticsPanel({
   courseOutcomes,
   onCreateGradeExport,
 }: TeacherAnalyticsPanelProps) {
+  const currentBlocker = gradeStatistics.publishedCount === 0
+    ? '当前阻塞：暂无已发布成绩'
+    : gradeExports.length === 0
+      ? '当前阻塞：尚未生成导出记录'
+      : '当前阻塞：无';
+  const nextAction = gradeStatistics.publishedCount === 0
+    ? '下一步：先回到人工复核完成发布，再分析结果。'
+    : gradeExports.length === 0
+      ? '下一步：先导出成绩，沉淀当前批次结果。'
+      : '下一步：结合失分点和达成度制定下一轮改进。';
   const downloadGradeExport = async (item: GradeExportSummary) => {
     const url = await fetchApiAssetBlobUrl(item.downloadUrl);
     const link = document.createElement('a');
@@ -38,99 +49,120 @@ export function TeacherAnalyticsPanel({
     }
   };
 
+  const exportColumns = [
+    {
+      title: '文件',
+      key: 'file',
+      render: (_: unknown, item: GradeExportSummary) => toChineseFileName(item.fileName),
+    },
+    {
+      title: '行数',
+      key: 'rowCount',
+      render: (_: unknown, item: GradeExportSummary) => `${item.rowCount} 行`,
+    },
+    {
+      title: '状态',
+      key: 'status',
+      render: (_: unknown, item: GradeExportSummary) => <Tag color={item.status === 'READY' ? 'success' : item.status === 'FAILED' ? 'error' : 'processing'}>{exportStatusText[item.status]}</Tag>,
+    },
+    {
+      title: '时间',
+      key: 'createdAt',
+      render: (_: unknown, item: GradeExportSummary) => formatDate(item.createdAt),
+    },
+    {
+      title: '操作',
+      key: 'actions',
+      render: (_: unknown, item: GradeExportSummary) => (
+        <Button type="link" onClick={() => downloadGradeExport(item)}>下载文件</Button>
+      ),
+    },
+  ];
+
   return (
     <section className="analytics-grid">
-      <article className="panel analytics-panel">
-        <div className="panel-heading">
-          <div>
-            <h3>成绩统计</h3>
-          </div>
-          <button className="ghost-button" type="button" onClick={onCreateGradeExport}>
-            <FileText size={15} /> 导出成绩
-          </button>
-        </div>
-        <span className="status-pill">{gradeStatistics.publishedCount} 份已发布</span>
-        <div className="analytics-metrics">
-          <span><strong>{gradeStatistics.averageScore}</strong>均分</span>
-          <span><strong>{gradeStatistics.standardDeviation}</strong>标准差</span>
-          <span><strong>{gradeStatistics.maxScore}</strong>最高分</span>
-          <span><strong>{gradeStatistics.minScore}</strong>最低分</span>
-        </div>
-        <div className="score-buckets">
-          {gradeStatistics.scoreBuckets.map((bucket) => {
-            const width = gradeStatistics.publishedCount === 0 ? 0 : Math.round((bucket.studentCount / gradeStatistics.publishedCount) * 100);
-            return (
-              <div className="bucket-row" key={bucket.label}>
-                <span>{bucket.label}</span>
-                <div><b style={{ width: `${width}%` }} /></div>
-                <strong>{bucket.studentCount} 人</strong>
-              </div>
-            );
-          })}
-        </div>
-        <div className="index-row">
-          <span>难度系数 {gradeStatistics.difficultyIndex}</span>
-          <span>区分度 {gradeStatistics.discriminationIndex}</span>
-        </div>
-        <div className="audit-list panel-scroll panel-scroll-md">
-          <strong>导出记录</strong>
-          {gradeExports.map((item) => (
-            <div className="audit-row" key={item.id}>
-              <span>{toChineseFileName(item.fileName)} · {item.rowCount} 行</span>
-              <small>
-                {exportStatusText[item.status]} · {formatDate(item.createdAt)} ·{' '}
-                <button className="link-button" type="button" onClick={() => downloadGradeExport(item)}>下载文件</button>
-              </small>
-            </div>
-          ))}
-        </div>
-      </article>
+      <Card
+        className="analytics-panel"
+        title="成绩统计"
+        extra={<Button onClick={onCreateGradeExport}><FileText size={15} /> 导出成绩</Button>}
+      >
+        <Space direction="vertical" size={16} style={{ width: '100%' }}>
+          <Alert
+            type={gradeStatistics.publishedCount === 0 || gradeExports.length === 0 ? 'warning' : 'success'}
+            showIcon
+            message={currentBlocker}
+            description={nextAction}
+            action={gradeStatistics.publishedCount > 0 ? (
+              <Button type="primary" onClick={onCreateGradeExport}>
+                <FileText size={15} /> 先导出当前成绩
+              </Button>
+            ) : null}
+          />
+          <Tag color="processing">{gradeStatistics.publishedCount} 份已发布</Tag>
+          <Row gutter={[16, 16]}>
+            <Col xs={24} md={12} xl={6}><Card><Typography.Text type="secondary">均分</Typography.Text><Typography.Title level={3}>{gradeStatistics.averageScore}</Typography.Title></Card></Col>
+            <Col xs={24} md={12} xl={6}><Card><Typography.Text type="secondary">标准差</Typography.Text><Typography.Title level={3}>{gradeStatistics.standardDeviation}</Typography.Title></Card></Col>
+            <Col xs={24} md={12} xl={6}><Card><Typography.Text type="secondary">最高分</Typography.Text><Typography.Title level={3}>{gradeStatistics.maxScore}</Typography.Title></Card></Col>
+            <Col xs={24} md={12} xl={6}><Card><Typography.Text type="secondary">最低分</Typography.Text><Typography.Title level={3}>{gradeStatistics.minScore}</Typography.Title></Card></Col>
+          </Row>
+          <Space direction="vertical" size={12} style={{ width: '100%' }}>
+            {gradeStatistics.scoreBuckets.map((bucket) => {
+              const percent = gradeStatistics.publishedCount === 0 ? 0 : Math.round((bucket.studentCount / gradeStatistics.publishedCount) * 100);
+              return (
+                <div key={bucket.label}>
+                  <Space style={{ width: '100%', justifyContent: 'space-between' }}>
+                    <Typography.Text>{bucket.label}</Typography.Text>
+                    <Typography.Text>{bucket.studentCount} 人</Typography.Text>
+                  </Space>
+                  <Progress percent={percent} showInfo={false} />
+                </div>
+              );
+            })}
+          </Space>
+          <Space wrap>
+            <Tag>难度系数 {gradeStatistics.difficultyIndex}</Tag>
+            <Tag>区分度 {gradeStatistics.discriminationIndex}</Tag>
+          </Space>
+          <Table<GradeExportSummary> rowKey="id" columns={exportColumns} dataSource={gradeExports} pagination={false} scroll={{ x: 900 }} />
+        </Space>
+      </Card>
 
-      <article className="panel analytics-panel">
-        <div className="panel-heading">
-          <div>
-            <h3>高频失分点</h3>
-          </div>
-          <BarChart3 size={22} />
-        </div>
-        <div className="loss-list panel-scroll panel-scroll-md">
+      <Card className="analytics-panel" title="高频失分点" extra={<BarChart3 size={18} />}>
+        <Space direction="vertical" size={12} style={{ width: '100%' }}>
           {lossPoints.map((item) => (
-            <div className="loss-row" key={item.rubricItemId}>
-              <div>
-                <strong>{toChineseText(item.title)}</strong>
-                <span>{item.courseOutcomeCode} · 影响 {item.affectedStudentCount} 人</span>
-                <p>{toChineseText(item.topReason)}</p>
-              </div>
-              <b>-{item.averageLostScore}</b>
-            </div>
+            <Card key={item.rubricItemId} size="small">
+              <Space direction="vertical" size={6} style={{ width: '100%' }}>
+                <Space style={{ width: '100%', justifyContent: 'space-between' }}>
+                  <Typography.Text strong>{toChineseText(item.title)}</Typography.Text>
+                  <Tag color="error">-{item.averageLostScore}</Tag>
+                </Space>
+                <Typography.Text type="secondary">{item.courseOutcomeCode} · 影响 {item.affectedStudentCount} 人</Typography.Text>
+                <Typography.Paragraph style={{ marginBottom: 0 }}>{toChineseText(item.topReason)}</Typography.Paragraph>
+              </Space>
+            </Card>
           ))}
-        </div>
-      </article>
+        </Space>
+      </Card>
 
-      <article className="panel analytics-panel outcome-panel">
-        <div className="panel-heading">
-          <div>
-            <h3>课程目标达成度</h3>
-          </div>
-          <span className="status-pill">目标值 75%</span>
-        </div>
-        <div className="outcome-list panel-scroll panel-scroll-md">
+      <Card className="analytics-panel outcome-panel" title="课程目标达成度" extra={<Tag>目标值 75%</Tag>}>
+        <Space direction="vertical" size={12} style={{ width: '100%' }}>
           {courseOutcomes.map((item) => (
-            <div className="outcome-row" key={item.courseOutcomeCode}>
-              <div className="outcome-title">
-                <strong>{item.courseOutcomeCode}</strong>
-                <span>{toChineseText(item.title)}</span>
-                <b>{item.status}</b>
-              </div>
-              <div className="outcome-bar">
-                <span style={{ width: `${Math.round(item.achievedValue * 100)}%` }} />
-                <i style={{ left: `${Math.round(item.targetValue * 100)}%` }} />
-              </div>
-              <small>{Math.round(item.achievedValue * 100)}% / 目标 {Math.round(item.targetValue * 100)}%</small>
-            </div>
+            <Card key={item.courseOutcomeCode} size="small">
+              <Space direction="vertical" size={8} style={{ width: '100%' }}>
+                <Space style={{ width: '100%', justifyContent: 'space-between' }}>
+                  <div>
+                    <Typography.Text strong>{item.courseOutcomeCode}</Typography.Text>
+                    <Typography.Text type="secondary" style={{ marginLeft: 8 }}>{toChineseText(item.title)}</Typography.Text>
+                  </div>
+                  <Tag color={item.status === '达成' ? 'success' : item.status === '临界' ? 'warning' : 'error'}>{item.status}</Tag>
+                </Space>
+                <Progress percent={Math.round(item.achievedValue * 100)} success={{ percent: Math.round(item.targetValue * 100) }} />
+                <Typography.Text type="secondary">{Math.round(item.achievedValue * 100)}% / 目标 {Math.round(item.targetValue * 100)}%</Typography.Text>
+              </Space>
+            </Card>
           ))}
-        </div>
-      </article>
+        </Space>
+      </Card>
     </section>
   );
 }

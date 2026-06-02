@@ -1,6 +1,7 @@
 package com.trainmark.auth;
 
 import com.trainmark.shared.RoleCode;
+import com.trainmark.shared.dto.RegisterRequest;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.ResultSet;
@@ -41,9 +42,70 @@ public class JdbcAuthUserStore implements AuthUserStore {
     return false;
   }
 
+  @Override
+  public void updatePasswordHash(Long userId, String passwordHash) {
+    var sql = """
+        UPDATE users
+        SET password_hash = ?, updated_at = now()
+        WHERE id = ?
+        """;
+    try (var connection = connect();
+        var statement = connection.prepareStatement(sql)) {
+      statement.setString(1, passwordHash);
+      statement.setLong(2, userId);
+      statement.executeUpdate();
+    } catch (SQLException error) {
+      throw new IllegalStateException("Failed to update password hash", error);
+    }
+  }
+
+  @Override
+  public AuthUser register(RegisterRequest request, String passwordHash) {
+    var sql = """
+        INSERT INTO users (organization_id, username, password_hash, name, email, status)
+        VALUES (?, ?, ?, ?, ?, 'ACTIVE')
+        RETURNING id, username, name, password_hash
+        """;
+    try (var connection = connect()) {
+      connection.setAutoCommit(false);
+      try (var statement = connection.prepareStatement(sql)) {
+        statement.setObject(1, null);
+        statement.setString(2, request.username().trim());
+        statement.setString(3, passwordHash);
+        statement.setString(4, request.name().trim());
+        statement.setString(5, request.username().trim() + "@trainmark.local");
+        try (var results = statement.executeQuery()) {
+          if (!results.next()) {
+            throw new IllegalStateException("User registration failed");
+          }
+          var userId = results.getLong("id");
+          grantStudentRole(connection, userId);
+          connection.commit();
+          return new AuthUser(
+              userId,
+              results.getString("name"),
+              results.getString("username"),
+              results.getString("password_hash"),
+              listRoles(connection, userId)
+          );
+        }
+      } catch (SQLException error) {
+        connection.rollback();
+        if ("23505".equals(error.getSQLState())) {
+          throw new IllegalArgumentException("Username already exists");
+        }
+        throw error;
+      } finally {
+        connection.setAutoCommit(true);
+      }
+    } catch (SQLException error) {
+      throw new IllegalStateException("Failed to register auth user", error);
+    }
+  }
+
   private Optional<AuthUser> findExactUser(String login) {
     var sql = """
-        SELECT id, name, username
+        SELECT id, name, username, password_hash
         FROM users
         WHERE status = 'ACTIVE' AND (username = ? OR student_no = ? OR teacher_no = ?)
         ORDER BY id
@@ -71,7 +133,7 @@ public class JdbcAuthUserStore implements AuthUserStore {
       return Optional.empty();
     }
     var sql = """
-        SELECT u.id, u.name, u.username
+        SELECT u.id, u.name, u.username, u.password_hash
         FROM users u
         JOIN user_roles ur ON ur.user_id = u.id
         JOIN roles r ON r.id = ur.role_id
@@ -99,6 +161,7 @@ public class JdbcAuthUserStore implements AuthUserStore {
         userId,
         results.getString("name"),
         results.getString("username"),
+        results.getString("password_hash"),
         listRoles(connection, userId)
     );
   }
@@ -141,6 +204,20 @@ public class JdbcAuthUserStore implements AuthUserStore {
       return Optional.of(RoleCode.SUPERVISOR);
     }
     return Optional.empty();
+  }
+
+  private void grantStudentRole(Connection connection, Long userId) throws SQLException {
+    var sql = """
+        INSERT INTO user_roles (user_id, role_id)
+        SELECT ?, id
+        FROM roles
+        WHERE code = 'STUDENT'
+        ON CONFLICT DO NOTHING
+        """;
+    try (var statement = connection.prepareStatement(sql)) {
+      statement.setLong(1, userId);
+      statement.executeUpdate();
+    }
   }
 
   private Connection connect() throws SQLException {

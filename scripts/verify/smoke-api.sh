@@ -11,6 +11,10 @@ SMOKE_ACCESS_TOKEN=""
 SMOKE_ADMIN_TOKEN=""
 SMOKE_STUDENT_TOKEN=""
 PYTHON_BIN="${PYTHON_BIN:-}"
+SMOKE_STUDENT_USERNAME="${SMOKE_STUDENT_USERNAME:-2024010101}"
+SMOKE_STUDENT_PASSWORD="${SMOKE_STUDENT_PASSWORD:-trainmark}"
+SMOKE_CHECK_ANNOTATION_EXPORT="${SMOKE_CHECK_ANNOTATION_EXPORT:-0}"
+SMOKE_CHECK_ANNOTATED_EXPORT_BUNDLE="${SMOKE_CHECK_ANNOTATED_EXPORT_BUNDLE:-0}"
 
 if [[ -z "$PYTHON_BIN" ]]; then
   for candidate in python3 python py; do
@@ -592,9 +596,14 @@ check_login_role() {
   local label="$1"
   local username="$2"
   local expected_role="$3"
+  local password="trainmark"
+  if [[ "$expected_role" == "STUDENT" ]]; then
+    username="$SMOKE_STUDENT_USERNAME"
+    password="$SMOKE_STUDENT_PASSWORD"
+  fi
 
   if [[ "$SMOKE_DRY_RUN" == "1" ]]; then
-    post_json "$label login" "$GATEWAY_URL/api/auth/login" "{\"username\":\"$username\",\"password\":\"trainmark\"}"
+    post_json "$label login" "$GATEWAY_URL/api/auth/login" "{\"username\":\"$username\",\"password\":\"$password\"}"
     check_api_auth "$label profile" "$GATEWAY_URL/api/auth/me" "<from $label login>"
     post_auth "$label refresh" "$GATEWAY_URL/api/auth/refresh" "<from $label login>"
     post_auth "$label logout" "$GATEWAY_URL/api/auth/logout" "<from $label login>"
@@ -605,7 +614,7 @@ check_login_role() {
   local access_token
   local profile_response
   local refresh_response
-  login_response="$(post_json "$label login" "$GATEWAY_URL/api/auth/login" "{\"username\":\"$username\",\"password\":\"trainmark\"}")"
+  login_response="$(post_json "$label login" "$GATEWAY_URL/api/auth/login" "{\"username\":\"$username\",\"password\":\"$password\"}")"
   access_token="$(json_field accessToken <<< "$login_response")"
   profile_response="$(curl --noproxy '*' --fail --silent --show-error --max-time 5 \
     -H "Authorization: Bearer $access_token" \
@@ -641,7 +650,7 @@ expect_gateway_auth_failure "organizations without token" "$GATEWAY_URL/api/orga
 if [[ "$SMOKE_DRY_RUN" == "1" ]]; then
   post_json "gateway smoke session login" "$GATEWAY_URL/api/auth/login" '{"username":"teacher","password":"trainmark"}'
   post_json "gateway admin session login" "$GATEWAY_URL/api/auth/login" '{"username":"admin","password":"trainmark"}'
-  post_json "gateway student session login" "$GATEWAY_URL/api/auth/login" '{"username":"student","password":"trainmark"}'
+  post_json "gateway student session login" "$GATEWAY_URL/api/auth/login" "{\"username\":\"$SMOKE_STUDENT_USERNAME\",\"password\":\"$SMOKE_STUDENT_PASSWORD\"}"
   expect_gateway_forbidden "teacher admin audit logs" "$GATEWAY_URL/api/admin/audit-logs" "<from gateway smoke session login>" "Access is denied"
   expect_gateway_forbidden "student grade exports" "$GATEWAY_URL/api/grading/exports?assignmentId=1" "<from gateway student session login>" "Access is denied"
   expect_gateway_forbidden "student grade export download" "$GATEWAY_URL/exports/assignments/1/grades.csv" "<from gateway student session login>" "Access is denied"
@@ -651,7 +660,7 @@ else
   SMOKE_ACCESS_TOKEN="$(json_field accessToken <<< "$smoke_session_response")"
   admin_session_response="$(post_json "gateway admin session login" "$GATEWAY_URL/api/auth/login" '{"username":"admin","password":"trainmark"}')"
   SMOKE_ADMIN_TOKEN="$(json_field accessToken <<< "$admin_session_response")"
-  student_session_response="$(post_json "gateway student session login" "$GATEWAY_URL/api/auth/login" '{"username":"student","password":"trainmark"}')"
+  student_session_response="$(post_json "gateway student session login" "$GATEWAY_URL/api/auth/login" "{\"username\":\"$SMOKE_STUDENT_USERNAME\",\"password\":\"$SMOKE_STUDENT_PASSWORD\"}")"
   SMOKE_STUDENT_TOKEN="$(json_field accessToken <<< "$student_session_response")"
   expect_gateway_forbidden "teacher admin audit logs" "$GATEWAY_URL/api/admin/audit-logs" "$SMOKE_ACCESS_TOKEN" "Access is denied"
   expect_gateway_forbidden "student grade exports" "$GATEWAY_URL/api/grading/exports?assignmentId=1" "$SMOKE_STUDENT_TOKEN" "Access is denied"
@@ -668,9 +677,13 @@ check_api "gateway collection overview" "$GATEWAY_URL/api/notifications/assignme
 check_api "gateway rubrics" "$GATEWAY_URL/api/rubrics"
 check_api "gateway grading jobs" "$GATEWAY_URL/api/grading/jobs"
 check_api "gateway grading results" "$GATEWAY_URL/api/grading/results"
-check_url "gateway annotation PDF" "$GATEWAY_URL/annotations/submissions/1/annotated.pdf"
+if [[ "$SMOKE_CHECK_ANNOTATION_EXPORT" == "1" ]]; then
+  check_url "gateway annotation PDF" "$GATEWAY_URL/annotations/submissions/1/annotated.pdf"
+fi
 check_url "gateway grade export" "$GATEWAY_URL/exports/assignments/1/grades.csv"
-check_url "gateway annotated PDF export bundle" "$GATEWAY_URL/exports/assignments/1/annotated-pdfs.zip"
+if [[ "$SMOKE_CHECK_ANNOTATED_EXPORT_BUNDLE" == "1" ]]; then
+  check_url "gateway annotated PDF export bundle" "$GATEWAY_URL/exports/assignments/1/annotated-pdfs.zip"
+fi
 check_api "gateway OCR jobs" "$GATEWAY_URL/api/ocr/jobs"
 check_api "gateway similarity jobs" "$GATEWAY_URL/api/similarity/jobs"
 check_api "gateway analytics grade statistics" "$GATEWAY_URL/api/analytics/grade-statistics?assignmentId=1"

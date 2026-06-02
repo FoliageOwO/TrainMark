@@ -1,3 +1,4 @@
+import { Alert, Button, Card, Empty, Space, Table, Tag, Typography } from 'antd';
 import type { AppealSummary } from '../api/types';
 import { toChineseText } from '../utils/displayText';
 
@@ -13,59 +14,81 @@ type TeacherAppealPanelProps = {
 };
 
 export function TeacherAppealPanel({ appeals, onResolveAppeal }: TeacherAppealPanelProps) {
+  const pendingAppeals = appeals.filter((item) => item.status === 'SUBMITTED');
+  const currentBlocker = pendingAppeals.length > 0
+    ? `当前阻塞：仍有 ${pendingAppeals.length} 条申诉待处理`
+    : '当前阻塞：无';
+  const nextAction = pendingAppeals.length > 0
+    ? '下一步：优先处理最早提交的申诉，再回到复核确认是否需要撤回重发。'
+    : '下一步：申诉已清空，可继续推进结果分析。';
+
+  const columns = [
+    {
+      title: '学生',
+      dataIndex: 'studentName',
+      key: 'studentName',
+    },
+    {
+      title: '结果',
+      key: 'result',
+      render: (_: unknown, appeal: AppealSummary) => `结果 #${appeal.resultId} / 评分项 ${appeal.rubricItemId ?? '总评'}`,
+    },
+    {
+      title: '申诉理由',
+      key: 'reason',
+      render: (_: unknown, appeal: AppealSummary) => toChineseText(appeal.reason),
+    },
+    {
+      title: '期望处理',
+      key: 'requestedChange',
+      render: (_: unknown, appeal: AppealSummary) => toChineseText(appeal.requestedChange),
+    },
+    {
+      title: '状态',
+      key: 'status',
+      render: (_: unknown, appeal: AppealSummary) => (
+        <Tag color={appeal.status === 'SUBMITTED' ? 'warning' : appeal.status === 'ACCEPTED' ? 'success' : 'error'}>
+          {appealStatusText[appeal.status]}
+        </Tag>
+      ),
+    },
+    {
+      title: '操作',
+      key: 'actions',
+      render: (_: unknown, appeal: AppealSummary) => (
+        appeal.status === 'SUBMITTED' ? (
+          <Space wrap>
+            <Button type="primary" onClick={() => onResolveAppeal(appeal.id, true)}>采纳</Button>
+            <Button onClick={() => onResolveAppeal(appeal.id, false)}>驳回</Button>
+          </Space>
+        ) : (
+          <Typography.Text type="secondary">{appeal.teacherReply ? toChineseText(appeal.teacherReply) : '-'}</Typography.Text>
+        )
+      ),
+    },
+  ];
+
   return (
     <section className="management-grid">
-      <article className="panel appeal-panel">
-        <div className="panel-heading">
-          <div>
-            <h3>学生申诉处理</h3>
-          </div>
-          <span className="status-pill">{appeals.filter((item) => item.status === 'SUBMITTED').length} 条待处理</span>
-        </div>
-        <div className="table-shell">
-          <div className="table-scroll table-scroll-lg">
-            <table className="data-table">
-              <thead>
-                <tr>
-                  <th>学生</th>
-                  <th>结果</th>
-                  <th>申诉理由</th>
-                  <th>期望处理</th>
-                  <th>状态</th>
-                  <th className="actions-col">操作</th>
-                </tr>
-              </thead>
-              <tbody>
-                {appeals.length === 0 ? (
-                  <tr>
-                    <td colSpan={6}>
-                      <div className="empty-table-cell">暂无学生申诉</div>
-                    </td>
-                  </tr>
-                ) : appeals.map((appeal) => (
-                  <tr key={appeal.id}>
-                    <td>{appeal.studentName}</td>
-                    <td>结果 #{appeal.resultId} / 评分项 {appeal.rubricItemId ?? '总评'}</td>
-                    <td>{toChineseText(appeal.reason)}</td>
-                    <td>{toChineseText(appeal.requestedChange)}</td>
-                    <td>{appealStatusText[appeal.status]}</td>
-                    <td>
-                      {appeal.status === 'SUBMITTED' ? (
-                        <div className="table-actions">
-                          <button className="primary-button compact" type="button" onClick={() => onResolveAppeal(appeal.id, true)}>采纳</button>
-                          <button className="ghost-button compact" type="button" onClick={() => onResolveAppeal(appeal.id, false)}>驳回</button>
-                        </div>
-                      ) : (
-                        <span>{appeal.teacherReply ? toChineseText(appeal.teacherReply) : '-'}</span>
-                      )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </article>
+      <Card
+        className="appeal-panel"
+        title="学生申诉处理"
+        extra={<Tag color="warning">{pendingAppeals.length} 条待处理</Tag>}
+      >
+        <Space direction="vertical" size={16} style={{ width: '100%' }}>
+          <Alert
+            type={pendingAppeals.length > 0 ? 'warning' : 'success'}
+            showIcon
+            message={currentBlocker}
+            description={nextAction}
+          />
+          {appeals.length === 0 ? (
+            <Empty description="暂无学生申诉" />
+          ) : (
+            <Table<AppealSummary> rowKey="id" columns={columns} dataSource={appeals} pagination={false} scroll={{ x: 1200 }} />
+          )}
+        </Space>
+      </Card>
     </section>
   );
 }

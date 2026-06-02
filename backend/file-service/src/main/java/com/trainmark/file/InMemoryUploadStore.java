@@ -79,8 +79,8 @@ public class InMemoryUploadStore implements UploadStore {
     if (existing != null) {
       submissions.values().removeIf(item ->
           upload.request().assignmentId().equals(item.assignmentId())
-              && upload.request().studentId().equals(item.studentId())
-              && !id.equals(item.id()));
+              && upload.request().studentId() == item.studentId()
+              && id != item.id());
       objectKeys.keySet().removeIf(submissionId -> !submissions.containsKey(submissionId));
     }
     submissions.put(id, summary);

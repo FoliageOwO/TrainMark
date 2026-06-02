@@ -3,6 +3,7 @@ package com.trainmark.auth;
 import com.trainmark.shared.RoleCode;
 import com.trainmark.shared.dto.LoginRequest;
 import com.trainmark.shared.dto.LoginResponse;
+import com.trainmark.shared.dto.RegisterRequest;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
@@ -14,6 +15,7 @@ import java.util.List;
 import java.util.Optional;
 import javax.crypto.SecretKey;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -22,6 +24,7 @@ public class AuthService {
   private final SecretKey signingKey;
   private final long accessTokenTtlSeconds;
   private final long refreshTokenTtlSeconds;
+  private final BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
 
   public AuthService(
       AuthUserStore authUserStore,
@@ -42,24 +45,31 @@ public class AuthService {
 
   public LoginResponse login(LoginRequest request) {
     return authUserStore.findByLogin(request.username())
+        .filter((user) -> passwordMatches(request.password(), user))
         .map(this::loginUser)
         .orElseGet(() -> fallbackLogin(request.username()));
+  }
+
+  public LoginResponse register(RegisterRequest request) {
+    var user = authUserStore.register(request, passwordEncoder.encode(request.password().trim()));
+    return loginUser(user);
   }
 
   public LoginResponse.UserProfile currentUser(String authorizationHeader) {
     return currentAuthUser(authorizationHeader)
         .map(this::profile)
-        .orElseGet(() -> mockUser("teacher").user());
+        .orElseThrow(() -> new IllegalArgumentException("Authentication is required"));
   }
 
   public LoginResponse refresh(String authorizationHeader) {
     return currentAuthUser(authorizationHeader)
         .map(this::loginUser)
-        .orElseGet(() -> mockUser("teacher"));
+        .orElseThrow(() -> new IllegalArgumentException("Authentication is required"));
   }
 
   public void logout(String authorizationHeader) {
-    currentAuthUser(authorizationHeader);
+    currentAuthUser(authorizationHeader)
+        .orElseThrow(() -> new IllegalArgumentException("Authentication is required"));
   }
 
   private Optional<AuthUserStore.AuthUser> currentAuthUser(String authorizationHeader) {
@@ -109,13 +119,28 @@ public class AuthService {
   private Optional<AuthUserStore.AuthUser> fallbackAuthUser(String username) {
     if (authUserStore.allowsMockFallback()) {
       var user = mockUser(username).user();
-      return Optional.of(new AuthUserStore.AuthUser(user.id(), user.name(), user.username(), user.roles()));
+      return Optional.of(new AuthUserStore.AuthUser(user.id(), user.name(), user.username(), "", user.roles()));
     }
     throw new IllegalArgumentException("Invalid access token");
   }
 
   private LoginResponse.UserProfile profile(AuthUserStore.AuthUser authUser) {
     return new LoginResponse.UserProfile(authUser.id(), authUser.name(), authUser.username(), authUser.roles());
+  }
+
+  private boolean passwordMatches(String rawPassword, AuthUserStore.AuthUser user) {
+    var storedPasswordHash = user.passwordHash();
+    if (storedPasswordHash == null || storedPasswordHash.isBlank()) {
+      return false;
+    }
+    if (storedPasswordHash.startsWith("plain:")) {
+      var matched = storedPasswordHash.equals("plain:" + rawPassword);
+      if (matched) {
+        authUserStore.updatePasswordHash(user.id(), passwordEncoder.encode(rawPassword));
+      }
+      return matched;
+    }
+    return passwordEncoder.matches(rawPassword, storedPasswordHash);
   }
 
   private Optional<String> usernameFromBearer(String authorizationHeader) {

@@ -1,4 +1,5 @@
 import { useEffect, useState, type FormEvent } from 'react';
+import { Alert, Button, Card, Col, Descriptions, Empty, Form, Input, InputNumber, Row, Select, Space, Statistic, Table, Tag, Typography } from 'antd';
 import { CheckCircle2, FileText } from 'lucide-react';
 import { fetchApiAssetBlobUrl } from '../api/httpApi';
 import type { AppealSummary, AssignmentSummary, GradePublicationAuditEntry, GradingResultSummary, TeachingClassSummary } from '../api/types';
@@ -60,9 +61,52 @@ export function TeacherReviewWorkspace({
   const currentResultIds = new Set(reviewResults.map((item) => item.id));
   const assignmentAppeals = appeals.filter((item) => currentResultIds.has(item.resultId));
   const selectedAppeals = appeals.filter((item) => item.resultId === selectedReview.id);
+  const selectedPendingAppeals = selectedAppeals.filter((item) => item.status === 'SUBMITTED');
+  const selectedResolvedAppeals = selectedAppeals.filter((item) => item.status !== 'SUBMITTED');
   const pendingAppealCount = assignmentAppeals.filter((item) => item.status === 'SUBMITTED').length;
+  const currentBlocker = selectedReview.reviewStatus !== 'APPROVED'
+    ? '当前阻塞：复核结果未通过'
+    : selectedReview.publicationStatus !== 'PUBLISHED'
+      ? '当前阻塞：成绩尚未发布'
+      : pendingAppealCount > 0
+        ? `当前阻塞：仍有 ${pendingAppealCount} 条申诉待处理`
+        : '当前阻塞：无';
+  const nextAction = selectedReview.reviewStatus !== 'APPROVED'
+    ? '下一步：先完成分项复核并点击“通过复核”。'
+    : selectedReview.publicationStatus !== 'PUBLISHED'
+      ? '下一步：点击“发布成绩”，完成结果发布。'
+      : pendingAppealCount > 0
+        ? '下一步：处理待办申诉，再确认是否需要撤回重发。'
+        : '下一步：进入结果分析，查看失分点与达成度。';
   const [annotationPreviewUrl, setAnnotationPreviewUrl] = useState<string | null>(null);
   const [annotationPreviewError, setAnnotationPreviewError] = useState<string | null>(null);
+
+  const reviewColumns = [
+    {
+      title: '学生',
+      key: 'student',
+      render: (_: unknown, result: GradingResultSummary) => (
+        <div className="table-primary">
+          <strong>{result.studentName}</strong>
+          <span>{result.studentNo}</span>
+        </div>
+      ),
+    },
+    {
+      title: '分数',
+      key: 'score',
+      render: (_: unknown, result: GradingResultSummary) => `${result.teacherScore}/${result.totalScore}`,
+    },
+    {
+      title: '状态',
+      key: 'status',
+      render: (_: unknown, result: GradingResultSummary) => (
+        <Tag color={result.reviewStatus === 'APPROVED' ? 'success' : result.reviewStatus === 'RETURNED' ? 'error' : 'warning'}>
+          {reviewStatusText[result.reviewStatus]}
+        </Tag>
+      ),
+    },
+  ];
 
   useEffect(() => {
     let cancelled = false;
@@ -101,73 +145,40 @@ export function TeacherReviewWorkspace({
 
   return (
     <section className="review-layout">
-      <article className="panel review-list-panel">
-        <div className="panel-heading">
-          <div>
-            <h3>待复核报告</h3>
-            <p className="panel-subtitle">{selectedAssignment?.title ?? '当前实训任务'}</p>
-          </div>
-          <span className="status-pill">{reviewResults.length} 份 · {pendingAppealCount} 条申诉</span>
-        </div>
-        <label className="file-name-field review-task-field">
-          当前实训任务
-          <select value={selectedAssignmentId} onChange={(event) => onSelectAssignment(Number(event.target.value))}>
-            {assignments.map((assignment) => (
-              <option key={assignment.id} value={assignment.id}>
-                {toChineseText(assignment.title)}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label className="file-name-field review-task-field">
-          当前班级
-          <select value={selectedClassId} onChange={(event) => onSelectClass(Number(event.target.value))}>
-            <option value={0}>全部班级</option>
-            {classes.map((teachingClass) => (
-              <option key={teachingClass.id} value={teachingClass.id}>
-                {teachingClass.name}
-              </option>
-            ))}
-          </select>
-        </label>
-        <div className="table-shell">
-          <div className="table-scroll table-scroll-lg">
-            <table className="data-table review-table">
-              <thead>
-                <tr>
-                  <th>学生</th>
-                  <th>分数</th>
-                  <th>状态</th>
-                </tr>
-              </thead>
-              <tbody>
-                {reviewResults.length === 0 ? (
-                  <tr>
-                    <td colSpan={3}>
-                      <div className="empty-table-cell">当前实训任务暂无复核结果</div>
-                    </td>
-                  </tr>
-                ) : reviewResults.map((result) => (
-                  <tr
-                    className={selectedReview.id === result.id ? 'is-selected is-clickable' : 'is-clickable'}
-                    key={result.id}
-                    onClick={() => onSelectReview(result.id)}
-                  >
-                    <td>
-                      <div className="table-primary">
-                        <strong>{result.studentName}</strong>
-                        <span>{result.studentNo}</span>
-                      </div>
-                    </td>
-                    <td>{result.teacherScore}/{result.totalScore}</td>
-                    <td>{reviewStatusText[result.reviewStatus]}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </article>
+      <Card
+        className="review-list-panel"
+        title="待复核报告"
+        extra={<Tag color="warning">{reviewResults.length} 份 · {pendingAppealCount} 条申诉</Tag>}
+      >
+        <Space direction="vertical" size={16} style={{ width: '100%' }}>
+          <Typography.Text type="secondary">{selectedAssignment?.title ?? '当前实训任务'}</Typography.Text>
+          <Select
+            value={selectedAssignmentId}
+            options={assignments.map((assignment) => ({ value: assignment.id, label: toChineseText(assignment.title) }))}
+            onChange={(value) => onSelectAssignment(value)}
+          />
+          <Select
+            value={selectedClassId}
+            options={[
+              { value: 0, label: '全部班级' },
+              ...classes.map((teachingClass) => ({ value: teachingClass.id, label: teachingClass.name })),
+            ]}
+            onChange={(value) => onSelectClass(value)}
+          />
+          {reviewResults.length === 0 ? (
+            <Empty description="当前实训任务暂无复核结果" />
+          ) : (
+            <Table<GradingResultSummary>
+              rowKey="id"
+              columns={reviewColumns}
+              dataSource={reviewResults}
+              pagination={false}
+              onRow={(result) => ({ onClick: () => onSelectReview(result.id), style: { cursor: 'pointer' } })}
+              rowClassName={(result) => (selectedReview.id === result.id ? 'is-selected' : '')}
+            />
+          )}
+        </Space>
+      </Card>
 
       <article className="panel review-preview-panel">
         <div className="panel-heading">
@@ -182,9 +193,9 @@ export function TeacherReviewWorkspace({
             <span>原报告批注版预览</span>
             <div className="pdf-toolbar-actions">
               {annotationPreviewUrl ? (
-                <a className="ghost-button compact-link" href={annotationPreviewUrl} rel="noreferrer" target="_blank">
+                <Button type="link" href={annotationPreviewUrl} rel="noreferrer" target="_blank">
                   <FileText size={14} /> 打开批注 PDF
-                </a>
+                </Button>
               ) : null}
             </div>
           </div>
@@ -220,113 +231,114 @@ export function TeacherReviewWorkspace({
         </div>
       </article>
 
-      <article className="panel review-score-panel">
-        <div className="panel-heading">
-          <div>
-            <h3>复核结果</h3>
-            <p className="panel-subtitle">{selectedReview.studentName} · {selectedReview.teacherScore}/{selectedReview.totalScore} 分</p>
-          </div>
-        </div>
-        <div className="review-score-summary">
-          <div>
-            <span>AI 初评</span>
-            <strong>{selectedReview.aiScore}</strong>
-          </div>
-          <div>
-            <span>教师复核</span>
-            <strong>{selectedReview.teacherScore}</strong>
-          </div>
-          <div>
-            <span>置信度</span>
-            <strong>{selectedReview.confidence}%</strong>
-          </div>
-        </div>
-        <div className="publication-actions">
-          <div>
-            <span>发布状态</span>
-            <strong>{publicationStatusText[selectedReview.publicationStatus]}</strong>
-            {selectedReview.publishedAt && <small>{formatDate(selectedReview.publishedAt)} 发布</small>}
-          </div>
-          <div className="publication-buttons">
-            <button
-              className="primary-button"
-              type="button"
-              onClick={onPublishResult}
-              disabled={selectedReview.reviewStatus !== 'APPROVED'}
-            >
+      <Card className="review-score-panel" title="复核结果">
+        <Space direction="vertical" size={16} style={{ width: '100%' }}>
+          <Typography.Text type="secondary">{selectedReview.studentName} · {selectedReview.teacherScore}/{selectedReview.totalScore} 分</Typography.Text>
+          <Alert
+            type={selectedReview.reviewStatus !== 'APPROVED' || selectedReview.publicationStatus !== 'PUBLISHED' ? 'warning' : 'success'}
+            showIcon
+            message={currentBlocker}
+            description={nextAction}
+            action={selectedReview.reviewStatus !== 'APPROVED' ? (
+              <Button type="primary" onClick={onApproveResult}>
+                <CheckCircle2 size={16} /> 通过复核（下一步）
+              </Button>
+            ) : selectedReview.publicationStatus !== 'PUBLISHED' ? (
+              <Button type="primary" onClick={onPublishResult}>
+                <CheckCircle2 size={16} /> 发布成绩（下一步）
+              </Button>
+            ) : null}
+          />
+          <Descriptions bordered size="small" column={1}>
+            <Descriptions.Item label="发布状态">
+              {publicationStatusText[selectedReview.publicationStatus]} {selectedReview.publishedAt ? `· ${formatDate(selectedReview.publishedAt)} 发布` : ''}
+            </Descriptions.Item>
+          </Descriptions>
+          <Space wrap>
+            <Button onClick={onApproveResult}><CheckCircle2 size={16} /> 通过复核</Button>
+            <Button type="primary" onClick={onPublishResult} disabled={selectedReview.reviewStatus !== 'APPROVED'}>
               <CheckCircle2 size={16} /> 发布成绩
-            </button>
-            <button className="ghost-button" type="button" onClick={onWithdrawResult}>
-              撤回发布
-            </button>
-          </div>
-        </div>
-        <div className="overall-comment">
-          <span>总评</span>
-          <p>{toChineseText(selectedReview.overallComment)}</p>
-        </div>
-        <div className="review-appeal-box">
-          <div className="review-appeal-heading">
-            <strong>申诉处理</strong>
-            <span>{selectedAppeals.filter((item) => item.status === 'SUBMITTED').length} 条待处理</span>
-          </div>
+            </Button>
+            <Button onClick={onWithdrawResult}>撤回发布</Button>
+          </Space>
+          <Row gutter={[16, 16]}>
+            <Col xs={24} md={8}><Card><Statistic title="AI 初评" value={selectedReview.aiScore} /></Card></Col>
+            <Col xs={24} md={8}><Card><Statistic title="教师复核" value={selectedReview.teacherScore} /></Card></Col>
+            <Col xs={24} md={8}><Card><Statistic title="置信度" value={selectedReview.confidence} suffix="%" /></Card></Col>
+          </Row>
+          <Card size="small">
+            <Typography.Text type="secondary">总评</Typography.Text>
+            <Typography.Paragraph style={{ marginBottom: 0 }}>{toChineseText(selectedReview.overallComment)}</Typography.Paragraph>
+          </Card>
+          <Card size="small" title={`申诉处理 · ${selectedPendingAppeals.length} 条待处理`}>
           {selectedAppeals.length === 0 ? (
-            <p className="review-appeal-empty">该学生本次结果暂无申诉。</p>
+            <Typography.Text type="secondary">该学生本次结果暂无申诉。</Typography.Text>
           ) : (
-            selectedAppeals.map((appeal) => (
-              <div className="review-appeal-card" key={appeal.id}>
+            selectedPendingAppeals.map((appeal) => (
+              <Card className="review-appeal-card" key={appeal.id} size="small" style={{ marginBottom: 12 }}>
                 <div>
-                  <b>{appeal.status === 'SUBMITTED' ? '待处理' : appeal.status === 'ACCEPTED' ? '已采纳' : '已驳回'}</b>
+                  <b>待处理</b>{' '}
                   <span>{appeal.rubricItemId ? `评分项 ${appeal.rubricItemId}` : '总评'} · {formatDate(appeal.createdAt)}</span>
                 </div>
                 <p>{toChineseText(appeal.reason)}</p>
                 <small>{toChineseText(appeal.requestedChange)}</small>
                 {appeal.teacherReply ? <small>{toChineseText(appeal.teacherReply)}</small> : null}
-                {appeal.status === 'SUBMITTED' ? (
-                  <div className="table-actions">
-                    <button className="primary-button compact" type="button" onClick={() => onResolveAppeal(appeal.id, true)}>采纳申诉</button>
-                    <button className="ghost-button compact" type="button" onClick={() => onResolveAppeal(appeal.id, false)}>驳回申诉</button>
-                  </div>
-                ) : null}
-              </div>
+                <Space wrap style={{ marginTop: 8 }}>
+                  <Button type="primary" onClick={() => onResolveAppeal(appeal.id, true)}>采纳申诉</Button>
+                  <Button onClick={() => onResolveAppeal(appeal.id, false)}>驳回申诉</Button>
+                </Space>
+              </Card>
             ))
           )}
-        </div>
-        <div className="review-item-list panel-scroll panel-scroll-xl">
+          {selectedResolvedAppeals.length > 0 ? (
+            <details>
+              <summary>查看已处理申诉（{selectedResolvedAppeals.length}）</summary>
+              {selectedResolvedAppeals.map((appeal) => (
+                <Card className="review-appeal-card" key={appeal.id} size="small" style={{ marginTop: 12 }}>
+                  <div>
+                    <b>{appeal.status === 'ACCEPTED' ? '已采纳' : '已驳回'}</b>
+                    <span>{appeal.rubricItemId ? `评分项 ${appeal.rubricItemId}` : '总评'} · {formatDate(appeal.createdAt)}</span>
+                  </div>
+                  <p>{toChineseText(appeal.reason)}</p>
+                  <small>{toChineseText(appeal.requestedChange)}</small>
+                  {appeal.teacherReply ? <small>{toChineseText(appeal.teacherReply)}</small> : null}
+                </Card>
+              ))}
+            </details>
+          ) : null}
+          </Card>
+          <div className="review-item-list panel-scroll panel-scroll-xl">
           {selectedReview.items.map((item) => (
-            <form className="review-item-card" key={item.rubricItemId} onSubmit={(event) => onReviewItemSubmit(event, item.rubricItemId)}>
-              <div className="review-item-heading">
-                <div>
-                  <strong>{toChineseText(item.title)}</strong>
-                  <span>AI {item.aiScore}/{item.maxScore} · 置信度 {item.confidence}%</span>
-                </div>
-                <label>
-                  教师分
-                  <input name="teacherScore" type="number" min="0" max={item.maxScore} defaultValue={item.teacherScore} />
-                </label>
-              </div>
-              <div className="deduction-box">
-                <span>扣分原因</span>
-                <p>{toChineseText(item.deductionReason)}</p>
-              </div>
-              <div className="evidence-tags">
-                {item.evidence.map((evidence) => <span key={evidence}>{toChineseText(evidence)}</span>)}
-              </div>
-              <label className="comment-field">
-                教师评语
-                <textarea name="teacherComment" rows={2} defaultValue={toChineseText(item.teacherComment)} />
-              </label>
-              <button className="ghost-button" type="submit">保存分项复核</button>
-            </form>
+            <Card key={item.rubricItemId} className="review-item-card" size="small" style={{ marginBottom: 12 }}>
+              <Form layout="vertical" onSubmitCapture={(event) => onReviewItemSubmit(event, item.rubricItemId)}>
+                <Space style={{ width: '100%', justifyContent: 'space-between' }}>
+                  <div>
+                    <Typography.Text strong>{toChineseText(item.title)}</Typography.Text>
+                    <Typography.Text type="secondary" style={{ display: 'block' }}>AI {item.aiScore}/{item.maxScore} · 置信度 {item.confidence}%</Typography.Text>
+                  </div>
+                  <Form.Item label="教师分" style={{ marginBottom: 0 }}>
+                    <InputNumber name="teacherScore" min={0} max={item.maxScore} defaultValue={item.teacherScore} />
+                  </Form.Item>
+                </Space>
+                <Card size="small" style={{ marginTop: 12, marginBottom: 12 }}>
+                  <Typography.Text type="secondary">扣分原因</Typography.Text>
+                  <Typography.Paragraph style={{ marginBottom: 0 }}>{toChineseText(item.deductionReason)}</Typography.Paragraph>
+                </Card>
+                <Space wrap style={{ marginBottom: 12 }}>
+                  {item.evidence.map((evidence) => <Tag key={evidence}>{toChineseText(evidence)}</Tag>)}
+                </Space>
+                <Form.Item label="教师评语" style={{ marginBottom: 12 }}>
+                  <Input.TextArea name="teacherComment" rows={2} defaultValue={toChineseText(item.teacherComment)} />
+                </Form.Item>
+                <Button htmlType="submit">保存分项复核</Button>
+              </Form>
+            </Card>
           ))}
-        </div>
-        <button className="primary-button full-width" type="button" onClick={onApproveResult}>
-          <CheckCircle2 size={16} /> 通过复核，等待发布
-        </button>
-        <div className="audit-list">
-          <strong>发布审计</strong>
+          </div>
+          <details className="audit-list">
+          <summary>发布审计（{selectedAudits.length}）</summary>
           {selectedAudits.length === 0 ? (
-            <span>暂无发布操作记录</span>
+            <Typography.Text type="secondary">暂无发布操作记录</Typography.Text>
           ) : (
             selectedAudits.map((audit) => (
               <div className="audit-row" key={audit.id}>
@@ -335,8 +347,9 @@ export function TeacherReviewWorkspace({
               </div>
             ))
           )}
-        </div>
-      </article>
+          </details>
+        </Space>
+      </Card>
     </section>
   );
 }

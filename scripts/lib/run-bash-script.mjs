@@ -24,6 +24,9 @@ for (let index = 0; index < rawArgs.length; index += 1) {
     scriptPath = arg;
     continue;
   }
+  if (arg === '--') {
+    continue;
+  }
   scriptArgs.push(arg);
 }
 

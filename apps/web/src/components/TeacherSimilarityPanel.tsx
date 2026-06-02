@@ -1,3 +1,4 @@
+import { Button, Card, Empty, Select, Table, Tag } from 'antd';
 import { ShieldCheck } from 'lucide-react';
 import type { SimilarityJobSummary, TeachingClassSummary } from '../api/types';
 import { toChineseText } from '../utils/displayText';
@@ -25,55 +26,56 @@ export function TeacherSimilarityPanel({
     ...match,
   })));
 
+  const columns = [
+    {
+      title: '任务',
+      key: 'jobId',
+      render: (_: unknown, match: typeof matchRows[number]) => `#${match.jobId}`,
+    },
+    {
+      title: '学生对',
+      key: 'students',
+      render: (_: unknown, match: typeof matchRows[number]) => `${match.sourceStudentName} / ${match.targetStudentName}`,
+    },
+    {
+      title: '命中片段',
+      key: 'section',
+      render: (_: unknown, match: typeof matchRows[number]) => toChineseText(match.matchedSection),
+    },
+    {
+      title: '相似度',
+      key: 'similarity',
+      render: (_: unknown, match: typeof matchRows[number]) => `${Math.round(match.similarity * 100)}%`,
+    },
+    {
+      title: '风险',
+      key: 'risk',
+      render: (_: unknown, match: typeof matchRows[number]) => <Tag color={match.riskLevel === 'HIGH' ? 'error' : match.riskLevel === 'MEDIUM' ? 'warning' : 'default'}>{match.riskLevel}</Tag>,
+    },
+  ];
+
   return (
     <section className="management-grid">
-      <article className="panel similarity-panel">
-        <div className="panel-heading">
-          <div>
-            <h3>查重检测</h3>
-          </div>
-          <button className="ghost-button" type="button" onClick={onStartSimilarity}>
-            <ShieldCheck size={15} /> 启动查重
-          </button>
-        </div>
-        <label className="file-name-field section-filter-field">
-          当前班级
-          <select value={selectedClassId} onChange={(event) => onSelectClass(Number(event.target.value))}>
-            <option value={0}>全部班级</option>
-            {classes.map((teachingClass) => (
-              <option key={teachingClass.id} value={teachingClass.id}>
-                {teachingClass.name}
-              </option>
-            ))}
-          </select>
-        </label>
-        <div className="table-shell">
-          <div className="table-scroll table-scroll-lg">
-            <table className="data-table">
-              <thead>
-                <tr>
-                  <th>任务</th>
-                  <th>学生对</th>
-                  <th>命中片段</th>
-                  <th>相似度</th>
-                  <th>风险</th>
-                </tr>
-              </thead>
-              <tbody>
-                {matchRows.map((match) => (
-                  <tr key={`${match.jobId}-${match.sourceSubmissionId}-${match.targetSubmissionId}`}>
-                    <td>#{match.jobId}</td>
-                    <td>{match.sourceStudentName} / {match.targetStudentName}</td>
-                    <td>{toChineseText(match.matchedSection)}</td>
-                    <td>{Math.round(match.similarity * 100)}%</td>
-                    <td>{match.riskLevel}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </article>
+      <Card
+        className="similarity-panel"
+        title="查重检测"
+        extra={<Button onClick={onStartSimilarity}><ShieldCheck size={15} /> 启动查重</Button>}
+      >
+        <Select
+          value={selectedClassId}
+          style={{ width: '100%', marginBottom: 16 }}
+          options={[
+            { value: 0, label: '全部班级' },
+            ...classes.map((teachingClass) => ({ value: teachingClass.id, label: teachingClass.name })),
+          ]}
+          onChange={(value) => onSelectClass(value)}
+        />
+        {matchRows.length === 0 ? (
+          <Empty description="暂无查重命中结果" />
+        ) : (
+          <Table rowKey={(match) => `${match.jobId}-${match.sourceSubmissionId}-${match.targetSubmissionId}`} columns={columns} dataSource={matchRows} pagination={false} scroll={{ x: 1000 }} />
+        )}
+      </Card>
     </section>
   );
 }

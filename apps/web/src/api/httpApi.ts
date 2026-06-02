@@ -148,14 +148,19 @@ export type ImportStudentsInput = {
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8080';
 const API_MODE = import.meta.env.VITE_API_MODE ?? 'mock';
-const API_STRICT_HTTP = import.meta.env.VITE_API_STRICT_HTTP === '1';
+const API_STRICT_HTTP = import.meta.env.VITE_API_STRICT_HTTP !== '0';
+const API_ALLOW_MOCK_FALLBACK = import.meta.env.VITE_API_ALLOW_MOCK_FALLBACK === '1';
+
+// Fallback policy:
+// - In HTTP mode, critical reads/writes fail loudly.
+// - Mock fallbacks are only for explicit non-HTTP demo mode.
 
 export function shouldUseHttpApi() {
   return API_MODE === 'http';
 }
 
 export function shouldUseStrictHttpApi() {
-  return shouldUseHttpApi() && API_STRICT_HTTP;
+  return shouldUseHttpApi() && API_STRICT_HTTP && !API_ALLOW_MOCK_FALLBACK;
 }
 
 export function resolveApiAssetUrl(path: string) {
@@ -186,37 +191,52 @@ export async function fetchApiAssetBlobUrl(path: string): Promise<string> {
   return URL.createObjectURL(await response.blob());
 }
 
-const roleLoginUsernames: Record<RoleCode, string> = {
-  TEACHER: 'teacher',
-  STUDENT: 'student',
-  COURSE_OWNER: 'owner',
-  SUPERVISOR: 'supervisor',
-  ADMIN: 'admin',
-};
-
-export async function loginAsRole(role: RoleCode): Promise<UserProfile> {
+export async function loginWithCredentials(username: string, password: string): Promise<UserProfile> {
   if (!shouldUseHttpApi()) {
-    return mockApi.login(role);
-  }
-  try {
-    const response = await request<LoginResponse>(
-      '/api/auth/login',
-      'POST',
-      {
-        username: roleLoginUsernames[role],
-        password: 'trainmark',
-      },
-      false,
-    );
-    persistTokens(response);
-    return response.user;
-  } catch (error) {
-    clearTokens();
-    if (shouldUseStrictHttpApi()) {
-      throw error;
+    const normalized = username.toLowerCase();
+    if (normalized.includes('student')) {
+      return mockApi.login('STUDENT');
     }
-    return mockApi.login(role);
+    if (normalized.includes('admin')) {
+      return mockApi.login('ADMIN');
+    }
+    if (normalized.includes('owner')) {
+      return mockApi.login('COURSE_OWNER');
+    }
+    if (normalized.includes('supervisor')) {
+      return mockApi.login('SUPERVISOR');
+    }
+    return mockApi.login('TEACHER');
   }
+  const response = await request<LoginResponse>(
+    '/api/auth/login',
+    'POST',
+    { username, password },
+    false,
+  );
+  persistTokens(response);
+  return response.user;
+}
+
+export async function registerWithCredentials(username: string, name: string, password: string): Promise<UserProfile> {
+  if (!shouldUseHttpApi()) {
+    mockApi.createUser({
+      organizationId: 3,
+      username,
+      name,
+      email: `${username}@trainmark.local`,
+      roles: ['STUDENT'],
+    });
+    return mockApi.login('STUDENT');
+  }
+  const response = await request<LoginResponse>(
+    '/api/auth/register',
+    'POST',
+    { username, name, password },
+    false,
+  );
+  persistTokens(response);
+  return response.user;
 }
 
 export async function refreshCurrentSession(): Promise<UserProfile | null> {
@@ -254,15 +274,26 @@ export async function loadWorkspaceData(selectedCourseId: number, userId: number
   const isAdmin = role === 'ADMIN';
   const submissionPath = role === 'STUDENT' ? `/api/submissions?studentId=${userId}` : '/api/submissions';
   const assignmentPath = isStudent ? '/api/assignments' : `/api/assignments?courseId=${selectedCourseId}`;
-  const assignmentFallback = isStudent ? mockApi.listAssignments() : mockApi.listAssignments(selectedCourseId);
-  const assignments = await getOr(assignmentPath, assignmentFallback);
+  const assignmentFallback: AssignmentSummary[] = [];
+  const assignments = await mustGetStrict(assignmentPath, assignmentFallback);
   const selectedAssignmentId = resolveWorkspaceAssignmentId(assignments, selectedCourseId);
   const gradingResultsPath = isStudent ? '/api/grading/results' : `/api/grading/results?assignmentId=${selectedAssignmentId}`;
   const appealsPath = isStudent ? `/api/grading/results/appeals?studentId=${userId}` : '/api/grading/results/appeals';
-  const fallbackGradingResults = isStudent ? mockApi.listGradingResults() : mockApi.listGradingResults(selectedAssignmentId);
-  const fallbackAppeals = isStudent ? mockApi.listAppeals().filter((item) => item.studentId === userId) : mockApi.listAppeals();
-  const emptyCollectionOverview = mockApi.getCollectionOverview(selectedAssignmentId);
-  const emptyGradeStatistics = { ...mockApi.getGradeStatistics(selectedAssignmentId), publishedCount: 0, averageScore: 0, maxScore: 0, minScore: 0, buckets: [] };
+  const fallbackGradingResults: GradingResultSummary[] = [];
+  const fallbackAppeals: AppealSummary[] = [];
+  const emptyCollectionOverview: CollectionOverview = { assignmentId: selectedAssignmentId, totalStudents: 0, submitted: 0, unsubmitted: 0, lateSubmitted: 0, processing: 0, reviewed: 0, published: 0 };
+  const emptyGradeStatistics: GradeStatisticsSummary = {
+    assignmentId: selectedAssignmentId,
+    submittedCount: 0,
+    publishedCount: 0,
+    averageScore: 0,
+    standardDeviation: 0,
+    maxScore: 0,
+    minScore: 0,
+    difficultyIndex: 0,
+    discriminationIndex: 0,
+    scoreBuckets: [],
+  };
   const [
     courses,
     classes,
@@ -286,27 +317,27 @@ export async function loadWorkspaceData(selectedCourseId: number, userId: number
     auditLogs,
     systemSettings,
   ] = await Promise.all([
-    getOr('/api/courses', mockApi.listCourses()),
-    getOr(`/api/courses/${selectedCourseId}/classes`, mockApi.listClasses(selectedCourseId)),
-    getOr('/api/organizations', mockApi.listOrganizations()),
-    getOr('/api/users', mockApi.listUsers()),
-    getOr('/api/users?role=STUDENT', mockApi.listUsers('STUDENT')),
+    mustGetStrict('/api/courses', []),
+    mustGetStrict(`/api/courses/${selectedCourseId}/classes`, []),
+    mustGetStrict('/api/organizations', []),
+    mustGetStrict('/api/users', []),
+    mustGetStrict('/api/users?role=STUDENT', []),
     isStudent || isAdmin ? {} : loadClassStudents(selectedCourseId),
-    isStudent ? emptyCollectionOverview : getOr(`/api/notifications/assignments/${selectedAssignmentId}/collection`, mockApi.getCollectionOverview(selectedAssignmentId)),
-    isStudent ? [] : getOr(`/api/notifications/assignments/${selectedAssignmentId}/unsubmitted`, mockApi.listUnsubmittedStudents(selectedAssignmentId)),
-    isStudent ? [] : getOr('/api/rubrics', mockApi.listRubrics()),
-    isStudent ? [] : getOr(`/api/grading/jobs?assignmentId=${selectedAssignmentId}`, mockApi.listGradingJobs(selectedAssignmentId)),
+    isStudent ? emptyCollectionOverview : mustGetStrict(`/api/notifications/assignments/${selectedAssignmentId}/collection`, emptyCollectionOverview),
+    isStudent ? [] : mustGetStrict(`/api/notifications/assignments/${selectedAssignmentId}/unsubmitted`, []),
+    isStudent ? [] : mustGetStrict('/api/rubrics', []),
+    isStudent ? [] : mustGetStrict(`/api/grading/jobs?assignmentId=${selectedAssignmentId}`, []),
     isStudent ? [] : loadOcrJobs(),
-    getOr(gradingResultsPath, fallbackGradingResults),
-    getOr(submissionPath, isStudent ? mockApi.listSubmissions(undefined, userId) : mockApi.listSubmissions()),
-    isStudent ? [] : getOr(`/api/grading/exports?assignmentId=${selectedAssignmentId}`, mockApi.listGradeExports(selectedAssignmentId)),
-    isStudent ? emptyGradeStatistics : getOr(`/api/analytics/grade-statistics?assignmentId=${selectedAssignmentId}`, mockApi.getGradeStatistics(selectedAssignmentId)),
-    isStudent ? [] : getOr(`/api/analytics/loss-points?assignmentId=${selectedAssignmentId}`, mockApi.listLossPoints(selectedAssignmentId)),
-    isStudent ? [] : getOr(`/api/analytics/course-outcomes?assignmentId=${selectedAssignmentId}`, mockApi.listCourseOutcomes(selectedAssignmentId)),
-    getOr(appealsPath, fallbackAppeals),
-    isStudent ? [] : getOr(`/api/similarity/jobs?assignmentId=${selectedAssignmentId}`, mockApi.listSimilarityJobs(selectedAssignmentId)),
-    isAdmin ? getOr('/api/admin/audit-logs', mockApi.listAuditLogs()) : [],
-    isAdmin ? getOr('/api/admin/settings', mockApi.listSystemSettings()) : [],
+    mustGetStrict(gradingResultsPath, fallbackGradingResults),
+    mustGetStrict(submissionPath, []),
+    isStudent ? [] : mustGetStrict(`/api/grading/exports?assignmentId=${selectedAssignmentId}`, []),
+    isStudent ? emptyGradeStatistics : mustGetStrict(`/api/analytics/grade-statistics?assignmentId=${selectedAssignmentId}`, emptyGradeStatistics),
+    isStudent ? [] : mustGetStrict(`/api/analytics/loss-points?assignmentId=${selectedAssignmentId}`, []),
+    isStudent ? [] : mustGetStrict(`/api/analytics/course-outcomes?assignmentId=${selectedAssignmentId}`, []),
+    mustGetStrict(appealsPath, fallbackAppeals),
+    isStudent ? [] : mustGetStrict(`/api/similarity/jobs?assignmentId=${selectedAssignmentId}`, []),
+    isAdmin ? mustGetStrict('/api/admin/audit-logs', []) : [],
+    isAdmin ? mustGetStrict('/api/admin/settings', []) : [],
   ]);
   const publishedResults = gradingResults.filter((item) => item.publicationStatus === 'PUBLISHED' && item.studentId === userId);
   const publicationAudits = isStudent ? [] : await loadPublicationAuditsForResults(gradingResults);
@@ -341,9 +372,9 @@ export async function loadWorkspaceData(selectedCourseId: number, userId: number
 }
 
 async function loadClassStudents(courseId: number): Promise<Record<number, UserSummary[]>> {
-  const classes = await getOr(`/api/courses/${courseId}/classes`, mockApi.listClasses(courseId));
+  const classes = await mustGetStrict<TeachingClassSummary[]>(`/api/courses/${courseId}/classes`, []);
   const entries = await Promise.all(classes.map(async (teachingClass) => {
-    const students = await getOr(`/api/users/classes/${teachingClass.id}/students`, mockApi.listClassStudents(teachingClass.id));
+    const students = await mustGetStrict<UserSummary[]>(`/api/users/classes/${teachingClass.id}/students`, []);
     return [teachingClass.id, students] as const;
   }));
   return Object.fromEntries(entries);
@@ -351,7 +382,7 @@ async function loadClassStudents(courseId: number): Promise<Record<number, UserS
 
 async function loadPublicationAuditsForResults(gradingResults: GradingResultSummary[]) {
   if (gradingResults.length === 0) {
-    return mockApi.listPublicationAudits();
+    return [] as GradePublicationAuditEntry[];
   }
   const resultIds = [...new Set(gradingResults.map((result) => result.id))];
   const auditGroups = await Promise.all(resultIds.map((resultId) => loadPublicationAudits(resultId)));
@@ -420,42 +451,28 @@ function deriveTaskStatus(status: SubmissionSummary['status'] | undefined, hasPu
   return '未提交';
 }
 
-async function getOr<T, R = T>(path: string, fallback: T, normalize?: (value: R) => T): Promise<T> {
+async function mustGetStrict<T, R = T>(path: string, fallback: T, normalize?: (value: R) => T): Promise<T> {
   if (!shouldUseHttpApi()) {
     return fallback;
   }
-
-  try {
-    const response = await fetch(`${API_BASE_URL}${path}`, {
-      headers: authHeaders(),
-    });
-    if (!response.ok) {
-      if (shouldUseStrictHttpApi()) {
-        throw new Error(`HTTP ${response.status} for ${path}`);
-      }
-      return fallback;
-    }
-    const payload = (await response.json()) as ApiResponse<R>;
-    if (!payload.success) {
-      if (shouldUseStrictHttpApi()) {
-        throw new Error(payload.message || `API request failed for ${path}`);
-      }
-      return fallback;
-    }
-    return normalize ? normalize(payload.data) : (payload.data as unknown as T);
-  } catch (error) {
-    if (shouldUseStrictHttpApi()) {
-      throw error;
-    }
-    return fallback;
+  const response = await fetch(`${API_BASE_URL}${path}`, {
+    headers: authHeaders(),
+  });
+  if (!response.ok) {
+    throw new Error(`HTTP ${response.status} for ${path}`);
   }
+  const payload = (await response.json()) as ApiResponse<R>;
+  if (!payload.success) {
+    throw new Error(payload.message || `API request failed for ${path}`);
+  }
+  return normalize ? normalize(payload.data) : (payload.data as unknown as T);
 }
 
 export async function createGradingJob(assignmentId: number, rubricId: number, submissionIds: number[] = [1]): Promise<GradingJobSummary> {
   if (submissionIds.length === 0) {
     throw new Error('当前任务暂无学生提交，不能启动批改');
   }
-  return mutateOr(
+  return mutateMust(
     'POST',
     '/api/grading/jobs',
     { assignmentId, rubricId, submissionIds },
@@ -464,7 +481,7 @@ export async function createGradingJob(assignmentId: number, rubricId: number, s
 }
 
 export async function createCourse(input: CreateCourseInput): Promise<CourseSummary> {
-  return mutateOr(
+  return mutateMust(
     'POST',
     '/api/courses',
     input,
@@ -473,7 +490,7 @@ export async function createCourse(input: CreateCourseInput): Promise<CourseSumm
 }
 
 export async function createTeachingClass(input: CreateTeachingClassInput): Promise<TeachingClassSummary> {
-  return mutateOr(
+  return mutateMust(
     'POST',
     `/api/courses/${input.courseId}/classes`,
     input,
@@ -486,19 +503,11 @@ export async function deleteTeachingClass(courseId: number, classId: number): Pr
     mockApi.deleteClass(courseId, classId);
     return;
   }
-
-  try {
-    await request<void>(`/api/courses/${courseId}/classes/${classId}`, 'DELETE');
-  } catch (error) {
-    if (shouldUseStrictHttpApi()) {
-      throw error;
-    }
-    mockApi.deleteClass(courseId, classId);
-  }
+  await request<void>(`/api/courses/${courseId}/classes/${classId}`, 'DELETE');
 }
 
 export async function createOcrJob(submissionId: number, objectKey: string): Promise<OcrJobSummary> {
-  return mutateOr(
+  return mutateMust(
     'POST',
     '/api/ocr/jobs',
     { submissionId, objectKey, mode: 'STRUCTURE' },
@@ -525,7 +534,7 @@ export async function updateReviewItem(
   teacherScore: number,
   teacherComment: string,
 ): Promise<GradingResultSummary> {
-  return mutateOr(
+  return mutateMust(
     'PATCH',
     `/api/grading/results/${resultId}/items`,
     { rubricItemId, teacherScore, teacherComment },
@@ -534,11 +543,11 @@ export async function updateReviewItem(
 }
 
 export async function loadGradingResults(assignmentId: number): Promise<GradingResultSummary[]> {
-  return getOr(`/api/grading/results?assignmentId=${assignmentId}`, mockApi.listGradingResults(assignmentId));
+  return mustGetStrict(`/api/grading/results?assignmentId=${assignmentId}`, []);
 }
 
 export async function approveGradingResult(resultId: number, reviewerName: string, overallComment: string): Promise<GradingResultSummary> {
-  return mutateOr(
+  return mutateMust(
     'POST',
     `/api/grading/results/${resultId}/approve`,
     { reviewerName, overallComment },
@@ -547,7 +556,7 @@ export async function approveGradingResult(resultId: number, reviewerName: strin
 }
 
 export async function publishGradingResult(resultId: number, operatorName: string): Promise<GradingResultSummary> {
-  return mutateOr(
+  return mutateMust(
     'POST',
     `/api/grading/results/${resultId}/publish`,
     { operatorName, message: '发布成绩与批注' },
@@ -556,7 +565,7 @@ export async function publishGradingResult(resultId: number, operatorName: strin
 }
 
 export async function withdrawGradingResult(resultId: number, operatorName: string, reason = '复核后重新发布'): Promise<GradingResultSummary> {
-  return mutateOr(
+  return mutateMust(
     'POST',
     `/api/grading/results/${resultId}/withdraw`,
     { operatorName, reason },
@@ -565,11 +574,11 @@ export async function withdrawGradingResult(resultId: number, operatorName: stri
 }
 
 export async function loadPublicationAudits(resultId: number) {
-  return getOr(`/api/grading/results/${resultId}/publication-audits`, mockApi.listPublicationAudits(resultId));
+  return mustGetStrict(`/api/grading/results/${resultId}/publication-audits`, []);
 }
 
 export async function createGradeExport(assignmentId: number, operatorName: string, format: GradeExportSummary['format'] = 'CSV') {
-  return mutateOr(
+  return mutateMust(
     'POST',
     '/api/grading/exports',
     { assignmentId, format, operatorName },
@@ -584,7 +593,7 @@ export async function createAppeal(
   reason: string,
   requestedChange: string,
 ) {
-  return mutateOr(
+  return mutateMust(
     'POST',
     '/api/grading/results/appeals',
     { resultId, rubricItemId, studentId, reason, requestedChange },
@@ -593,7 +602,7 @@ export async function createAppeal(
 }
 
 export async function resolveAppeal(appealId: number, accepted: boolean, teacherReply: string) {
-  return mutateOr(
+  return mutateMust(
     'POST',
     `/api/grading/results/appeals/${appealId}/resolve`,
     { status: accepted ? 'ACCEPTED' : 'REJECTED', teacherReply },
@@ -602,7 +611,7 @@ export async function resolveAppeal(appealId: number, accepted: boolean, teacher
 }
 
 export async function remindUnsubmitted(assignmentId: number, studentIds: number[]): Promise<ReminderResult> {
-  return mutateOr(
+  return mutateMust(
     'POST',
     '/api/notifications/remind-unsubmitted',
     {
@@ -620,7 +629,7 @@ export async function startSimilarityJob(assignmentId: number, submissionIds: nu
   if (submissionIds.length === 0) {
     throw new Error('当前任务暂无学生提交，不能启动查重');
   }
-  return mutateOr(
+  return mutateMust(
     'POST',
     '/api/similarity/jobs',
     { assignmentId, submissionIds, includeHistory: true },
@@ -629,7 +638,7 @@ export async function startSimilarityJob(assignmentId: number, submissionIds: nu
 }
 
 export async function createAssignment(input: CreateAssignmentInput): Promise<AssignmentSummary> {
-  return mutateOr(
+  return mutateMust(
     'POST',
     '/api/assignments',
     input,
@@ -638,7 +647,7 @@ export async function createAssignment(input: CreateAssignmentInput): Promise<As
 }
 
 export async function publishAssignment(assignmentId: number): Promise<AssignmentSummary> {
-  return mutateOr(
+  return mutateMust(
     'POST',
     `/api/assignments/${assignmentId}/publish`,
     {},
@@ -647,7 +656,7 @@ export async function publishAssignment(assignmentId: number): Promise<Assignmen
 }
 
 export async function createRubric(input: CreateRubricInput): Promise<RubricSummary> {
-  return mutateOr(
+  return mutateMust(
     'POST',
     '/api/rubrics',
     input,
@@ -656,7 +665,7 @@ export async function createRubric(input: CreateRubricInput): Promise<RubricSumm
 }
 
 export async function createOrganization(input: CreateOrganizationInput): Promise<OrganizationSummary> {
-  return mutateOr(
+  return mutateMust(
     'POST',
     '/api/organizations',
     input,
@@ -665,7 +674,7 @@ export async function createOrganization(input: CreateOrganizationInput): Promis
 }
 
 export async function createUser(input: CreateUserInput): Promise<UserSummary> {
-  return mutateOr(
+  return mutateMust(
     'POST',
     '/api/users',
     input,
@@ -674,7 +683,7 @@ export async function createUser(input: CreateUserInput): Promise<UserSummary> {
 }
 
 export async function updateSystemSetting(input: UpdateSystemSettingInput): Promise<SystemSettingSummary> {
-  return mutateOr(
+  return mutateMust(
     'PATCH',
     `/api/admin/settings/${encodeURIComponent(input.key)}`,
     { value: input.value },
@@ -683,7 +692,7 @@ export async function updateSystemSetting(input: UpdateSystemSettingInput): Prom
 }
 
 export async function importStudents(input: ImportStudentsInput): Promise<StudentImportResult> {
-  return mutateOr(
+  return mutateMust(
     'POST',
     '/api/users/students/import',
     input,
@@ -695,32 +704,24 @@ export async function createUploadReceipt(fileName: string, assignmentId: number
   if (!shouldUseHttpApi()) {
     return mockApi.createUploadReceipt(fileName, assignmentId, studentId);
   }
-
-  try {
-    const uploadFile = file ?? new File(['TrainMark AI local upload placeholder'], fileName, {
-      type: guessContentType(fileName),
-    });
-    const init = await request<{ uploadId: string; objectKey: string }>('/api/submissions/upload/init', 'POST', {
-      assignmentId,
-      studentId,
-      fileName: uploadFile.name,
-      contentType: uploadFile.type || guessContentType(uploadFile.name),
-      fileSize: uploadFile.size,
-      checksum: null,
-    });
-    await uploadObjectContent(init.uploadId, init.objectKey, uploadFile);
-    const receipt = await request<BackendSubmissionReceipt>('/api/submissions/upload/complete', 'POST', {
-      uploadId: init.uploadId,
-      objectKey: init.objectKey,
-      checksum: null,
-    });
-    return normalizeUploadReceipt(receipt);
-  } catch (error) {
-    if (shouldUseStrictHttpApi()) {
-      throw error;
-    }
-    return mockApi.createUploadReceipt(fileName, assignmentId, studentId);
-  }
+  const uploadFile = file ?? new File(['TrainMark AI local upload placeholder'], fileName, {
+    type: guessContentType(fileName),
+  });
+  const init = await request<{ uploadId: string; objectKey: string }>('/api/submissions/upload/init', 'POST', {
+    assignmentId,
+    studentId,
+    fileName: uploadFile.name,
+    contentType: uploadFile.type || guessContentType(uploadFile.name),
+    fileSize: uploadFile.size,
+    checksum: null,
+  });
+  await uploadObjectContent(init.uploadId, init.objectKey, uploadFile);
+  const receipt = await request<BackendSubmissionReceipt>('/api/submissions/upload/complete', 'POST', {
+    uploadId: init.uploadId,
+    objectKey: init.objectKey,
+    checksum: null,
+  });
+  return normalizeUploadReceipt(receipt);
 }
 
 export async function deleteSubmission(submissionId: number): Promise<void> {
@@ -728,15 +729,7 @@ export async function deleteSubmission(submissionId: number): Promise<void> {
     mockApi.deleteSubmission(submissionId);
     return;
   }
-
-  try {
-    await request<void>(`/api/submissions/${submissionId}`, 'DELETE');
-  } catch (error) {
-    if (shouldUseStrictHttpApi()) {
-      throw error;
-    }
-    mockApi.deleteSubmission(submissionId);
-  }
+  await request<void>(`/api/submissions/${submissionId}`, 'DELETE');
 }
 
 async function uploadObjectContent(uploadId: string, objectKey: string, file: File): Promise<void> {
@@ -758,7 +751,7 @@ async function uploadObjectContent(uploadId: string, objectKey: string, file: Fi
   }
 }
 
-async function mutateOr<T, R = T>(
+async function mutateMust<T, R = T>(
   method: 'POST' | 'PATCH',
   path: string,
   body: unknown,
@@ -768,16 +761,8 @@ async function mutateOr<T, R = T>(
   if (!shouldUseHttpApi()) {
     return fallback();
   }
-
-  try {
-    const value = await request<R>(path, method, body);
-    return normalize ? normalize(value) : (value as unknown as T);
-  } catch (error) {
-    if (shouldUseStrictHttpApi()) {
-      throw error;
-    }
-    return fallback();
-  }
+  const value = await request<R>(path, method, body);
+  return normalize ? normalize(value) : (value as unknown as T);
 }
 
 async function request<T>(path: string, method: 'POST' | 'PATCH' | 'DELETE', body?: unknown, includeAuth = true): Promise<T> {
@@ -845,7 +830,7 @@ function normalizeOcrJobs(value: BackendOcrJobSummary[]): OcrJobSummary[] {
 }
 
 async function loadOcrJobs(): Promise<OcrJobSummary[]> {
-  const jobs = await getOr('/api/ocr/jobs', mockApi.listOcrJobs(), normalizeOcrJobs);
+  const jobs = await mustGetStrict('/api/ocr/jobs', [], normalizeOcrJobs);
   if (!shouldUseHttpApi()) {
     return jobs;
   }
@@ -854,7 +839,7 @@ async function loadOcrJobs(): Promise<OcrJobSummary[]> {
     if (job.blocks.length > 0) {
       return job;
     }
-    const result = await getOr(`/api/ocr/jobs/${job.id}/result`, { blocks: [] as OcrJobSummary['blocks'] });
+    const result = await mustGetStrict(`/api/ocr/jobs/${job.id}/result`, { blocks: [] as OcrJobSummary['blocks'] });
     return {
       ...job,
       blocks: result.blocks,
@@ -924,20 +909,16 @@ function guessContentType(fileName: string) {
 }
 
 export async function listNotifications(userId: number, unreadOnly = false): Promise<NotificationItem[]> {
-  return getOr(`/api/notifications?userId=${userId}&unreadOnly=${unreadOnly}`, []);
+  return mustGetStrict(`/api/notifications?userId=${userId}&unreadOnly=${unreadOnly}`, []);
 }
 
-export async function createNotification(input: CreateNotificationInput): Promise<NotificationItem | null> {
-  try {
-    return await mutateOr(
-      'POST',
-      '/api/notifications',
-      input,
-      () => mockApi.createNotification(input),
-    );
-  } catch {
-    return null;
-  }
+export async function createNotification(input: CreateNotificationInput): Promise<NotificationItem> {
+  return mutateMust(
+    'POST',
+    '/api/notifications',
+    input,
+    () => mockApi.createNotification(input),
+  );
 }
 
 export async function markNotificationAsRead(notificationId: number, userId: number): Promise<void> {

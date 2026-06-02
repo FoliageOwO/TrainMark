@@ -1,4 +1,5 @@
 import { useState, type FormEvent, type MouseEvent } from 'react';
+import { Alert, Button, Card, Empty, Form, Input, Select, Space, Table, Tag, Typography } from 'antd';
 import { Plus, Trash2, UploadCloud, Users, X } from 'lucide-react';
 import type { CourseSummary, StudentImportResult, StudentImportRow, TeachingClassSummary } from '../api/types';
 import type { CreateCourseInput, CreateTeachingClassInput, ImportStudentsInput } from '../api/httpApi';
@@ -61,6 +62,50 @@ export function TeacherCoursePanel({
   const [importNotice, setImportNotice] = useState('');
   const selectedClass = classes.find((item) => item.id === selectedClassId) ?? null;
   const activeClassId = selectedClass?.id ?? 0;
+
+  const courseColumns = [
+    {
+      title: '课程',
+      key: 'course',
+      render: (_: unknown, course: CourseSummary) => (
+        <div className="table-primary">
+          <strong>{course.name}</strong>
+          <span>{course.code}</span>
+        </div>
+      ),
+    },
+    { title: '学期', dataIndex: 'semester', key: 'semester' },
+    { title: '班级', dataIndex: 'classCount', key: 'classCount' },
+    { title: '学生', dataIndex: 'studentCount', key: 'studentCount' },
+    {
+      title: '状态',
+      key: 'status',
+      render: (_: unknown, course: CourseSummary) => <Tag color={course.status === 'ACTIVE' ? 'success' : 'default'}>{statusText[course.status]}</Tag>,
+    },
+  ];
+
+  const classColumns = [
+    { title: '班级', dataIndex: 'name', key: 'name' },
+    { title: '专业', key: 'major', render: (_: unknown, item: TeachingClassSummary) => item.major || '未填写' },
+    { title: '年级', key: 'grade', render: (_: unknown, item: TeachingClassSummary) => item.grade ? `${item.grade}级` : '未填写' },
+    { title: '人数', dataIndex: 'studentCount', key: 'studentCount' },
+    {
+      title: '操作',
+      key: 'actions',
+      render: (_: unknown, item: TeachingClassSummary) => (
+        <Button
+          danger
+          type="link"
+          aria-label={`删除班级 ${item.name}`}
+          title="删除班级"
+          onClick={(event) => deleteClass(event as unknown as MouseEvent<HTMLButtonElement>, item)}
+        >
+          <Trash2 size={14} />
+          删除
+        </Button>
+      ),
+    },
+  ];
 
   const submitCourse = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -166,247 +211,174 @@ export function TeacherCoursePanel({
   };
 
   return (
-    <article className="panel">
-      <div className="panel-heading">
-        <div>
-          <h3>课程与班级</h3>
-        </div>
-        <button className="ghost-button" type="button" onClick={() => setShowCreateForm((value) => !value)}>
+    <Card
+      title="课程与班级"
+      extra={(
+        <Button onClick={() => setShowCreateForm((value) => !value)}>
           {showCreateForm ? <X size={15} /> : <Plus size={15} />}
           {showCreateForm ? '收起表单' : '新建课程'}
-        </button>
-      </div>
-      {courseNotice ? <div className="inline-success">{courseNotice}</div> : null}
+        </Button>
+      )}
+    >
+      <Space direction="vertical" size={16} style={{ width: '100%' }}>
+      {courseNotice ? <Alert type="success" showIcon message={courseNotice} /> : null}
       {showCreateForm ? (
-        <form className="assignment-create-form course-create-form" onSubmit={submitCourse}>
-          <label>
-            课程名称
-            <input
+        <Form className="assignment-create-form course-create-form" layout="vertical" onSubmitCapture={submitCourse}>
+          <Form.Item label="课程名称">
+            <Input
               value={formState.name}
               onChange={(event) => setFormState((current) => ({ ...current, name: event.target.value }))}
               placeholder="例如：数据库设计实训"
             />
-          </label>
-          <label>
-            课程代码
-            <input
+          </Form.Item>
+          <Form.Item label="课程代码">
+            <Input
               value={formState.code}
               onChange={(event) => setFormState((current) => ({ ...current, code: event.target.value }))}
               placeholder="例如：DB-DESIGN-2026"
             />
-          </label>
-          <label>
-            学期
-            <input
+          </Form.Item>
+          <Form.Item label="学期">
+            <Input
               value={formState.semester}
               onChange={(event) => setFormState((current) => ({ ...current, semester: event.target.value }))}
               placeholder="例如：2025-2026-2"
             />
-          </label>
-          <label className="wide-field">
-            课程说明
-            <textarea
+          </Form.Item>
+          <Form.Item label="课程说明" className="wide-field">
+            <Input.TextArea
               rows={3}
               value={formState.description}
               onChange={(event) => setFormState((current) => ({ ...current, description: event.target.value }))}
               placeholder="可选，填写课程目标或实训说明"
             />
-          </label>
-          {submitError ? <div className="inline-error">{submitError}</div> : null}
-          <button className="primary-button" type="submit">保存课程</button>
-        </form>
+          </Form.Item>
+          {submitError ? <Alert type="error" showIcon message={submitError} /> : null}
+          <Button type="primary" htmlType="submit">保存课程</Button>
+        </Form>
       ) : null}
 
       <section className="management-grid">
-        <div className="table-shell">
-          <div className="table-scroll table-scroll-md">
-            <table className="data-table">
-              <thead>
-                <tr>
-                  <th>课程</th>
-                  <th>学期</th>
-                  <th>班级</th>
-                  <th>学生</th>
-                  <th>状态</th>
-                </tr>
-              </thead>
-              <tbody>
-                {courses.map((course) => (
-                  <tr
-                    className={selectedCourseId === course.id ? 'is-selected is-clickable' : 'is-clickable'}
-                    key={course.id}
-                    onClick={() => {
-                      onSelectCourse(course.id);
-                      setSelectedClassId(0);
-                      setClassNotice('');
-                      setImportNotice('');
-                    }}
-                  >
-                    <td>
-                      <div className="table-primary">
-                        <strong>{course.name}</strong>
-                        <span>{course.code}</span>
-                      </div>
-                    </td>
-                    <td>{course.semester}</td>
-                    <td>{course.classCount}</td>
-                    <td>{course.studentCount}</td>
-                    <td>{statusText[course.status]}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
+        <Table<CourseSummary>
+          rowKey="id"
+          columns={courseColumns}
+          dataSource={courses}
+          pagination={false}
+          onRow={(course) => ({
+            onClick: () => {
+              onSelectCourse(course.id);
+              setSelectedClassId(0);
+              setClassNotice('');
+              setImportNotice('');
+            },
+            style: { cursor: 'pointer' },
+          })}
+          rowClassName={(course) => (selectedCourseId === course.id ? 'is-selected' : '')}
+        />
 
         <div>
-          <div className="panel-heading compact-heading">
-            <div>
-              <h3>班级</h3>
-            </div>
-            <button className="ghost-button" type="button" onClick={() => setShowClassForm((value) => !value)}>
+          <Space style={{ width: '100%', justifyContent: 'space-between', marginBottom: 12 }}>
+            <Typography.Title level={4} style={{ margin: 0 }}>班级</Typography.Title>
+            <Button onClick={() => setShowClassForm((value) => !value)}>
               {showClassForm ? <X size={15} /> : <Plus size={15} />}
               {showClassForm ? '收起表单' : '新建班级'}
-            </button>
-          </div>
-          {classNotice ? <div className="inline-success">{classNotice}</div> : null}
-          {classDeleteError ? <div className="inline-error">{classDeleteError}</div> : null}
+            </Button>
+          </Space>
+          {classNotice ? <Alert type="success" showIcon message={classNotice} style={{ marginBottom: 12 }} /> : null}
+          {classDeleteError ? <Alert type="error" showIcon message={classDeleteError} style={{ marginBottom: 12 }} /> : null}
           {showClassForm ? (
-            <form className="assignment-create-form course-create-form" onSubmit={submitClass}>
-              <label>
-                班级名称
-                <input
+            <Form className="assignment-create-form course-create-form" layout="vertical" onSubmitCapture={submitClass}>
+              <Form.Item label="班级名称">
+                <Input
                   value={classFormState.name}
                   onChange={(event) => setClassFormState((current) => ({ ...current, name: event.target.value }))}
                   placeholder="例如：软件2403班"
                 />
-              </label>
-              <label>
-                专业
-                <input
+              </Form.Item>
+              <Form.Item label="专业">
+                <Input
                   value={classFormState.major}
                   onChange={(event) => setClassFormState((current) => ({ ...current, major: event.target.value }))}
                   placeholder="例如：软件技术"
                 />
-              </label>
-              <label>
-                年级
-                <input
+              </Form.Item>
+              <Form.Item label="年级">
+                <Input
                   value={classFormState.grade}
                   onChange={(event) => setClassFormState((current) => ({ ...current, grade: event.target.value }))}
                   placeholder="例如：2024"
                 />
-              </label>
-              {classSubmitError ? <div className="inline-error">{classSubmitError}</div> : null}
-              <button className="primary-button" type="submit">保存班级</button>
-            </form>
+              </Form.Item>
+              {classSubmitError ? <Alert type="error" showIcon message={classSubmitError} /> : null}
+              <Button type="primary" htmlType="submit">保存班级</Button>
+            </Form>
           ) : null}
           {classes.length === 0 ? (
-            <div className="empty-state">
-              <Users size={32} />
-              <p>暂无班级</p>
-              <span>请先新建班级，再导入学生名单</span>
-            </div>
+            <Empty description={<Space direction="vertical"><Users size={32} /><span>暂无班级，请先新建班级，再导入学生名单。</span></Space>} />
           ) : (
-            <div className="table-shell">
-              <div className="table-scroll table-scroll-md">
-                <table className="data-table">
-                  <thead>
-                    <tr>
-                      <th>班级</th>
-                      <th>专业</th>
-                      <th>年级</th>
-                      <th>人数</th>
-                      <th>操作</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {classes.map((item) => (
-                      <tr
-                        className={activeClassId === item.id ? 'is-selected is-clickable' : 'is-clickable'}
-                        key={item.id}
-                        onClick={() => setSelectedClassId(item.id)}
-                      >
-                        <td>{item.name}</td>
-                        <td>{item.major || '未填写'}</td>
-                        <td>{item.grade ? `${item.grade}级` : '未填写'}</td>
-                        <td>{item.studentCount}</td>
-                        <td>
-                          <button
-                            aria-label={`删除班级 ${item.name}`}
-                            className="link-button danger-link class-delete-button"
-                            title="删除班级"
-                            type="button"
-                            onClick={(event) => deleteClass(event, item)}
-                          >
-                            <Trash2 size={14} />
-                            删除
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
+            <Table<TeachingClassSummary>
+              rowKey="id"
+              columns={classColumns}
+              dataSource={classes}
+              pagination={false}
+              onRow={(item) => ({ onClick: () => setSelectedClassId(item.id), style: { cursor: 'pointer' } })}
+              rowClassName={(item) => (activeClassId === item.id ? 'is-selected' : '')}
+            />
           )}
         </div>
       </section>
 
       <section className="course-import-section">
-        <div className="panel-heading">
+        <Space style={{ width: '100%', justifyContent: 'space-between', marginBottom: 12 }}>
           <div>
-            <h3>导入学生</h3>
-            <span className="panel-subtitle">选择班级后粘贴学生名单，已有学生会复用账号并加入当前班级</span>
+            <Typography.Title level={4} style={{ margin: 0 }}>导入学生</Typography.Title>
+            <Typography.Text type="secondary">选择班级后粘贴学生名单，已有学生会复用账号并加入当前班级</Typography.Text>
           </div>
-          <span className="status-pill">{selectedClass ? `当前导入：${selectedClass.name}` : '请先选择班级'}</span>
-        </div>
+          <Tag>{selectedClass ? `当前导入：${selectedClass.name}` : '请先选择班级'}</Tag>
+        </Space>
         {!selectedClass ? (
-          <div className="inline-warning">
-            <span>请先在上方班级表格中选择一个班级；新建班级后会自动选中。</span>
-          </div>
+          <Alert type="warning" showIcon message="请先在上方班级表格中选择一个班级；新建班级后会自动选中。" style={{ marginBottom: 12 }} />
         ) : null}
-        <div className="import-dropzone">
+        <Card className="import-dropzone" style={{ marginBottom: 16 }}>
           <UploadCloud size={28} />
           <strong>粘贴学生名单行</strong>
           <span>每行格式：学号, 姓名, 邮箱, 手机号。已存在的学生会直接加入当前班级。</span>
-        </div>
-        <form className="assignment-create-form" onSubmit={submitImport}>
-          <label>
-            导入班级
-            <select name="classId" required value={activeClassId || ''} onChange={(event) => setSelectedClassId(Number(event.target.value))}>
-              <option value="" disabled>请选择班级</option>
+        </Card>
+        <Form className="assignment-create-form" layout="vertical" onSubmitCapture={submitImport}>
+          <Form.Item label="导入班级">
+            <Select value={activeClassId || undefined} onChange={(value) => setSelectedClassId(value)} placeholder="请选择班级">
               {classes.map((item) => (
-                <option key={item.id} value={item.id}>{item.name}</option>
+                <Select.Option key={item.id} value={item.id}>{item.name}</Select.Option>
               ))}
-            </select>
-          </label>
-          <label className="wide-field">
-            学生名单
-            <textarea name="rows" rows={4} defaultValue={sampleRows} required disabled={!activeClassId} />
-          </label>
-          {importError ? <div className="inline-error">{importError}</div> : null}
-          <button className="primary-button" type="submit" disabled={!activeClassId}>
+            </Select>
+            <input type="hidden" name="classId" value={activeClassId || ''} readOnly />
+          </Form.Item>
+          <Form.Item label="学生名单" className="wide-field">
+            <Input.TextArea name="rows" rows={4} defaultValue={sampleRows} required disabled={!activeClassId} />
+          </Form.Item>
+          {importError ? <Alert type="error" showIcon message={importError} /> : null}
+          <Button type="primary" htmlType="submit" disabled={!activeClassId}>
             <UploadCloud size={15} /> 导入名单
-          </button>
-        </form>
-        {importNotice ? <div className="inline-success">{importNotice}</div> : null}
+          </Button>
+        </Form>
+        {importNotice ? <Alert type="success" showIcon message={importNotice} style={{ marginTop: 12 }} /> : null}
         {importResult && importResult.warnings.length > 0 && (
-          <div className="inline-warning">
+          <div className="inline-warning" style={{ marginTop: 12 }}>
             {importResult.warnings.slice(0, 3).map((warning) => (
               <span key={warning}>{warning}</span>
             ))}
           </div>
         )}
         {importResult ? (
-          <div className="import-metrics course-import-metrics">
+          <div className="import-metrics course-import-metrics" style={{ marginTop: 12 }}>
             <span><strong>{importResult.total}</strong>总记录</span>
             <span><strong>{importResult.created}</strong>已加入</span>
             <span><strong>{importResult.skipped}</strong>已跳过</span>
           </div>
         ) : null}
       </section>
-    </article>
+      </Space>
+    </Card>
   );
 }
 

@@ -26,6 +26,20 @@ SMOKE_DRY_RUN=1 SMOKE_INCLUDE_WRITES=1 pnpm smoke:api
 echo "[verify] Strict auth smoke endpoint list"
 SMOKE_DRY_RUN=1 pnpm smoke:auth:strict
 
+echo "[verify] HTTP auth UI guard + strict auth smoke"
+pnpm verify:http:auth-ui-guards
+
+echo "[verify] Teacher workflow guides"
+pnpm verify:teacher-workflow-guides
+pnpm verify:student-workflow-guides
+pnpm verify:student-results:no-mock-copy
+
+echo "[verify] HTTP API strict write/no-degrade guards"
+pnpm verify:httpapi:strict-writes
+pnpm verify:httpapi:no-degradable-calls
+pnpm verify:httpapi:no-relaxed-read
+pnpm verify:http:workspace-error-no-clear
+
 echo "[verify] API route surface"
 if command -v rg >/dev/null 2>&1; then
   rg -n "@(GetMapping|PostMapping|PatchMapping|RequestMapping)" backend/*-service/src/main/java -g "*.java" >/dev/null

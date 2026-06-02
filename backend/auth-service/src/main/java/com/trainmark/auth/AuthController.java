@@ -3,6 +3,7 @@ package com.trainmark.auth;
 import com.trainmark.shared.ApiResponse;
 import com.trainmark.shared.dto.LoginRequest;
 import com.trainmark.shared.dto.LoginResponse;
+import com.trainmark.shared.dto.RegisterRequest;
 import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -22,6 +23,11 @@ public class AuthController {
   @PostMapping("/login")
   public ApiResponse<LoginResponse> login(@Valid @RequestBody LoginRequest request) {
     return ApiResponse.ok(authService.login(request));
+  }
+
+  @PostMapping("/register")
+  public ApiResponse<LoginResponse> register(@Valid @RequestBody RegisterRequest request) {
+    return ApiResponse.ok(authService.register(request));
   }
 
   @PostMapping("/refresh")

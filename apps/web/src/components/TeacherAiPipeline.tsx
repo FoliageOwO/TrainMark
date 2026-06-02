@@ -1,4 +1,5 @@
 import { useState, type FormEvent } from 'react';
+import { Alert, Button, Card, Col, Empty, Form, Input, InputNumber, Progress, Row, Select, Space, Table, Tag, Typography } from 'antd';
 import { FileText, Plus, Sparkles } from 'lucide-react';
 import type { CreateRubricInput } from '../api/httpApi';
 import type { AssignmentSummary, GradingJobSummary, OcrJobSummary, RubricSummary, TeachingClassSummary } from '../api/types';
@@ -93,283 +94,267 @@ export function TeacherAiPipeline({
       setIsCreatingRubric(false);
     }
   };
+  const runningOcrCount = ocrJobs.filter((job) => job.status !== 'COMPLETED' && job.status !== 'FAILED').length;
+  const runningGradingCount = gradingJobs.filter((job) => job.status !== 'COMPLETED' && job.status !== 'FAILED').length;
+  const nextAction = !rubric
+    ? '先创建评分标准，再启动批改'
+    : runningOcrCount > 0 || runningGradingCount > 0
+      ? `当前有 ${runningOcrCount + runningGradingCount} 个处理中任务`
+      : '可直接启动 OCR 或批改';
+  const currentBlocker = !rubric
+    ? '当前阻塞：缺少评分标准'
+    : runningOcrCount > 0 || runningGradingCount > 0
+      ? `当前阻塞：仍有 ${runningOcrCount + runningGradingCount} 个任务处理中`
+      : '当前阻塞：无';
+
+  const ocrColumns = [
+    {
+      title: '任务',
+      key: 'task',
+      render: (_: unknown, job: OcrJobSummary) => (
+        <div className="queue-task-cell">
+          <strong>识别任务 #{job.id}</strong>
+          <span>{shortObjectKey(job.objectKey)}</span>
+        </div>
+      ),
+    },
+    {
+      title: '处理进度',
+      key: 'progress',
+      render: (_: unknown, job: OcrJobSummary) => <Progress percent={ocrProgress(job)} size="small" />,
+    },
+    {
+      title: '状态',
+      key: 'status',
+      render: (_: unknown, job: OcrJobSummary) => <Tag color={job.status === 'COMPLETED' ? 'success' : job.status === 'FAILED' ? 'error' : 'processing'}>{ocrStatusText[job.status]}</Tag>,
+    },
+    {
+      title: '处理时间',
+      key: 'time',
+      render: (_: unknown, job: OcrJobSummary) => formatProcessTime(job.createdAt, job.updatedAt, job.status === 'COMPLETED' || job.status === 'FAILED'),
+    },
+    {
+      title: '识别结果',
+      key: 'result',
+      render: (_: unknown, job: OcrJobSummary) => `${job.pageCount} 页 / ${job.textBlockCount} 文本 / ${job.tableCount} 表格 / ${job.confidence}%`,
+    },
+  ];
+
+  const gradingColumns = [
+    {
+      title: '任务',
+      key: 'task',
+      render: (_: unknown, job: GradingJobSummary) => (
+        <div className="queue-task-cell">
+          <strong>批改任务 #{job.id}</strong>
+          <span>{job.completedSubmissions}/{job.totalSubmissions} 份报告</span>
+        </div>
+      ),
+    },
+    {
+      title: '完成进度',
+      key: 'progress',
+      render: (_: unknown, job: GradingJobSummary) => <Progress percent={gradingProgress(job)} size="small" />,
+    },
+    {
+      title: '状态',
+      key: 'status',
+      render: (_: unknown, job: GradingJobSummary) => <Tag color={job.status === 'COMPLETED' ? 'success' : job.status === 'FAILED' ? 'error' : 'processing'}>{gradingStatusText[job.status]}</Tag>,
+    },
+    {
+      title: '处理时间',
+      key: 'time',
+      render: (_: unknown, job: GradingJobSummary) => formatProcessTime(job.startedAt ?? job.createdAt, job.finishedAt ?? job.updatedAt, job.status === 'COMPLETED' || job.status === 'FAILED'),
+    },
+    {
+      title: '置信度',
+      key: 'confidence',
+      render: (_: unknown, job: GradingJobSummary) => `${job.confidence}%`,
+    },
+  ];
+
+  const blockColumns = [
+    {
+      title: '标题',
+      key: 'title',
+      render: (_: unknown, block: OcrJobSummary['blocks'][number]) => toChineseText(block.title),
+    },
+    {
+      title: '类型',
+      key: 'type',
+      render: (_: unknown, block: OcrJobSummary['blocks'][number]) => ocrBlockTypeText[block.type],
+    },
+    {
+      title: '页码',
+      key: 'page',
+      render: (_: unknown, block: OcrJobSummary['blocks'][number]) => `第 ${block.page} 页`,
+    },
+    {
+      title: '置信度',
+      key: 'confidence',
+      render: (_: unknown, block: OcrJobSummary['blocks'][number]) => `${block.confidence}%`,
+    },
+  ];
 
   return (
     <>
-      <section className="pipeline-stage-row">
-        <article className="pipeline-stage-card">
-          <span>评分标准</span>
-          <strong>{rubric ? rubric.items.length : 0}</strong>
-          <small>{rubric ? '评分项' : '未配置'}</small>
-        </article>
-        <article className="pipeline-stage-card">
-          <span>识别队列</span>
-          <strong>{ocrJobs.length}</strong>
-          <small>{ocrJobs.filter((job) => job.status !== 'COMPLETED').length} 个处理中</small>
-        </article>
-        <article className="pipeline-stage-card">
-          <span>批改队列</span>
-          <strong>{gradingJobs.length}</strong>
-          <small>{gradingJobs.filter((job) => job.status !== 'COMPLETED').length} 个处理中</small>
-        </article>
-      </section>
+      <Row gutter={[16, 16]}>
+        <Col xs={24} md={8}><Card><Typography.Text type="secondary">评分标准</Typography.Text><Typography.Title level={2}>{rubric ? rubric.items.length : 0}</Typography.Title><Typography.Text type="secondary">{rubric ? '评分项' : '未配置'}</Typography.Text></Card></Col>
+        <Col xs={24} md={8}><Card><Typography.Text type="secondary">识别队列</Typography.Text><Typography.Title level={2}>{ocrJobs.length}</Typography.Title><Typography.Text type="secondary">{ocrJobs.filter((job) => job.status !== 'COMPLETED').length} 个处理中</Typography.Text></Card></Col>
+        <Col xs={24} md={8}><Card><Typography.Text type="secondary">批改队列</Typography.Text><Typography.Title level={2}>{gradingJobs.length}</Typography.Title><Typography.Text type="secondary">{gradingJobs.filter((job) => job.status !== 'COMPLETED').length} 个处理中</Typography.Text></Card></Col>
+      </Row>
+      <Card style={{ marginTop: 16 }}>
+        <Alert
+          type={!rubric || runningOcrCount > 0 || runningGradingCount > 0 ? 'warning' : 'success'}
+          showIcon
+          message={currentBlocker}
+          description={nextAction}
+          action={!rubric ? (
+            <Button type="primary" onClick={() => setShowRubricForm(true)}>
+              <Plus size={15} /> 先创建评分标准
+            </Button>
+          ) : runningOcrCount + runningGradingCount === 0 ? (
+            <Button type="primary" onClick={onStartOcr} disabled={!canStartOcr}>
+              <FileText size={15} /> 先启动识别
+            </Button>
+          ) : null}
+        />
+      </Card>
 
       <section className="management-grid">
-        <article className="panel rubric-panel">
-          <div className="panel-heading">
+        <Card
+          className="rubric-panel"
+          title="评分标准"
+          extra={<Button onClick={() => setShowRubricForm((value) => !value)}><Plus size={15} /> 新建标准</Button>}
+        >
+          <Space direction="vertical" size={16} style={{ width: '100%' }}>
             <div>
-              <h3>评分标准</h3>
+              <Typography.Text type="secondary">当前批改任务</Typography.Text>
+              <Select
+                value={selectedAssignmentId}
+                style={{ width: '100%', marginTop: 8 }}
+                options={assignments.map((assignment) => ({
+                  value: assignment.id,
+                  label: `${toChineseText(assignment.title)} · ${assignment.status === 'PUBLISHED' ? '已发布' : '草稿'}`,
+                }))}
+                onChange={(value) => onSelectAssignment(value)}
+              />
             </div>
-            <button className="ghost-button" type="button" onClick={() => setShowRubricForm((value) => !value)}>
-              <Plus size={15} /> 新建标准
-            </button>
-          </div>
-          <label className="file-name-field">
-            当前批改任务
-            <select
-              value={selectedAssignmentId}
-              onChange={(event) => onSelectAssignment(Number(event.target.value))}
-            >
-              {assignments.map((assignment) => (
-                <option key={assignment.id} value={assignment.id}>
-                  {toChineseText(assignment.title)} · {assignment.status === 'PUBLISHED' ? '已发布' : '草稿'}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label className="file-name-field section-filter-field">
-            当前班级
-            <select value={selectedClassId} onChange={(event) => onSelectClass(Number(event.target.value))}>
-              <option value={0}>全部班级</option>
-              {classes.map((teachingClass) => (
-                <option key={teachingClass.id} value={teachingClass.id}>
-                  {teachingClass.name}
-                </option>
-              ))}
-            </select>
-          </label>
+            <div>
+              <Typography.Text type="secondary">当前班级</Typography.Text>
+              <Select
+                value={selectedClassId}
+                style={{ width: '100%', marginTop: 8 }}
+                options={[
+                  { value: 0, label: '全部班级' },
+                  ...classes.map((teachingClass) => ({ value: teachingClass.id, label: teachingClass.name })),
+                ]}
+                onChange={(value) => onSelectClass(value)}
+              />
+            </div>
           {showRubricForm && (
-            <form className="assignment-create-form" onSubmit={handleSubmitRubric}>
-              <label>
-                适用任务
-                <select name="assignmentId" required defaultValue={selectedAssignmentId || assignments[0]?.id || ''}>
-                  {assignments.map((assignment) => (
-                    <option key={assignment.id} value={assignment.id}>{toChineseText(assignment.title)}</option>
-                  ))}
-                </select>
-              </label>
-              <label>
-                标准名称
-                <input name="name" required defaultValue="实训报告评分标准" />
-              </label>
-              <label>
-                总分
-                <input name="totalScore" min="1" max="1000" required type="number" defaultValue="100" />
-              </label>
-              <label>
-                评分项一
-                <input name="item1Title" required defaultValue="需求与设计" />
-              </label>
-              <label>
-                分值
-                <input name="item1Score" min="1" required type="number" defaultValue="20" />
-              </label>
-              <label>
-                关键词
-                <input name="item1Keywords" defaultValue="需求,设计,ER图,约束" />
-              </label>
-              <label>
-                评分项二
-                <input name="item2Title" required defaultValue="系统实现" />
-              </label>
-              <label>
-                分值
-                <input name="item2Score" min="1" required type="number" defaultValue="50" />
-              </label>
-              <label>
-                关键词
-                <input name="item2Keywords" defaultValue="功能,接口,权限,异常" />
-              </label>
-              <label>
-                评分项三
-                <input name="item3Title" required defaultValue="报告规范" />
-              </label>
-              <label>
-                分值
-                <input name="item3Score" min="1" required type="number" defaultValue="30" />
-              </label>
-              <label>
-                关键词
-                <input name="item3Keywords" defaultValue="截图,总结,目录,格式" />
-              </label>
-              <button className="primary-button" type="submit" disabled={isCreatingRubric || assignments.length === 0}>
-                {isCreatingRubric ? '保存中...' : '保存评分标准'}
-              </button>
-            </form>
+            <Form layout="vertical" className="assignment-create-form" onSubmitCapture={handleSubmitRubric}>
+              <Form.Item label="适用任务">
+                <Select
+                  defaultValue={selectedAssignmentId || assignments[0]?.id || undefined}
+                  options={assignments.map((assignment) => ({ value: assignment.id, label: toChineseText(assignment.title) }))}
+                  onChange={(value) => {
+                    const hidden = document.querySelector<HTMLInputElement>('input[name="assignmentId"]');
+                    if (hidden) hidden.value = String(value);
+                  }}
+                />
+                <input type="hidden" name="assignmentId" defaultValue={String(selectedAssignmentId || assignments[0]?.id || '')} />
+              </Form.Item>
+              <Form.Item label="标准名称"><Input name="name" required defaultValue="实训报告评分标准" /></Form.Item>
+              <Form.Item label="总分"><InputNumber name="totalScore" min={1} max={1000} defaultValue={100} style={{ width: '100%' }} /></Form.Item>
+              <Form.Item label="评分项一"><Input name="item1Title" required defaultValue="需求与设计" /></Form.Item>
+              <Form.Item label="分值"><InputNumber name="item1Score" min={1} defaultValue={20} style={{ width: '100%' }} /></Form.Item>
+              <Form.Item label="关键词"><Input name="item1Keywords" defaultValue="需求,设计,ER图,约束" /></Form.Item>
+              <Form.Item label="评分项二"><Input name="item2Title" required defaultValue="系统实现" /></Form.Item>
+              <Form.Item label="分值"><InputNumber name="item2Score" min={1} defaultValue={50} style={{ width: '100%' }} /></Form.Item>
+              <Form.Item label="关键词"><Input name="item2Keywords" defaultValue="功能,接口,权限,异常" /></Form.Item>
+              <Form.Item label="评分项三"><Input name="item3Title" required defaultValue="报告规范" /></Form.Item>
+              <Form.Item label="分值"><InputNumber name="item3Score" min={1} defaultValue={30} style={{ width: '100%' }} /></Form.Item>
+              <Form.Item label="关键词"><Input name="item3Keywords" defaultValue="截图,总结,目录,格式" /></Form.Item>
+              <Button type="primary" htmlType="submit" loading={isCreatingRubric} disabled={assignments.length === 0}>
+                保存评分标准
+              </Button>
+            </Form>
           )}
-          {rubricNotice && <div className="inline-success">{rubricNotice}</div>}
+          {rubricNotice ? <Alert type="success" showIcon message={rubricNotice} /> : null}
           {rubric ? (
             <>
-              <div className="rubric-summary">
-                <div>
-                  <strong>{toChineseText(rubric.name)}</strong>
-                  <span>总分 {rubric.totalScore} · {rubric.items.length} 个评分项</span>
-                </div>
-                <span className="score-chip">可解释评分</span>
-              </div>
-              <div className="rubric-list">
-                {rubric.items.map((item) => (
-                  <div className="rubric-row" key={item.id}>
+              <Card size="small" style={{ background: 'rgba(22,119,255,0.04)' }}>
+                <Space direction="vertical" size={8} style={{ width: '100%' }}>
+                  <Space style={{ width: '100%', justifyContent: 'space-between' }}>
                     <div>
-                      <strong>{toChineseText(item.title)}</strong>
-                      <span>{item.courseOutcomeCode} · {toChineseText(item.points[0]?.title ?? '待配置得分点')}</span>
+                      <Typography.Text strong>{toChineseText(rubric.name)}</Typography.Text>
+                      <Typography.Text type="secondary" style={{ display: 'block' }}>总分 {rubric.totalScore} · {rubric.items.length} 个评分项</Typography.Text>
                     </div>
-                    <b>{item.score} 分</b>
-                  </div>
-                ))}
-              </div>
+                    <Tag color="processing">可解释评分</Tag>
+                  </Space>
+                  {rubric.items.map((item) => (
+                    <Card key={item.id} size="small">
+                      <Space style={{ width: '100%', justifyContent: 'space-between' }}>
+                        <div>
+                          <Typography.Text strong>{toChineseText(item.title)}</Typography.Text>
+                          <Typography.Text type="secondary" style={{ display: 'block' }}>{item.courseOutcomeCode} · {toChineseText(item.points[0]?.title ?? '待配置得分点')}</Typography.Text>
+                        </div>
+                        <Tag>{item.score} 分</Tag>
+                      </Space>
+                    </Card>
+                  ))}
+                </Space>
+              </Card>
             </>
           ) : (
-            <div className="empty-result">
-              <strong>暂无评分标准</strong>
-              <span>先为实训任务创建评分标准，再启动智能批改。</span>
-            </div>
+            <Empty description="暂无评分标准，先为实训任务创建评分标准，再启动智能批改。" />
           )}
-        </article>
+          </Space>
+        </Card>
 
-        <article className="panel ocr-panel">
-          <div className="panel-heading">
-            <div>
-              <h3>文档识别队列</h3>
-            </div>
-            <button className="ghost-button" type="button" onClick={onStartOcr} disabled={!canStartOcr}>
-              <FileText size={15} /> 启动识别
-            </button>
-          </div>
-          <div className="table-shell">
-            <div className="table-scroll table-scroll-md">
-              <table className="data-table">
-                <thead>
-                  <tr>
-                    <th>任务</th>
-                    <th>处理进度</th>
-                    <th>状态</th>
-                    <th>处理时间</th>
-                    <th>识别结果</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {ocrJobs.map((job) => {
-                    const progress = ocrProgress(job);
-                    return (
-                      <tr key={job.id}>
-                        <td>
-                          <div className="queue-task-cell">
-                            <strong>识别任务 #{job.id}</strong>
-                            <span>{shortObjectKey(job.objectKey)}</span>
-                          </div>
-                        </td>
-                        <td>
-                          <ProgressMeter value={progress} />
-                        </td>
-                        <td><StatusPill status={job.status}>{ocrStatusText[job.status]}</StatusPill></td>
-                        <td>{formatProcessTime(job.createdAt, job.updatedAt, job.status === 'COMPLETED' || job.status === 'FAILED')}</td>
-                        <td>
-                          <span className="queue-result-text">
-                            {job.pageCount} 页 / {job.textBlockCount} 文本 / {job.tableCount} 表格 / {job.confidence}%
-                          </span>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </article>
+        <Card
+          className="ocr-panel"
+          title="文档识别队列"
+          extra={<Button onClick={onStartOcr} disabled={!canStartOcr}><FileText size={15} /> 启动识别</Button>}
+        >
+          {ocrJobs.length === 0 ? (
+            <Empty description="暂无识别任务，先在上方点击“启动识别”。" />
+          ) : (
+            <Table<OcrJobSummary> rowKey="id" columns={ocrColumns} dataSource={ocrJobs} pagination={false} scroll={{ x: 1100 }} />
+          )}
+        </Card>
 
-        <article className="panel grading-panel">
-          <div className="panel-heading">
-            <div>
-              <h3>智能批改队列</h3>
-            </div>
-            <button className="ghost-button" type="button" onClick={onStartGrading} disabled={!rubric}>
-              <Sparkles size={15} /> 启动批改
-            </button>
-          </div>
-          {actionNotice && <div className="inline-success">{actionNotice}</div>}
-          <div className="table-shell">
-            <div className="table-scroll table-scroll-md">
-              <table className="data-table">
-                <thead>
-                  <tr>
-                    <th>任务</th>
-                    <th>完成进度</th>
-                    <th>状态</th>
-                    <th>处理时间</th>
-                    <th>置信度</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {gradingJobs.map((job) => {
-                    const progress = gradingProgress(job);
-                    return (
-                      <tr key={job.id}>
-                        <td>
-                          <div className="queue-task-cell">
-                            <strong>批改任务 #{job.id}</strong>
-                            <span>{job.completedSubmissions}/{job.totalSubmissions} 份报告</span>
-                          </div>
-                        </td>
-                        <td>
-                          <ProgressMeter value={progress} />
-                        </td>
-                        <td><StatusPill status={job.status}>{gradingStatusText[job.status]}</StatusPill></td>
-                        <td>{formatProcessTime(job.startedAt ?? job.createdAt, job.finishedAt ?? job.updatedAt, job.status === 'COMPLETED' || job.status === 'FAILED')}</td>
-                        <td>{job.confidence}%</td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </article>
+        <Card
+          className="grading-panel"
+          title="智能批改队列"
+          extra={<Button onClick={onStartGrading} disabled={!rubric}><Sparkles size={15} /> 启动批改</Button>}
+        >
+          <Space direction="vertical" size={16} style={{ width: '100%' }}>
+            {actionNotice ? <Alert type="success" showIcon message={actionNotice} /> : null}
+            {gradingJobs.length === 0 ? (
+              <Empty description="暂无批改任务，先准备评分标准后点击“启动批改”。" />
+            ) : (
+              <Table<GradingJobSummary> rowKey="id" columns={gradingColumns} dataSource={gradingJobs} pagination={false} scroll={{ x: 1100 }} />
+            )}
+          </Space>
+        </Card>
       </section>
 
       <section className="management-grid">
-        <article className="panel ocr-panel span-two">
-          <div className="panel-heading">
-            <div>
-              <h3>结构识别结果</h3>
-            </div>
-            <span className="status-pill">最新任务</span>
-          </div>
-          <div className="table-shell">
-            <div className="table-scroll table-scroll-md">
-              <table className="data-table">
-                <thead>
-                  <tr>
-                    <th>标题</th>
-                    <th>类型</th>
-                    <th>页码</th>
-                    <th>置信度</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {ocrJobs[0]?.blocks.map((block) => (
-                    <tr key={`${block.type}-${block.page}-${block.title}`}>
-                      <td>{toChineseText(block.title)}</td>
-                      <td>{ocrBlockTypeText[block.type]}</td>
-                      <td>第 {block.page} 页</td>
-                      <td>{block.confidence}%</td>
-                    </tr>
-                  )) ?? null}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </article>
+        <Card className="ocr-panel span-two" title="结构识别结果" extra={<Tag>最新任务</Tag>}>
+          {ocrJobs[0]?.blocks?.length ? (
+            <Table<OcrJobSummary['blocks'][number]>
+              rowKey={(block) => `${block.type}-${block.page}-${block.title}`}
+              columns={blockColumns}
+              dataSource={ocrJobs[0].blocks}
+              pagination={false}
+              scroll={{ x: 900 }}
+            />
+          ) : (
+            <Empty description="暂无结构识别结果" />
+          )}
+        </Card>
       </section>
     </>
   );
@@ -400,22 +385,6 @@ function splitKeywords(value: string) {
     .split(/[,，]/)
     .map((item) => item.trim())
     .filter(Boolean);
-}
-
-function ProgressMeter({ value }: { value: number }) {
-  const safeValue = Math.max(0, Math.min(100, Math.round(value)));
-  return (
-    <div className="queue-progress" aria-label={`处理进度 ${safeValue}%`}>
-      <div className="queue-progress-track">
-        <span style={{ width: `${safeValue}%` }} />
-      </div>
-      <b>{safeValue}%</b>
-    </div>
-  );
-}
-
-function StatusPill({ status, children }: { status: string; children: string }) {
-  return <span className={`queue-status queue-status-${status.toLowerCase().replace(/_/g, '-')}`}>{children}</span>;
 }
 
 function gradingProgress(job: GradingJobSummary) {

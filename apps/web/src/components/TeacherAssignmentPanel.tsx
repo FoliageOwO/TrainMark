@@ -1,4 +1,5 @@
 import { useState, type FormEvent } from 'react';
+import { Alert, Button, Card, Empty, Form, Input, InputNumber, Select, Space, Switch, Table, Tag, Typography } from 'antd';
 import { CalendarClock, FileText, Plus } from 'lucide-react';
 import type { CreateAssignmentInput } from '../api/httpApi';
 import type { AssignmentSummary, TeachingClassSummary } from '../api/types';
@@ -38,6 +39,8 @@ export function TeacherAssignmentPanel({
   const [showForm, setShowForm] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
   const [publishingId, setPublishingId] = useState<number | null>(null);
+  const [aiGradingEnabled, setAiGradingEnabled] = useState(true);
+  const [similarityCheckEnabled, setSimilarityCheckEnabled] = useState(true);
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -58,10 +61,12 @@ export function TeacherAssignmentPanel({
         deadline: new Date(deadline).toISOString(),
         totalScore,
         classIds: classes.map((item) => item.id),
-        similarityCheckEnabled: formData.get('similarityCheckEnabled') === 'on',
-        aiGradingEnabled: formData.get('aiGradingEnabled') === 'on',
+        similarityCheckEnabled,
+        aiGradingEnabled,
       });
       event.currentTarget.reset();
+      setAiGradingEnabled(true);
+      setSimilarityCheckEnabled(true);
       setShowForm(false);
     } finally {
       setIsCreating(false);
@@ -77,115 +82,131 @@ export function TeacherAssignmentPanel({
     }
   };
 
+  const draftCount = assignments.filter((item) => item.status === 'DRAFT').length;
+  const publishedCount = assignments.filter((item) => item.status === 'PUBLISHED').length;
+  const currentBlocker = assignments.length === 0
+    ? '当前阻塞：还没有可发布任务'
+    : draftCount > 0
+      ? `当前阻塞：仍有 ${draftCount} 个草稿未发布`
+      : '当前阻塞：无';
+  const nextAction = assignments.length === 0
+    ? '下一步：先创建第一份任务。'
+    : draftCount > 0
+      ? '下一步：优先发布草稿任务，再进入报告收集。'
+      : `下一步：任务已发布 ${publishedCount} 个，可进入报告收集。`;
+  const firstDraft = assignments.find((item) => item.status === 'DRAFT') ?? null;
+
+  const columns = [
+    {
+      title: '任务',
+      key: 'title',
+      render: (_: unknown, item: AssignmentSummary) => (
+        <div className="table-primary">
+          <strong>{item.title}</strong>
+          <span>{selectedAssignmentId === item.id ? '当前任务' : `任务 #${item.id}`}</span>
+        </div>
+      ),
+    },
+    {
+      title: '截止时间',
+      key: 'deadline',
+      render: (_: unknown, item: AssignmentSummary) => (
+        <span className="table-inline"><CalendarClock size={14} /> {formatDate(item.deadline)}</span>
+      ),
+    },
+    {
+      title: '分值',
+      key: 'score',
+      render: (_: unknown, item: AssignmentSummary) => `${item.totalScore} 分`,
+    },
+    {
+      title: '批改方式',
+      key: 'grading',
+      render: (_: unknown, item: AssignmentSummary) => item.aiGradingEnabled ? 'AI 批改' : '人工批改',
+    },
+    {
+      title: '查重',
+      key: 'similarity',
+      render: (_: unknown, item: AssignmentSummary) => item.similarityCheckEnabled ? '开启' : '关闭',
+    },
+    {
+      title: '状态',
+      key: 'status',
+      render: (_: unknown, item: AssignmentSummary) => <Tag color={item.status === 'PUBLISHED' ? 'success' : 'default'}>{statusText[item.status]}</Tag>,
+    },
+    {
+      title: '操作',
+      key: 'actions',
+      render: (_: unknown, item: AssignmentSummary) => (
+        <Space wrap>
+          <Button onClick={() => onSelectAssignment(item.id)}>
+            {selectedAssignmentId === item.id ? '当前任务' : '设为当前'}
+          </Button>
+          {item.status === 'DRAFT' ? (
+            <Button type="primary" onClick={() => handlePublish(item.id)} loading={publishingId === item.id}>
+              发布任务
+            </Button>
+          ) : null}
+        </Space>
+      ),
+    },
+  ];
+
   return (
-    <article className="panel">
-      <div className="panel-heading">
-        <div>
-          <h3>实训任务</h3>
-          <p className="panel-subtitle">{selectedCourseName}</p>
-        </div>
-        <button className="ghost-button" type="button" onClick={() => setShowForm((v) => !v)}>
-          <Plus size={15} /> 创建任务
-        </button>
-      </div>
+    <Card
+      title="实训任务"
+      extra={<Button onClick={() => setShowForm((v) => !v)}><Plus size={15} /> 创建任务</Button>}
+    >
+      <Space direction="vertical" size={16} style={{ width: '100%' }}>
+        <Typography.Text type="secondary">{selectedCourseName}</Typography.Text>
+        <Alert
+          type={assignments.length === 0 || draftCount > 0 ? 'warning' : 'success'}
+          showIcon
+          message={currentBlocker}
+          description={nextAction}
+          action={assignments.length === 0 ? (
+            <Button type="primary" onClick={() => setShowForm(true)}>
+              <Plus size={15} /> 先创建任务
+            </Button>
+          ) : firstDraft ? (
+            <Button type="primary" onClick={() => handlePublish(firstDraft.id)} loading={publishingId === firstDraft.id}>
+              先发布草稿任务 #{firstDraft.id}
+            </Button>
+          ) : null}
+        />
 
-      {showForm && (
-        <form className="assignment-create-form" onSubmit={handleSubmit}>
-          <label>
-            任务标题
-            <input name="title" required defaultValue={`${selectedCourseName}阶段报告`} />
-          </label>
-          <label>
-            截止时间
-            <input name="deadline" required type="datetime-local" defaultValue={defaultDeadlineValue()} />
-          </label>
-          <label>
-            总分
-            <input name="totalScore" min="1" max="1000" required type="number" defaultValue="100" />
-          </label>
-          <label className="wide-field">
-            任务说明
-            <textarea name="description" rows={3} defaultValue="提交完整实训报告，包含需求分析、系统设计、核心实现、运行截图和总结。" />
-          </label>
-          <div className="assignment-toggle-row">
-            <label><input name="aiGradingEnabled" type="checkbox" defaultChecked /> AI 批改</label>
-            <label><input name="similarityCheckEnabled" type="checkbox" defaultChecked /> 查重检测</label>
-          </div>
-          <button className="primary-button" type="submit" disabled={isCreating}>
-            {isCreating ? '创建中...' : '保存任务'}
-          </button>
-        </form>
-      )}
-      {assignmentNotice && <div className="inline-success">{assignmentNotice}</div>}
+        {showForm ? (
+          <Form layout="vertical" className="assignment-create-form" onSubmitCapture={handleSubmit}>
+            <Form.Item label="任务标题">
+              <Input name="title" required defaultValue={`${selectedCourseName}阶段报告`} />
+            </Form.Item>
+            <Form.Item label="截止时间">
+              <Input name="deadline" required type="datetime-local" defaultValue={defaultDeadlineValue()} />
+            </Form.Item>
+            <Form.Item label="总分">
+              <InputNumber name="totalScore" min={1} max={1000} defaultValue={100} style={{ width: '100%' }} />
+            </Form.Item>
+            <Form.Item label="任务说明">
+              <Input.TextArea name="description" rows={3} defaultValue="提交完整实训报告，包含需求分析、系统设计、核心实现、运行截图和总结。" />
+            </Form.Item>
+            <Space wrap>
+              <span>AI 批改 <Switch checked={aiGradingEnabled} onChange={setAiGradingEnabled} /></span>
+              <span>查重检测 <Switch checked={similarityCheckEnabled} onChange={setSimilarityCheckEnabled} /></span>
+            </Space>
+            <Button type="primary" htmlType="submit" loading={isCreating}>
+              保存任务
+            </Button>
+          </Form>
+        ) : null}
+        {assignmentNotice ? <Alert type="success" showIcon message={assignmentNotice} /> : null}
 
-      {assignments.length === 0 ? (
-        <div className="empty-state">
-          <FileText size={32} />
-          <p>暂无实训任务</p>
-          <span>点击右上角"创建任务"开始配置</span>
-        </div>
-      ) : (
-        <div className="table-shell">
-          <div className="table-scroll table-scroll-lg">
-            <table className="data-table">
-              <thead>
-                <tr>
-                  <th>任务</th>
-                  <th>截止时间</th>
-                  <th>分值</th>
-                  <th>批改方式</th>
-                  <th>查重</th>
-                  <th>状态</th>
-                  <th className="actions-col">操作</th>
-                </tr>
-              </thead>
-              <tbody>
-                {assignments.map((item) => (
-                  <tr className={selectedAssignmentId === item.id ? 'is-selected' : ''} key={item.id}>
-                    <td>
-                      <div className="table-primary">
-                        <strong>{item.title}</strong>
-                        <span>{selectedAssignmentId === item.id ? '当前任务' : `任务 #${item.id}`}</span>
-                      </div>
-                    </td>
-                    <td>
-                      <span className="table-inline"><CalendarClock size={14} /> {formatDate(item.deadline)}</span>
-                    </td>
-                    <td>{item.totalScore} 分</td>
-                    <td>{item.aiGradingEnabled ? 'AI 批改' : '人工批改'}</td>
-                    <td>{item.similarityCheckEnabled ? '开启' : '关闭'}</td>
-                    <td>
-                      <span className={`status-badge status-${item.status.toLowerCase()}`}>{statusText[item.status]}</span>
-                    </td>
-                    <td>
-                      <div className="table-actions">
-                        <button
-                          className="ghost-button compact"
-                          type="button"
-                          onClick={() => onSelectAssignment(item.id)}
-                        >
-                          {selectedAssignmentId === item.id ? '当前任务' : '设为当前'}
-                        </button>
-                        {item.status === 'DRAFT' && (
-                          <button
-                            className="primary-button compact"
-                            type="button"
-                            onClick={() => handlePublish(item.id)}
-                            disabled={publishingId === item.id}
-                          >
-                            {publishingId === item.id ? '发布中...' : '发布任务'}
-                          </button>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
-    </article>
+        {assignments.length === 0 ? (
+          <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description={<Space direction="vertical"><FileText size={32} /><span>暂无实训任务，点击右上角开始配置。</span></Space>} />
+        ) : (
+          <Table<AssignmentSummary> rowKey="id" columns={columns} dataSource={assignments} pagination={false} scroll={{ x: 1100 }} />
+        )}
+      </Space>
+    </Card>
   );
 }
 
